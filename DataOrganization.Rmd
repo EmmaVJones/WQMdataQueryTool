@@ -1,0 +1,81 @@
+---
+title: "Data Organization"
+author: "Emma Jones"
+date: "12/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(pool)
+library(config)
+library(sf)
+library(readxl)
+
+```
+
+# R version
+
+This application is built in R 3.6.2 to comply with geospatial dependencies on the R server.
+
+
+## Background
+
+This document walks users through all data acquisition and manipulation necessary for updating datasets beneath the WQM Data Query Tool.
+
+### ODS Connectivity
+
+Before beginning, make sure you have access to ODS production environment variables necessary to build the application.
+
+```{r ODS connectivity}
+# Server connection things
+conn <- config::get("connectionSettings") # get configuration settings
+
+## For testing: connect to ODS production
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQL Server Native Client 11.0", 
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  trusted_connection = "yes"
+)
+
+# Fpr deployment on the R server: Set up pool connection to production environment
+#pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#  # Production Environment
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  UID = conn$UID_prod, 
+#  PWD = conn$PWD_prod,
+#  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#  # Test environment
+#  #Server= "WSQ04151,50000",
+#  #dbname = "ODS_test",
+#  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#  trusted_connection = "yes"
+#)
+```
+
+### ProbMon Estimates
+
+This version of the application is the first to include basin-specific estimates (opposed to just superbasin) as the 2020IR officially published these data and thus they are available for use in other applications.
+
+```{r prob Estimates}
+probCDF <- read_csv('C:/HardDriveBackup/R/GitHub/ProbMon-Integrated-Reports/2020ProbChapter/processedData/allCDF.csv')
+
+# add unit information
+unitData <- read_csv('data/probIndicatorUnits.csv')
+
+probCDF <- left_join(probCDF, unitData, by = 'Indicator')
+# save to RDS locally for better data manipulation experience
+# drop first blank row
+saveRDS(probCDF[2:nrow(probCDF),], 'data/IR2020probMonCDFestimates.RDS')
+```
+
+
+
