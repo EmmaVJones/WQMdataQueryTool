@@ -1,16 +1,19 @@
 source('global.R')
 
-#assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
-#ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
-#assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
-#  st_transform( st_crs(4326)) 
-#subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
-#  rename('SUBBASIN' = 'SUBBASIN_1') %>%
-#  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN)))
-#subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
-#  filter(!is.na(SubbasinVAHU6code)) %>%
-#  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) %>%
-#  dplyr::select(SUBBASIN, SubbasinVAHU6code)
+assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
+ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
+  st_transform( st_crs(4326)) 
+subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
+  rename('SUBBASIN' = 'SUBBASIN_1') %>%
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN)))
+subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
+  filter(!is.na(SubbasinVAHU6code)) %>%
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) %>%
+  dplyr::select(SUBBASIN, SubbasinVAHU6code)
+
+WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
+
 
 
 shinyServer(function(input, output, session) {
@@ -131,19 +134,62 @@ shinyServer(function(input, output, session) {
                    end = max(as.Date(reactive_objects$stationFieldData$Fdt_Date_Time)))  })
   
   ### Filter by user input
-  stationFieldAnalyteDateRange <- reactive({req(reactive_objects$stationFieldData, input$dateRangeFilter)
+  stationFieldAnalyteDateRange <- reactive({req(reactive_objects$stationFieldData, input$dateRangeFilter, input$repFilter, input$averageParameters)
     stationFieldAnalyteDataPretty( filter(reactive_objects$stationAnalyteData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
-                                     filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
-                                     repFilter = input$repFilter) })
+                                   filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
+                                   repFilter = input$repFilter, averageResults = ifelse(input$averageParameters == 'Report all available parameters', FALSE, TRUE) ) })
     
-    
-  
-  
+  ## Data Summary  
   output$stationFieldAnalyte <-  renderDataTable({ req(stationFieldAnalyteDateRange())
-    datatable(stationFieldAnalyteDateRange(), rownames = F, escape= F, extensions = 'Buttons',
+    z <- stationFieldAnalyteDateRange() %>% # drop all empty columns ( this method longer but handles dttm issues)
+      map(~.x) %>%
+      discard(~all(is.na(.x))) %>%
+      map_df(~.x)
+    print(z)
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
-                             pageLength = nrow(stationFieldAnalyteDateRange()), buttons=list('copy','colvis')), selection = 'none')})
+                             pageLength = nrow(z), 
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none')})
   
+  ## Collector Summary
+  output$collectorSummary <- renderDataTable({ req(stationFieldAnalyteDateRange())
+    z <- uniqueCollector(stationFieldAnalyteDateRange()) 
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                             pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
+  
+  ## Sample Code Summary
+  output$sampleCodeSummary <- renderDataTable({ req(stationFieldAnalyteDateRange())
+    z <- uniqueSampleCodes(stationFieldAnalyteDateRange()) 
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                             pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
+  
+  ## Sample Comment Summary
+  output$sampleCommentSummary <- renderDataTable({ req(stationFieldAnalyteDateRange())
+    z <- uniqueComments(stationFieldAnalyteDateRange()) 
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                             pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
+  
+  
+  ## Visualization Tools: Simplified Dataset Tab
+  basicStationSummary <- reactive({req(stationFieldAnalyteDateRange())
+    basicSummary(stationFieldAnalyteDateRange()) })
+  
+  output$basicSummary <- renderDataTable({ req(basicStationSummary())
+    datatable(basicStationSummary(), rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px', pageLength = nrow(basicStationSummary()), 
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSbasicFieldAnalyteData',input$station, Sys.Date())),
+                                                                                    'colvis')), selection = 'none')})
+  
+  ## Visualization Tools: Parameter Plot Tab
+  
+  output$parameterPlot <- renderPlotly({ req(nrow(basicStationSummary()) > 0, input$parameterPlotlySelection)
+    parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup) })
+  
+  ## Visualization Tools: Probabilistic Estimates Tab
   
   #output$test1 <- renderPrint({reactive_objects$stationFieldData})
   #output$test2 <- renderPrint({reactive_objects$stationAnalyteData})

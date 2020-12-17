@@ -20,6 +20,12 @@ library(config)
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
 
+
+board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_KEY"),
+                         server = conn$CONNECT_SERVER)#Sys.getenv("CONNECT_SERVER"))
+
+
+
 ## For testing: connect to ODS production
 #pool <- dbPool(
 #  drv = odbc::odbc(),
@@ -47,6 +53,27 @@ pool <- dbPool(
   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
   trusted_connection = "yes"
 )
+
+unitData <- read_csv('data/probIndicatorUnits.csv')
+
+# WQS information for functions
+# From: 9VAC25-260-50. Numerical Criteria for Dissolved Oxygen, Ph, and Maximum Temperature
+# https://law.lis.virginia.gov/admincode/title9/agency25/chapter260/section50/
+WQSvalues <- tibble(CLASS_BASIN = c('I',"II","II_7","III","IV","V","VI","VII"),
+                    CLASS = c('I',"II","II","III","IV","V","VI","VII"),
+                    `Description Of Waters` = c('Open Ocean', 'Tidal Waters in the Chowan Basin and the Atlantic Ocean Basin',
+                                                'Tidal Waters in the Chesapeake Bay and its tidal tributaries',
+                                                'Nontidal Waters (Coastal and Piedmont Zone)','Mountainous Zone Waters',
+                                                'Stockable Trout Waters','Natural Trout Waters','Swamp Waters'),
+                    `Dissolved Oxygen Min (mg/L)` = c(5,4,NA,4,4,5,6,NA),
+                    `Dissolved Oxygen Daily Avg (mg/L)` = c(NA,5,NA,5,5,6,7,NA),
+                    `pH Min` = c(6,6,6.0,6.0,6.0,6.0,6.0,3.7),
+                    `pH Max` = c(9.0,9.0,9.0,9.0,9.0,9.0,9.0,8.0),
+                    `Max Temperature (C)` = c(NA, NA, NA, 32, 31, 21, 20, NA)) %>%
+  mutate(CLASS_DESCRIPTION = paste0(CLASS, " | ", `Description Of Waters`))
+
+
+
 
 
 
@@ -122,13 +149,206 @@ stationSummarySampingMetrics <- function(stationInfo_sf){
 } 
 
 # Organize field and analyte info into prettier table
-stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDataRaw, repFilter){
-  inner_join(stationFieldDataRaw,
-             stationAnalyteDataRaw %>%
-               filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
-               group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd) %>%
-               dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd, Ana_Parameter_Name, Ana_Value) %>%
-               pivot_wider(names_from = c('Ana_Parameter_Name','Ana_Sam_Mrs_Lcc_Parm_Group_Cd'), names_sep = " | ", 
-                           values_from = "Ana_Value"),
-             by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) 
+stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDataRaw, repFilter, averageResults){
+  if(averageResults == TRUE){
+    inner_join(stationFieldDataRaw,
+               stationAnalyteDataRaw %>%
+                 filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+                 group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
+                 dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
+                               Ana_Parameter_Name, Ana_Value) %>%
+                 pivot_wider(names_from = c('Ana_Parameter_Name'), names_sep = " | ", 
+                             values_from = "Ana_Value",
+                             values_fn = list(Ana_Value = mean)),
+               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) 
+  } else {
+    inner_join(stationFieldDataRaw,
+               stationAnalyteDataRaw %>%
+                 filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+                 group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd) %>%
+                 dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd, Ana_Parameter_Name, Ana_Value) %>%
+                 pivot_wider(names_from = c('Ana_Parameter_Name','Ana_Sam_Mrs_Lcc_Parm_Group_Cd'), names_sep = " | ", 
+                             values_from = "Ana_Value"),
+               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) }
+}
+
+
+# Field collector info
+uniqueCollector <- function(stationFieldAnalyte){
+  stationFieldAnalyte %>%
+    group_by(Fdt_Sta_Id, Fdt_Collector_Id) %>%
+    summarise(`n Samples` = n()) 
+}
+
+
+# Sample Codes Summary
+uniqueSampleCodes <- function(stationFieldAnalyte){
+  stationFieldAnalyte %>%
+    mutate(`Years Sampled` = year(Fdt_Date_Time)) %>%
+    group_by(Fdt_Sta_Id, `Years Sampled`, Fdt_Spg_Code) %>%#, Spg_Description) %>%
+    summarise(`n Samples` = n(),
+              `Sample Codes` = paste0(unique(Fdt_Spg_Code), collapse = ' | ')) %>%
+    dplyr::select(-Fdt_Spg_Code)
+}
+
+# Sample Comment Summary
+uniqueComments <- function(stationFieldAnalyte){
+  stationFieldAnalyte %>%
+    group_by(Fdt_Sta_Id, Fdt_Date_Time) %>%
+    distinct(Fdt_Comment, .keep_all = FALSE) %>%
+    filter(!is.na(Fdt_Comment))
+}
+
+# Concatenate multiple columns to one
+concatenateCols <- function(df, containString){
+  x <- dplyr::select(df, contains(containString)) 
+  if(length(x) > 0){
+    mutate_if(x, is.numeric, as.character) %>%
+    na_if('NA') %>%
+    unite(newCol, contains(containString), na.rm = TRUE) %>%
+    mutate(newCol = as.numeric(newCol)) %>%
+    pull()} else {as.numeric(rep(NA, nrow(x)))}
+}#
+#concatenateCols(stationFieldAnalyte,  'CHLOROPHYLL-A UG/L SPECTROPHOTOMETRIC ACID. METH') #'SUSP. SED. CONC. TOTAL, MG/L,(Method B)')#, 
+#df <- stationFieldAnalyte; containString <- 'E.COLI'
+
+# Generic Info People Want
+#stationFieldAnalyte <- stationFieldAnalyte1
+#stationFieldAnalyte$Fdt_Do_Optical[5] <- NA
+#stationFieldAnalyte$Fdt_Do_Winkler[5] <- 7.7
+#stationFieldAnalyte$Fdt_Do_Probe[7] <- 8.6
+#stationFieldAnalyte$Fdt_Do_Optical[7] <- NA
+
+
+basicSummary <- function(stationFieldAnalyte){
+  mutate(stationFieldAnalyte, 
+         blankColForSelect = NA, # placeholder to enable selection below
+         StationID = Fdt_Sta_Id,
+         `Collection Date` = Fdt_Date_Time,
+         Comments = Fdt_Comment, 
+         `Collector ID` = Fdt_Collector_Id,
+         `Run ID` = Fdt_Run_Id,
+         `SPG Code` = Fdt_Spg_Code,
+         `SPG Description` = Spg_Description,
+         Depth = Fdt_Depth,
+         `Weather Code` = Fdt_Weather_Code,
+         `Tide Code` = Fdt_Tide_Code,
+         Temperature = Fdt_Temp_Celcius,
+         pH = Fdt_Field_Ph,
+         DO = case_when(!is.na(Fdt_Do_Probe) ~ Fdt_Do_Probe,
+                        !is.na(Fdt_Do_Optical) ~ Fdt_Do_Optical,
+                        !is.na(Fdt_Do_Winkler) ~ Fdt_Do_Winkler,
+                        TRUE ~ as.numeric(NA)),
+         `DO Percent Saturation` = Fdt_Do_Satr_Per,
+         `Specific Conductance` = Fdt_Specific_Conductance,
+         Salinity = Fdt_Salinity,
+         Turbidity = Fdt_Turbidity,
+         `Secchi Depth` = Fdt_Secchi_Depth, 
+         Hardness = concatenateCols(stationFieldAnalyte, 'HARDNESS, TOTAL (MG/L AS CACO3)'),
+         Ecoli = concatenateCols(stationFieldAnalyte, 'E.COLI BY COLILERT SM 9223-B'),
+         Enterococci = concatenateCols(stationFieldAnalyte, 'ENTEROCOCCI- ME-MF N0/100ML'),
+         `Fecal Coliform` = concatenateCols(stationFieldAnalyte, 'FECAL COLIFORM,MEMBR FILTER,M-FC BROTH,44.5 C'),
+         `Total Nitrogen` = concatenateCols(stationFieldAnalyte, 'NITROGEN, TOTAL (MG/L AS N)'),
+         `Total Nitrate Nitrogen` = concatenateCols(stationFieldAnalyte, 'NITRITE NITROGEN, TOTAL (MG/L AS N)'),
+         `Total Kjeldahl Nitrogen` = concatenateCols(stationFieldAnalyte, 'NITROGEN, KJELDAHL, TOTAL, (MG/L AS N)'),
+         `Ammonia` = concatenateCols(stationFieldAnalyte, 'NITROGEN, AMMONIA, TOTAL (MG/L AS N)'),
+         `Total Phosphorus` = concatenateCols(stationFieldAnalyte, 'PHOSPHORUS, TOTAL (MG/L AS P)'),
+         `Ortho Phosphorus` = concatenateCols(stationFieldAnalyte, 'PHOSPHORUS, DISSOLVED ORTHOPHOSPHATE (MG/L AS P)'),
+         `Chlorophyll a` = concatenateCols(stationFieldAnalyte, 'CHLOROPHYLL-A UG/L SPECTROPHOTOMETRIC ACID. METH'),
+         Turbidity = concatenateCols(stationFieldAnalyte, 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU'),
+         `Total Dissolved Solids` = concatenateCols(stationFieldAnalyte, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'),
+         `Total Suspended Solids` = concatenateCols(stationFieldAnalyte, 'SUSP. SED. CONC. TOTAL, MG/L,(Method B)'),
+         `Suspended Sediment Concentration Coarse` = concatenateCols(stationFieldAnalyte, 'SUSP. SED. CONC. - >62 um,MG/L, (Method C)'),
+         `Suspended Sediment Concentration Fine` = concatenateCols(stationFieldAnalyte, 'SUSP. SED. CONC. - <62 um,MG/L, (Method C)'),
+         `Calcium` = concatenateCols(stationFieldAnalyte, 'CALCIUM, DISSOLVED (MG/L AS CA)'),
+         `Magnesium` = concatenateCols(stationFieldAnalyte, 'MAGNESIUM, DISSOLVED (MG/L AS MG)'),
+         `Sodium` = concatenateCols(stationFieldAnalyte, 'SODIUM, DISSOLVED (MG/L AS NA)'),
+         `Potassium` = concatenateCols(stationFieldAnalyte, 'POTASSIUM, DISSOLVED (MG/L AS K)'),
+         `Chloride` = concatenateCols(stationFieldAnalyte, 'CHLORIDE, DISSOLVED IN WATER MG/L'),
+         `Sulfate` = concatenateCols(stationFieldAnalyte, 'SULFATE, DISSOLVED (MG/L AS SO4)'),
+         `Arsenic` = concatenateCols(stationFieldAnalyte, "ARSENIC, DISSOLVED  (UG/L AS AS)"),
+         `Barium` = concatenateCols(stationFieldAnalyte, "BARIUM, DISSOLVED (UG/L AS BA)"),
+         `Beryllium` = concatenateCols(stationFieldAnalyte, "BERYLLIUM, DISSOLVED (UG/L AS BE)"),
+         `Cadmium` = concatenateCols(stationFieldAnalyte,  "CADMIUM, DISSOLVED (UG/L AS CD)"),
+         `Chromium` = concatenateCols(stationFieldAnalyte, "CHROMIUM, DISSOLVED (UG/L AS CR)"),
+         `Copper` = concatenateCols(stationFieldAnalyte, "COPPER, DISSOLVED (UG/L AS CU)"),
+         `Iron` = concatenateCols(stationFieldAnalyte, "IRON, DISSOLVED (UG/L AS FE)"),
+         `Lead` = concatenateCols(stationFieldAnalyte, "LEAD, DISSOLVED (UG/L AS PB)"), 
+         `Manganese` = concatenateCols(stationFieldAnalyte, "MANGANESE, DISSOLVED (UG/L AS MN)"),
+         `Thallium` = concatenateCols(stationFieldAnalyte, "THALLIUM, DISSOLVED (UG/L AS TL)"),
+         `Nickel` = concatenateCols(stationFieldAnalyte, "NICKEL, DISSOLVED (UG/L AS NI)"),
+         `Silver` = concatenateCols(stationFieldAnalyte, "SILVER, DISSOLVED (UG/L AS AG)"),
+         `Strontium` = concatenateCols(stationFieldAnalyte, "STRONTIUM, DISSOLVED (UG/L AS SR)"),
+         `Zinc` = concatenateCols(stationFieldAnalyte, "ZINC, DISSOLVED (UG/L AS ZN)"),
+         `Antimony` = concatenateCols(stationFieldAnalyte, "ANTIMONY, DISSOLVED (UG/L AS SB)"),
+         `Aluminum` = concatenateCols(stationFieldAnalyte, "ALUMINUM, DISSOLVED (UG/L AS AL)"),
+         `Selenium` = concatenateCols(stationFieldAnalyte, "SELENIUM, DISSOLVED (UG/L AS SE)"),
+         `Fecal Coliform` = concatenateCols(stationFieldAnalyte, "FECAL COLIFORM,MEMBR FILTER,M-FC BROTH,44.5 C"),                       
+         `Total Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, TOTAL ORGANIC (MG/L AS C)'),
+         `Dissolved Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, DISSOLVED ORGANIC (MG/L AS C)'),
+         `Benthic Ash Free Dry Mass` = concatenateCols(stationFieldAnalyte, 'BENTHIC ASH FREE DRY MASS, GM/M2')) %>%
+    dplyr::select(-c(Fdt_Id:blankColForSelect) )   
+}
+
+
+
+
+parameterPlotly <- function(basicData,
+                            parameter,
+                            unitData,
+                            WQSlookup){
+  parameterUnits <- filter(unitData, AltName %in% !!parameter)$Units
+  if(parameter %in% c('Temperature', 'DO', "pH")){
+    if(parameter == 'Temperature'){parameterLimit <- 'Max Temperature (C)'; specialStandards <- NULL}
+    if(parameter == 'DO'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
+    if(parameter == 'pH'){
+      parameterLimit <- c('pH Min', 'pH Max')
+      if(nrow(filter(WQSlookup, StationID %in% unique(basicData$StationID)) %>% 
+              filter(str_detect(as.character(SPSTDS), '6.5-9.5'))) > 0){specialStandards <- c(6.5, 9.5)
+      } else {specialStandards <- NULL}}
+  } else { parameterLimit <- NULL 
+  specialStandards <- NULL  }
+  
+  dat <- dplyr::select(basicData, StationID, `Collection Date`, Depth, Measure = !! parameter) %>%
+    filter( !is.na(Measure))
+  
+  if(nrow(dat) > 0){
+    dat <- left_join(dat, WQSlookup, by = c('StationID')) %>%
+      mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
+      mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
+      # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
+      left_join(WQSvalues, by = 'CLASS_BASIN') %>%
+      dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
+      rename('CLASS' = 'CLASS.x') %>%
+      # add standards info if available
+      {if(!is.null(parameterLimit))
+        dplyr::select(., StationID, `Collection Date`, Depth, Measure, Standard = !!parameterLimit) 
+        else dplyr::select(., StationID, `Collection Date`, Depth, Measure) } %>%
+      # pH special standards correction
+      {if(!is.null(specialStandards))
+        mutate(., Standard1 = specialStandards[1], Standard2 = specialStandards[2])
+        else . } %>%
+      mutate(units = parameterUnits) 
+    #return(dat)
+    plot_ly(data=dat) %>%
+      {if(parameter %in% c('Temperature', 'DO'))
+        add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
+                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+        else . } %>%
+      {if(parameter %in% c('pH'))
+        add_lines(.,  x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
+                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
+          add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
+                    hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+        else . } %>%
+      add_markers(data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
+                  marker = list(color= '#535559'), hoverinfo="text",
+                  text=~paste(sep="<br>",
+                              paste("Sample Date: ",`Collection Date`),
+                              paste("Depth: ",Depth, "m"),
+                              paste(parameter, ": ",Measure," (mg/L)"))) %>%
+      layout(showlegend=FALSE,
+             yaxis=list(title=paste(parameter, unique(dat$units))),
+             xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
+  }
 }
