@@ -15,7 +15,8 @@ library(pins)
 library(sqldf)
 library(config)
 
-
+#Bring in VLOOKUP-like function written in R
+source('vlookup.R')
 
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
@@ -27,23 +28,23 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 
 
 ## For testing: connect to ODS production
-#pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "SQL Server Native Client 11.0", 
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-#)
-
-# For deployment on the R server: Set up pool connection to production environment
 pool <- dbPool(
   drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
+  Driver = "SQL Server Native Client 11.0", 
   Server= "DEQ-SQLODS-PROD,50000",
   dbname = "ODS",
-  UID = conn$UID_prod, 
-  PWD = conn$PWD_prod,
+  trusted_connection = "yes"
+)
+
+# For deployment on the R server: Set up pool connection to production environment
+#pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  UID = conn$UID_prod, 
+#  PWD = conn$PWD_prod,
   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
   # Test environment
@@ -51,10 +52,29 @@ pool <- dbPool(
   #dbname = "ODS_test",
   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+#  trusted_connection = "yes"
+#)
+
+onStop(function() {
+  poolClose(pool)
+})
+
 
 unitData <- read_csv('data/probIndicatorUnits.csv')
+# Temporary list that we can compare data to. Maybe we increase to benthic metrics, MCCU, + more in time
+probIndicators <- filter(unitData, AltName %in% #names(basicData))$AltName
+                           c("DO", "pH", "Specific Conductance", "Total Nitrogen", "Total Phosphorus", "Total Dissolved Solids",
+                             "Ammonia", "Total Nitrate Nitrogen", "Ortho Phosphorus", "Turbidity", "Total Suspended Solids", "Sodium", 
+                             "Potassium", "Chloride", "Sulfate", "Suspended Sediment Concentration Coarse", "Suspended Sediment Concentration Fine",
+                             "Arsenic", "Barium", "Beryllium", "Cadmium", "Chromium", "Copper", "Iron", "Lead", "Manganese", "Thallium", "Nickel",                                 
+                             "Silver", "Zinc", "Antimony", "Aluminum", "Selenium", "Hardness", "Ecoli"))
+  #c("DO", "pH", "SpCond", "TN", "TP", "TDS", "NH4", "NO3", "Turb", "TSS", "Na", "K", "Cl", "Sf", 
+                  #  "SSCCOARSE", "SSCFINE", "ARSENIC", "BARIUM", "BERYLLIUM", "CADMIUM", "CHROMIUM", "COPPER", "IRON", 
+                  #  "LEAD", "MANGANESE", "THALLIUM", "NICKEL", "SILVER", "ZINC", "ANTIMONY", "ALUMINUM" ,"SELENIUM", "HARDNESS" )
+probEst <- readRDS('data/IR2020probMonCDFestimates.RDS') %>%
+  filter(Indicator %in% probIndicators$Indicator)
+
+
 
 # WQS information for functions
 # From: 9VAC25-260-50. Numerical Criteria for Dissolved Oxygen, Ph, and Maximum Temperature

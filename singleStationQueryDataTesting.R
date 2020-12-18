@@ -71,10 +71,10 @@ stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData,
                                                       filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
                                                       repFilter = c('R','S1'),
                                                       averageResults = TRUE)
-stationFieldAnalyte2 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
-                                                      filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
-                                                      repFilter = c('R','S1'),
-                                                      averageResults = FALSE)
+#stationFieldAnalyte2 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
+#                                                      filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
+#                                                      repFilter = c('R','S1'),
+#                                                      averageResults = FALSE)
 View(
 stationFieldAnalyte1 %>%
   map(~.x) %>%
@@ -91,73 +91,110 @@ uniqueSampleCodes(stationFieldAnalyte1)
 # Special Comments
 uniqueComments(stationFieldAnalyte1)
 
-
+# Basic Dataset people will actually use
 basicData <- basicSummary(stationFieldAnalyte1)
-parameter <- 'Temperature'
 
-parameterPlotly <- function(basicData,
-                            parameter,
-                            unitData,
-                            WQSlookup){
-  parameterUnits <- filter(unitData, AltName %in% !!parameter)$Units
-  if(parameter %in% c('Temperature', 'DO', "pH")){
-    if(parameter == 'Temperature'){parameterLimit <- 'Max Temperature (C)'; specialStandards <- NULL}
-    if(parameter == 'DO'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
-    if(parameter == 'pH'){
-      parameterLimit <- c('pH Min', 'pH Max')
-      if(nrow(filter(WQSlookup, StationID %in% unique(basicData$StationID)) %>% 
-         filter(str_detect(as.character(SPSTDS), '6.5-9.5'))) > 0){specialStandards <- c(6.5, 9.5)
-         } else {specialStandards <- NULL}}
-  } else { parameterLimit <- NULL 
-  specialStandards <- NULL  }
-  
-  dat <- dplyr::select(basicData, StationID, `Collection Date`, Depth, Measure = !! parameter) %>%
-    filter( !is.na(Measure))
-  
-  if(nrow(dat) > 0){
-    dat <- left_join(dat, WQSlookup, by = c('StationID')) %>%
-      mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
-      mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
-      # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
-      left_join(WQSvalues, by = 'CLASS_BASIN') %>%
-      dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
-      rename('CLASS' = 'CLASS.x') %>%
-      # add standards info if available
-      {if(!is.null(parameterLimit))
-        dplyr::select(., StationID, `Collection Date`, Depth, Measure, Standard = !!parameterLimit) 
-        else dplyr::select(., StationID, `Collection Date`, Depth, Measure) } %>%
-      # pH special standards correction
-      {if(!is.null(specialStandards))
-        mutate(., Standard1 = specialStandards[1], Standard2 = specialStandards[2])
-        else . } %>%
-      mutate(units = parameterUnits) 
-      #return(dat)
-    plot_ly(data=dat) %>%
-      {if(parameter %in% c('Temperature', 'DO'))
-        add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
-                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-        else . } %>%
-      {if(parameter %in% c('pH'))
-        add_lines(.,  x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
-                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
-          add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
-                    hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-        else . } %>%
-      add_markers(data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
-                  marker = list(color= '#535559'), hoverinfo="text",
-                  text=~paste(sep="<br>",
-                              paste("Sample Date: ",`Collection Date`),
-                              paste("Depth: ",Depth, "m"),
-                              paste(parameter, ": ",Measure," (mg/L)"))) %>%
-      layout(showlegend=FALSE,
-             yaxis=list(title=paste(parameter, unique(dat$units))),
-             xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
-    }
-}
-
+# parameter graph
 parameterPlotly(basicData, 'Temperature', unitData, WQSlookup) 
 
 
+# Compare to Prob Estimates section
+# for now only keep estimates we can crosswalk to WQM data
+#probEst <- filter(probEst, Indicator %in% filter(unitData, AltName %in% names(basicData))$Indicator) 
+
+# Find central tendency of each parameter based on filtered window
+median_n <- list(
+  median = ~signif(median(.x, na.rm = TRUE), digits = 2), 
+  mean = ~signif(mean(.x, na.rm = TRUE), digits = 2), 
+  n = ~sum(ifelse(!is.na(.x), 1,0))#, na.rm = TRUE)
+)
+
+centralTendencies <- function(basicData){
+  dplyr::select(basicData, StationID, probIndicators$AltName) %>%
+    group_by(StationID) %>%
+    summarise(across(where(is.numeric), median_n)) }
+
+probComparison <- centralTendencies(basicData)  
+  
+# User chooses an indicator
+indicatorOptions <- probIndicators$AltName[1]
+indicator <- filter(probIndicators, Indicator %in% indicatorOptions)$Indicator
+
+# Compare median of selected indicator to prob estimates
+subFunction <- function(cdftable,parameter,userInput){
+  return(filter(cdftable,Subpopulation%in%userInput & Indicator%in%parameter))
+}
+View(subFunction(probEst, parameter = indicator, 'Virginia'))
+
+subFunction2 <- function(cdftable,userValue){
+  return(filter(cdftable,Estimate.P%in%userValue))
+}
+
+subFunction2(subFunction(probEst, parameter = indicator, 'Virginia'), 50)
+
+vlookup(probComparison$indicator,filter(probEst, Indicator),2,range=TRUE)
 
 
 
+# CDF plot function
+cdfplot <- function(prettyParameterName,parameter,indicator,dataset,CDFsettings){
+  cdfsubset <- subFunction(cdfdata,parameter,indicator)
+  avg1 <- as.numeric(filter(dataset,Statistic==indicator)[,2])
+  avg <- subFunction2(cdfsubset,avg1)
+  med1 <- as.numeric(filter(dataset,Statistic==indicator)[,3]) 
+  med <- subFunction2(cdfsubset,med1)
+  m <- max(cdfsubset$NResp)
+  p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
+    labs(x=paste(prettyParameterName,unique(cdfsubset$units),sep=" "),y="Percentile") +
+    ggtitle(paste(indicator,prettyParameterName,"Percentile Graph ( n=",m,")",sep=" ")) + 
+    theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
+    theme(axis.title = element_text(face='bold',size=12))+
+    
+    CDFsettings  +
+    
+    geom_point() +
+    geom_point(data=avg,color='orange',size=4) + geom_text(data=avg,label='Average',hjust=1.2) +
+    geom_point(data=med,color='gray',size=4)+ geom_text(data=med,label='Median',hjust=1.2) 
+  return(p1)
+}
+
+
+
+
+# Return percentile 
+percentileTable <- function(statsTable,parameter,userBasin,userEco,userOrder,stationName){
+  out <- statsTable%>%select_("Statistic",parameter)%>% spread_("Statistic",parameter)%>%
+    mutate(Statistic=stationName)%>%select(Statistic,everything())
+  va <- data.frame(filter(cdfdata,Subpopulation=='Virginia',Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  basin <- data.frame(filter(cdfdata,Subpopulation==userBasin,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  eco <- data.frame(filter(cdfdata,Subpopulation==userEco,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  order <- data.frame(filter(cdfdata,Subpopulation==userOrder,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  va2 <- data.frame(Statistic='Virginia',Average=vlookup(out$Average,va,2,range=TRUE),Median=vlookup(out$Median,va,2,range=TRUE))
+  basin2 <- data.frame(Statistic=userBasin,Average=vlookup(out$Average,basin,2,TRUE),Median=vlookup(out$Median,basin,2,TRUE))
+  eco2 <- data.frame(Statistic=userEco,Average=vlookup(out$Average,eco,2,TRUE),Median=vlookup(out$Median,eco,2,TRUE))
+  order2 <- data.frame(Statistic=userOrder,Average=vlookup(out$Average,order,2,TRUE),Median=vlookup(out$Median,order,2,TRUE))
+  out_final <- rbind(out,va2,basin2,eco2,order2)
+  return(out_final)
+}
+cdfdata <- probEst
+out <- filter()
+
+out <- statsTable %>%
+  dplyr::select(StationID, starts_with(parameter)) %>%
+  group_by(StationID) %>%
+  pivot_longer(cols = starts_with(parameter), names_to = 'Statistic', values_to = 'Value')
+    
+
+va2 <- data.frame(Statistic='Virginia',
+                  Average=vlookup(filter(out, str_detect(Statistic, 'mean')) %>% pull(Value), va, 2, range=TRUE),
+                  Median=vlookup(filter(out, str_detect(Statistic, 'median')) %>% pull(Value), va, 2, range=TRUE))
+basin2 <- data.frame(Statistic=userBasin,
+                  Average=vlookup(filter(out, str_detect(Statistic, 'mean')) %>% pull(Value), basin, 2, range=TRUE),
+                  Median=vlookup(filter(out, str_detect(Statistic, 'median')) %>% pull(Value), basin, 2, range=TRUE))
+eco2 <- data.frame(Statistic=userEco,
+                  Average=vlookup(filter(out, str_detect(Statistic, 'mean')) %>% pull(Value), eco, 2, range=TRUE),
+                  Median=vlookup(filter(out, str_detect(Statistic, 'median')) %>% pull(Value), eco, 2, range=TRUE))
+
+
+percentileTable(statsTable = probComparison, parameter = "pH",userBasin = 'Roanoke Basin',userEco = 'Blue Ridge Mountains',userOrder = 'Fourth',stationName= '2-JKS023.61')
+#percentileTable(stats(),"pH",input$Basin,input$Ecoregion,input$StreamOrder,unique(inputFile()$StationID))
