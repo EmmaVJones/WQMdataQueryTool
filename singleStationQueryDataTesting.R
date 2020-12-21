@@ -17,6 +17,9 @@ subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) %>%
   dplyr::select(SUBBASIN, SubbasinVAHU6code)
 
+WQSlookup <- readRDS('C:/HardDriveBackup/R/pins11182020/ejones/WQSlookup-withStandards.RDS')
+  # while server is up
+  #pin_get("WQSlookup-withStandards",  board = "rsconnect")
 
 
 
