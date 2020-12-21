@@ -17,6 +17,7 @@ library(config)
 
 #Bring in VLOOKUP-like function written in R
 source('vlookup.R')
+source('cdfRiskTable.R')
 
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
@@ -60,7 +61,7 @@ onStop(function() {
 })
 
 
-unitData <- read_csv('data/probIndicatorUnits.csv')
+unitData <- read_csv('data/probParameterUnits.csv')
 # Temporary list that we can compare data to. Maybe we increase to benthic metrics, MCCU, + more in time
 probIndicators <- filter(unitData, AltName %in% #names(basicData))$AltName
                            c("DO", "pH", "Specific Conductance", "Total Nitrogen", "Total Phosphorus", "Total Dissolved Solids",
@@ -72,7 +73,7 @@ probIndicators <- filter(unitData, AltName %in% #names(basicData))$AltName
                   #  "SSCCOARSE", "SSCFINE", "ARSENIC", "BARIUM", "BERYLLIUM", "CADMIUM", "CHROMIUM", "COPPER", "IRON", 
                   #  "LEAD", "MANGANESE", "THALLIUM", "NICKEL", "SILVER", "ZINC", "ANTIMONY", "ALUMINUM" ,"SELENIUM", "HARDNESS" )
 probEst <- readRDS('data/IR2020probMonCDFestimates.RDS') %>%
-  filter(Indicator %in% probIndicators$Indicator)
+  filter(Indicator %in% probIndicators$Parameter)
 
 
 
@@ -371,4 +372,87 @@ parameterPlotly <- function(basicData,
              yaxis=list(title=paste(parameter, unique(dat$units))),
              xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
   }
+}
+
+
+
+
+# Find central tendency of each parameter based on filtered window
+median_n <- list(
+  median = ~signif(median(.x, na.rm = TRUE), digits = 2), 
+  mean = ~signif(mean(.x, na.rm = TRUE), digits = 2), 
+  n = ~sum(ifelse(!is.na(.x), 1,0))#, na.rm = TRUE)
+)
+
+centralTendencies <- function(basicData){
+  dplyr::select(basicData, StationID, probIndicators$AltName) %>%
+    group_by(StationID) %>%
+    pivot_longer(-StationID, names_to = 'parameter', values_to = 'measure') %>%
+    group_by(StationID, parameter) %>%
+    summarize(Median = signif(median(measure, na.rm = TRUE), digits = 2),
+              Mean = signif(mean(measure, na.rm = TRUE), digits = 2),
+              n = sum(ifelse(!is.na(measure), 1,0))) %>%
+    pivot_longer(-c(StationID, parameter), names_to= 'Statistic', values_to = 'value') %>%
+    pivot_wider(names_from = parameter, values_from = value) %>% ungroup() }
+
+
+
+
+
+# Compare median of selected indicator to prob estimates
+subFunction <- function(cdftable,parameter,userInput){
+  return(filter(cdftable,Subpopulation%in%userInput & Indicator%in%parameter))
+}
+#View(subFunction(probEst, parameter = parameter, 'Virginia'))
+
+subFunction2 <- function(cdftable,userValue){
+  return(filter(cdftable,Estimate.P %in% userValue))
+}
+#subFunction2(subFunction(probEst, parameter = parameter, 'Virginia'), 48.14737)
+
+
+
+
+# Return CDF percentile 
+percentileTable <- function(cdfdata, statsTable,parameter,userBasin,userEco,userOrder){
+  out <- statsTable %>%
+    dplyr::select(StationID, Statistic, starts_with(parameter))
+  va <- data.frame(filter(cdfdata,Subpopulation=='Virginia',Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  basin <- data.frame(filter(cdfdata,Subpopulation==userBasin,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  eco <- data.frame(filter(cdfdata,Subpopulation==userEco,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  #order <- data.frame(filter(cdfdata,Subpopulation==userOrder,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+  out_final <- list(statistics = out, 
+                    percentiles = data.frame(Subpopulation = 'Virginia',
+                                             Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE),
+                                             Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE)) %>%
+                      bind_rows(data.frame(Subpopulation = userBasin,
+                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE),
+                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE))) %>%
+                      bind_rows(data.frame(Subpopulation = userEco,
+                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE),
+                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE))) )
+  return(out_final)
+}
+
+
+# CDF plot function
+cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset,CDFsettings){
+  cdfsubset <- subFunction(cdfdata,parameter,subpopulation)
+  avg1 <- filter(dataset$percentiles, Subpopulation == subpopulation) %>% pull(Average)#filter(dataset$statistics, Statistic == "Mean")$DO
+  avg <- subFunction2(cdfsubset,avg1)
+  med1 <- filter(dataset$percentiles, Subpopulation == subpopulation) %>% pull(Median)
+  med <- subFunction2(cdfsubset,med1)
+  m <- max(cdfsubset$NResp)
+  p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
+    labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
+    ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
+    theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
+    theme(axis.title = element_text(face='bold',size=12))+
+    
+    CDFsettings  +
+    
+    geom_point() +
+    geom_point(data=avg,color='orange',size=4) + geom_text(data=avg,label='Average',hjust=1.2) +
+    geom_point(data=med,color='gray',size=4)+ geom_text(data=med,label='Median',hjust=1.2) 
+  return(p1)
 }
