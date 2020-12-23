@@ -29,23 +29,23 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 
 
 ## For testing: connect to ODS production
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQL Server Native Client 11.0", 
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  trusted_connection = "yes"
-)
-
-# For deployment on the R server: Set up pool connection to production environment
 #pool <- dbPool(
 #  drv = odbc::odbc(),
-#  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
+#  Driver = "SQL Server Native Client 11.0", 
 #  Server= "DEQ-SQLODS-PROD,50000",
 #  dbname = "ODS",
-#  UID = conn$UID_prod, 
-#  PWD = conn$PWD_prod,
+#  trusted_connection = "yes"
+#)
+
+# For deployment on the R server: Set up pool connection to production environment
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod, 
+  PWD = conn$PWD_prod,
   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
   # Test environment
@@ -53,8 +53,8 @@ pool <- dbPool(
   #dbname = "ODS_test",
   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-#  trusted_connection = "yes"
-#)
+  trusted_connection = "yes"
+)
 
 onStop(function() {
   poolClose(pool)
@@ -64,17 +64,23 @@ onStop(function() {
 unitData <- read_csv('data/probParameterUnits.csv')
 # Temporary list that we can compare data to. Maybe we increase to benthic metrics, MCCU, + more in time
 probIndicators <- filter(unitData, AltName %in% #names(basicData))$AltName
-                           c("DO", "pH", "Specific Conductance", "Total Nitrogen", "Total Phosphorus", "Total Dissolved Solids",
+                           c("Dissolved Oxygen", "pH", "Specific Conductance", "Total Nitrogen", "Total Phosphorus", "Total Dissolved Solids",
                              "Ammonia", "Total Nitrate Nitrogen", "Ortho Phosphorus", "Turbidity", "Total Suspended Solids", "Sodium", 
                              "Potassium", "Chloride", "Sulfate", "Suspended Sediment Concentration Coarse", "Suspended Sediment Concentration Fine",
                              "Arsenic", "Barium", "Beryllium", "Cadmium", "Chromium", "Copper", "Iron", "Lead", "Manganese", "Thallium", "Nickel",                                 
-                             "Silver", "Zinc", "Antimony", "Aluminum", "Selenium", "Hardness", "Ecoli"))
-  #c("DO", "pH", "SpCond", "TN", "TP", "TDS", "NH4", "NO3", "Turb", "TSS", "Na", "K", "Cl", "Sf", 
-                  #  "SSCCOARSE", "SSCFINE", "ARSENIC", "BARIUM", "BERYLLIUM", "CADMIUM", "CHROMIUM", "COPPER", "IRON", 
-                  #  "LEAD", "MANGANESE", "THALLIUM", "NICKEL", "SILVER", "ZINC", "ANTIMONY", "ALUMINUM" ,"SELENIUM", "HARDNESS" )
+                             "Silver", "Zinc", "Antimony", "Aluminum", "Selenium", "Hardness"))
 probEst <- readRDS('data/IR2020probMonCDFestimates.RDS') %>%
-  filter(Indicator %in% probIndicators$Parameter)
-
+  filter(Indicator %in% probIndicators$Parameter) %>%
+  # work around until basin system standardized on Probmon estimate side
+  mutate(Subpopulation = case_when(Subpopulation == 'Roanoke Basin' ~ 'Roanoke',
+                                   Subpopulation == 'James Basin' ~ 'James',
+                                   Subpopulation == 'Blue Ridge Mountains' ~ 'Blue Ridge',
+                                   Subpopulation == 'Central Appalachian Ridges and Valleys' ~ 'Ridge and Valley',
+                                   Subpopulation == 'James Basin' ~ 'James',
+                                   TRUE ~ as.character(Subpopulation)))
+#unique(ecoregion$US_L3NAME)
+#[1] Blue Ridge                    Central Appalachians          Middle Atlantic Coastal Plain Northern Piedmont             Piedmont                     
+#[6] Ridge and Valley              Southeastern Plains 
 
 
 # WQS information for functions
@@ -100,16 +106,27 @@ WQSvalues <- tibble(CLASS_BASIN = c('I',"II","II_7","III","IV","V","VI","VII"),
 
 # Pull as many details about station from REST service (if available). Work around provided in case station isn't on REST server
 ## Pull station info from REST service
-WQM_Station_Full_REST_request <- function(pool, station){
+WQM_Station_Full_REST_request <- function(pool, station, subbasinVAHU6crosswalk, subbasins, ecoregion){
   WQM_Station_Full_REST <- suppressWarnings(
     geojson_sf(
       paste0("https://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%27",
-             toupper(station),"%27&outFields=*&f=geojson")))
-  
+             toupper(station),"%27&outFields=*&f=geojson"))) 
+
   if(nrow(WQM_Station_Full_REST ) > 0){
-    WQM_Station_Full_REST <- mutate(WQM_Station_Full_REST, WQM_YRS_YEAR = ifelse(!is.na(WQM_YRS_YEAR), lubridate::year(as.Date(as.POSIXct(WQM_YRS_YEAR/1000, origin="1970-01-01"))), NA))
+    WQM_Station_Full_REST <- mutate(WQM_Station_Full_REST, WQM_YRS_YEAR = ifelse(!is.na(WQM_YRS_YEAR), lubridate::year(as.Date(as.POSIXct(WQM_YRS_YEAR/1000, origin="1970-01-01"))), NA)) %>% 
+      left_join(dplyr::select(subbasinVAHU6crosswalk, SubbasinVAHU6code, BASIN_NAME), by = c('BASINS_VAHUSB' = 'SubbasinVAHU6code'))
     WQM_Station_Full_REST <- bind_cols(WQM_Station_Full_REST, st_coordinates(WQM_Station_Full_REST) %>% as_tibble()) %>%
-      mutate(Latitude = Y, Longitude = X) # add lat/lng in DD
+      mutate(Latitude = Y, Longitude = X) %>% # add lat/lng in DD
+      # have to strip geometry and add it back in to get st_intersection to work for some reason
+      st_drop_geometry() %>%
+      st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
+               remove = F, # don't remove these lat/lon cols from df
+               crs = 4326)
+    stationBasin <- suppressMessages(suppressWarnings(st_intersection(WQM_Station_Full_REST, subbasins)$ProbBasin))
+    stationSuperBasin <- suppressMessages(suppressWarnings(st_intersection(WQM_Station_Full_REST, subbasins)$ProbSuperBasin))
+    
+    WQM_Station_Full_REST <- mutate(WQM_Station_Full_REST, ProbBasin = stationBasin, ProbSuperBasin = stationSuperBasin)
+    
   } else { # station doesn't yet exist in WQM full dataset
     # get what we can from CEDS
     stationGISInfo <- pool %>% tbl( "WQM_Sta_GIS_View") %>%
@@ -119,7 +136,8 @@ WQM_Station_Full_REST_request <- function(pool, station){
     WQM_Station_Full_REST <- suppressWarnings(
       geojson_sf(
         paste0("https://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%272-JKS023.61%27&outFields=*&f=geojson")))[1,] %>%
-      mutate(WQM_YRS_YEAR = ifelse(!is.na(WQM_YRS_YEAR), lubridate::year(as.Date(as.POSIXct(WQM_YRS_YEAR/1000, origin="1970-01-01"))), NA)) %>%
+      mutate(WQM_YRS_YEAR = ifelse(!is.na(WQM_YRS_YEAR), lubridate::year(as.Date(as.POSIXct(WQM_YRS_YEAR/1000, origin="1970-01-01"))), NA)) %>% 
+      left_join(dplyr::select(subbasinVAHU6crosswalk, SubbasinVAHU6code, BASIN_NAME), by = c('BASINS_VAHUSB' = 'SubbasinVAHU6code')) %>%
       st_drop_geometry()
     WQM_Station_Full_REST <- bind_rows(WQM_Station_Full_REST[0,],
                                        tibble(STATION_ID = stationGISInfo$Station_Id, 
@@ -129,7 +147,14 @@ WQM_Station_Full_REST_request <- function(pool, station){
                                               BASINS_VAHU6 = stationGISInfo$Huc6_Vahu6) ) %>%
       st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
                remove = F, # don't remove these lat/lon cols from df
-               crs = 4326)    }
+               crs = 4326)   
+    # add in basin and ecoregion information
+    stationEcoregion <- suppressMessages(suppressWarnings(st_intersection(WQM_Station_Full_REST, ecoregion)$US_L3NAME))
+    stationBasin <- suppressMessages(suppressWarnings(st_intersection(WQM_Station_Full_REST, subbasins)$ProbBasin))
+    stationSuperBasin <- suppressMessages(suppressWarnings(st_intersection(WQM_Station_Full_REST, subbasins)$ProbSuperBasin))
+    
+    WQM_Station_Full_REST <- mutate(WQM_Station_Full_REST, EPA_ECO_US_L3NAME = stationEcoregion, ProbBasin = stationBasin, ProbSuperBasin = stationSuperBasin)
+    }
   return(WQM_Station_Full_REST) }
 
 ## Pull CEDS Station Information 
@@ -172,7 +197,8 @@ stationSummarySampingMetrics <- function(stationInfo_sf){
 # Organize field and analyte info into prettier table
 stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDataRaw, repFilter, averageResults){
   if(averageResults == TRUE){
-    inner_join(stationFieldDataRaw,
+    suppressWarnings(
+    full_join(stationFieldDataRaw,
                stationAnalyteDataRaw %>%
                  filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
                  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
@@ -181,16 +207,17 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
                  pivot_wider(names_from = c('Ana_Parameter_Name'), names_sep = " | ", 
                              values_from = "Ana_Value",
                              values_fn = list(Ana_Value = mean)),
-               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) 
+               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) )
   } else {
-    inner_join(stationFieldDataRaw,
+    suppressWarnings(
+    full_join(stationFieldDataRaw,
                stationAnalyteDataRaw %>%
                  filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
                  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd) %>%
                  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd, Ana_Parameter_Name, Ana_Value) %>%
                  pivot_wider(names_from = c('Ana_Parameter_Name','Ana_Sam_Mrs_Lcc_Parm_Group_Cd'), names_sep = " | ", 
                              values_from = "Ana_Value"),
-               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) }
+               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) )}
 }
 
 
@@ -198,7 +225,8 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
 uniqueCollector <- function(stationFieldAnalyte){
   stationFieldAnalyte %>%
     group_by(Fdt_Sta_Id, Fdt_Collector_Id) %>%
-    summarise(`n Samples` = n()) 
+    summarise(`n Samples` = n()) %>%
+    arrange(desc(`n Samples`))
 }
 
 
@@ -229,7 +257,20 @@ concatenateCols <- function(df, containString){
     unite(newCol, contains(containString), na.rm = TRUE) %>%
     mutate(newCol = as.numeric(newCol)) %>%
     pull()} else {as.numeric(rep(NA, nrow(x)))}
-}#
+}
+
+concatenateCols2 <- function(df, containString){
+  x <- dplyr::select(df, contains(containString)) 
+  if(length(x) == 0){as.numeric(rep(NA, nrow(x)))}
+  if(length(x) == 1){as.numeric(x %>% pull()) }
+  if(length(x) > 1){
+    mutate_if(x, is.numeric, as.character) %>%
+      na_if('NA') %>%
+      unite(newCol, contains(containString), na.rm = TRUE) %>%
+      mutate(newCol = as.numeric(newCol)) %>%
+      pull()} 
+}
+
 #concatenateCols(stationFieldAnalyte,  'CHLOROPHYLL-A UG/L SPECTROPHOTOMETRIC ACID. METH') #'SUSP. SED. CONC. TOTAL, MG/L,(Method B)')#, 
 #df <- stationFieldAnalyte; containString <- 'E.COLI'
 
@@ -242,6 +283,7 @@ concatenateCols <- function(df, containString){
 
 
 basicSummary <- function(stationFieldAnalyte){
+  suppressWarnings(
   mutate(stationFieldAnalyte, 
          blankColForSelect = NA, # placeholder to enable selection below
          StationID = Fdt_Sta_Id,
@@ -256,7 +298,7 @@ basicSummary <- function(stationFieldAnalyte){
          `Tide Code` = Fdt_Tide_Code,
          Temperature = Fdt_Temp_Celcius,
          pH = Fdt_Field_Ph,
-         DO = case_when(!is.na(Fdt_Do_Probe) ~ Fdt_Do_Probe,
+         `Dissolved Oxygen` = case_when(!is.na(Fdt_Do_Probe) ~ Fdt_Do_Probe,
                         !is.na(Fdt_Do_Optical) ~ Fdt_Do_Optical,
                         !is.na(Fdt_Do_Winkler) ~ Fdt_Do_Winkler,
                         TRUE ~ as.numeric(NA)),
@@ -308,10 +350,16 @@ basicSummary <- function(stationFieldAnalyte){
          `Total Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, TOTAL ORGANIC (MG/L AS C)'),
          `Dissolved Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, DISSOLVED ORGANIC (MG/L AS C)'),
          `Benthic Ash Free Dry Mass` = concatenateCols(stationFieldAnalyte, 'BENTHIC ASH FREE DRY MASS, GM/M2')) %>%
-    dplyr::select(-c(Fdt_Id:blankColForSelect) )   
+    dplyr::select(StationID, `Collection Date`, Comments, `Collector ID`, `Run ID`, `SPG Code`, `SPG Description`,
+                  Depth, `Weather Code`, `Tide Code`, Temperature, pH, `Dissolved Oxygen`, `DO Percent Saturation`,
+                  `Specific Conductance`, Salinity, Turbidity, `Secchi Depth`, Hardness, Ecoli, Enterococci, `Fecal Coliform`,
+                  `Total Nitrogen`, `Total Nitrate Nitrogen`, `Total Kjeldahl Nitrogen`, `Ammonia`, `Total Phosphorus`, `Ortho Phosphorus`, 
+                  `Chlorophyll a`, Turbidity, `Total Dissolved Solids`, `Total Suspended Solids`, `Suspended Sediment Concentration Coarse`, 
+                  `Suspended Sediment Concentration Fine`, `Calcium`, `Magnesium`, `Sodium`, `Potassium`, `Chloride`, `Sulfate`, `Arsenic`, 
+                  `Barium`, `Beryllium`, `Cadmium`, `Chromium`, `Copper`, `Iron`, `Lead`, `Manganese`, `Thallium`, `Nickel`, `Silver`, 
+                  `Strontium`, `Zinc`, `Antimony`, `Aluminum`, `Selenium`, `Fecal Coliform`, `Total Organic Carbon`, `Dissolved Organic Carbon`, 
+                  `Benthic Ash Free Dry Mass` )   )
 }
-
-
 
 
 parameterPlotly <- function(basicData,
@@ -319,9 +367,9 @@ parameterPlotly <- function(basicData,
                             unitData,
                             WQSlookup){
   parameterUnits <- filter(unitData, AltName %in% !!parameter)$Units
-  if(parameter %in% c('Temperature', 'DO', "pH")){
+  if(parameter %in% c('Temperature', 'Dissolved Oxygen', "pH")){
     if(parameter == 'Temperature'){parameterLimit <- 'Max Temperature (C)'; specialStandards <- NULL}
-    if(parameter == 'DO'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
+    if(parameter == 'Dissolved Oxygen'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
     if(parameter == 'pH'){
       parameterLimit <- c('pH Min', 'pH Max')
       if(nrow(filter(WQSlookup, StationID %in% unique(basicData$StationID)) %>% 
@@ -352,7 +400,7 @@ parameterPlotly <- function(basicData,
       mutate(units = parameterUnits) 
     #return(dat)
     plot_ly(data=dat) %>%
-      {if(parameter %in% c('Temperature', 'DO'))
+      {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
         add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
                   hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
         else . } %>%
@@ -384,7 +432,7 @@ median_n <- list(
   n = ~sum(ifelse(!is.na(.x), 1,0))#, na.rm = TRUE)
 )
 
-centralTendencies <- function(basicData){
+centralTendenciesCalculation <- function(basicData){
   dplyr::select(basicData, StationID, probIndicators$AltName) %>%
     group_by(StationID) %>%
     pivot_longer(-StationID, names_to = 'parameter', values_to = 'measure') %>%
@@ -414,45 +462,88 @@ subFunction2 <- function(cdftable,userValue){
 
 
 # Return CDF percentile 
-percentileTable <- function(cdfdata, statsTable,parameter,userBasin,userEco,userOrder){
+#cdfdata <- probEst
+#statsTable <- probComparison 
+#prettyParameterName <- 'Specific Conductance'
+#parameter <- 'SpCond'
+#userBasin <- 'James'
+#userEcoregion <- "Blue Ridge" 
+#userOrder <- NA
+#rm(cdfdata); rm(statsTable); rm(parameter); rm(userBasin); rm(userEcoregion); rm(userOrder); rm(out); rm(va);rm(basin); rm(eco); rm(out_final); rm(prettyParameterName)
+percentileTable <- function(cdfdata, statsTable,prettyParameterName, parameter, userSuperBasin, userBasin, userEcoregion,userOrder){
   out <- statsTable %>%
-    dplyr::select(StationID, Statistic, starts_with(parameter))
-  va <- data.frame(filter(cdfdata,Subpopulation=='Virginia',Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
-  basin <- data.frame(filter(cdfdata,Subpopulation==userBasin,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
-  eco <- data.frame(filter(cdfdata,Subpopulation==userEco,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
+    dplyr::select(StationID, Statistic, starts_with(prettyParameterName))
+  va <- bind_rows(data.frame(Value= 0, `Estimate.P` = 0),
+                  data.frame(filter(cdfdata,Subpopulation=='Virginia',Indicator==parameter)%>%select(Value,Estimate.P)) )# needs to be df for vlookup to work
+  if(!is.na(userSuperBasin)){
+    superbasin <- bind_rows(data.frame(Value= 0, `Estimate.P` = 0),
+                            data.frame(filter(cdfdata,Subpopulation==userSuperBasin,Indicator==parameter)%>%select(Value,Estimate.P)) ) } # needs to be df for vlookup to work
+  basin <- bind_rows(data.frame(Value= 0, `Estimate.P` = 0),
+                     data.frame(filter(cdfdata,Subpopulation==userBasin,Indicator==parameter)%>%select(Value,Estimate.P)) )# needs to be df for vlookup to work
+  eco <- bind_rows(data.frame(Value= 0, `Estimate.P` = 0),
+                   data.frame(filter(cdfdata,Subpopulation==userEcoregion,Indicator==parameter)%>%select(Value,Estimate.P))) # needs to be df for vlookup to work
   #order <- data.frame(filter(cdfdata,Subpopulation==userOrder,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
   out_final <- list(statistics = out, 
                     percentiles = data.frame(Subpopulation = 'Virginia',
-                                             Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE),
-                                             Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE)) %>%
+                                             Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), va, 2, range=TRUE),
+                                             Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), va, 2, range=TRUE)) %>%
+                      {if(!is.na(userSuperBasin))
+                        bind_rows(., data.frame(Subpopulation = userSuperBasin,
+                                             Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), superbasin, 2, range=TRUE),
+                                             Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), superbasin, 2, range=TRUE)))
+                        else bind_rows(., data.frame(Subpopulation = userSuperBasin,
+                                                  Average = NA,
+                                                  Median = NA))} %>%
                       bind_rows(data.frame(Subpopulation = userBasin,
-                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE),
-                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE))) %>%
-                      bind_rows(data.frame(Subpopulation = userEco,
-                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE),
-                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE))) )
+                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), basin, 2, range=TRUE),
+                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), basin, 2, range=TRUE))) %>%
+                      bind_rows(data.frame(Subpopulation = userEcoregion,
+                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), eco, 2, range=TRUE),
+                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(prettyParameterName)) %>% pull(), eco, 2, range=TRUE))) )
   return(out_final)
 }
 
+# Giant list of percentile information
+percentileList <- function(probEst, probComparison, probIndicators, userSuperBasin, userBasin, userEcoregion, userOrder){
+  percentiles <- list()
+  for(i in names(dplyr::select(probComparison, -c(StationID, Statistic)))){
+    #print(i)
+    parameterSwitch <- filter(probIndicators, AltName %in% i)$Parameter
+    percentiles[[i]] <- percentileTable(probEst, probComparison, i, parameterSwitch, userSuperBasin, userBasin, userEcoregion, userOrder)
+  }
+  return(percentiles)
+}
 
 # CDF plot function
 cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset,CDFsettings){
   cdfsubset <- subFunction(cdfdata,parameter,subpopulation)
-  avg1 <- filter(dataset$percentiles, Subpopulation == subpopulation) %>% pull(Average)#filter(dataset$statistics, Statistic == "Mean")$DO
+  avg1 <- filter(dataset[[prettyParameterName]]$percentiles, Subpopulation == subpopulation) %>% pull(Average)#filter(dataset$statistics, Statistic == "Mean")$DO
   avg <- subFunction2(cdfsubset,avg1)
-  med1 <- filter(dataset$percentiles, Subpopulation == subpopulation) %>% pull(Median)
+  med1 <- filter(dataset[[prettyParameterName]]$percentiles, Subpopulation == subpopulation) %>% pull(Median)
   med <- subFunction2(cdfsubset,med1)
   m <- max(cdfsubset$NResp)
-  p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
-    labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
-    ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
-    theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
-    theme(axis.title = element_text(face='bold',size=12))+
-    
-    CDFsettings  +
-    
-    geom_point() +
-    geom_point(data=avg,color='orange',size=4) + geom_text(data=avg,label='Average',hjust=1.2) +
-    geom_point(data=med,color='gray',size=4)+ geom_text(data=med,label='Median',hjust=1.2) 
+  if(is.null(CDFsettings)){
+    p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
+      labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
+      ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
+      theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
+      theme(axis.title = element_text(face='bold',size=12))+
+      geom_point() +
+      geom_point(data=avg,color='orange',size=4) + geom_text(data=avg,label='Average',hjust=1.2) +
+      geom_point(data=med,color='gray',size=4)+ geom_text(data=med,label='Median',hjust=1.2) 
+  } else {
+    p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
+      labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
+      ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
+      theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
+      theme(axis.title = element_text(face='bold',size=12))+
+      
+      CDFsettings  +
+      
+      geom_point() +
+      geom_point(data=avg,color='orange',size=4) + geom_text(data=avg,label='Average',hjust=1.2) +
+      geom_point(data=med,color='gray',size=4)+ geom_text(data=med,label='Median',hjust=1.2) 
+  }
+  
   return(p1)
 }

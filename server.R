@@ -6,11 +6,28 @@ assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
   st_transform( st_crs(4326)) 
 subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
   rename('SUBBASIN' = 'SUBBASIN_1') %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN)))
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
+  mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
+                               SUBBASIN == 'Chowan River' ~ 'Chowan',
+                               SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
+                               SUBBASIN == 'New River' ~ 'New',
+                               SUBBASIN == 'Potomac River' ~ 'Potomac',
+                               SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
+                               SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
+                               SUBBASIN == 'Roanoke River' ~ 'Roanoke',
+                               SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
+                               SUBBASIN == 'Holston River' ~ 'Holston',
+                               SUBBASIN == 'York River' ~ 'York',
+                               TRUE ~ as.character(NA)),
+         ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
+                                    SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
+                                    SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
+                                    TRUE ~ as.character(NA)))
+
 subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
   filter(!is.na(SubbasinVAHU6code)) %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) %>%
-  dplyr::select(SUBBASIN, SubbasinVAHU6code)
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
+#dplyr::select(SUBBASIN, SubbasinVAHU6code)
 
 WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
 
@@ -36,7 +53,7 @@ shinyServer(function(input, output, session) {
   
   ## Pull station info from REST service
   WQM_Station_Full_REST <- reactive({req(input$begin, nrow(reactive_objects$stationInfo) != 0)
-    WQM_Station_Full_REST_request(pool, input$station)})
+    WQM_Station_Full_REST_request(pool, input$station, subbasinVAHU6crosswalk, subbasins, ecoregion)})
   
   
   ## Pull Station Information 
@@ -125,7 +142,6 @@ shinyServer(function(input, output, session) {
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
   
-  
   ## Field and Analyte Data Date Range 
   output$dateRangeFilter_ <- renderUI({ req(reactive_objects$stationFieldData)
     dateRangeInput('dateRangeFilter',
@@ -137,15 +153,16 @@ shinyServer(function(input, output, session) {
   stationFieldAnalyteDateRange <- reactive({req(reactive_objects$stationFieldData, input$dateRangeFilter, input$repFilter, input$averageParameters)
     stationFieldAnalyteDataPretty( filter(reactive_objects$stationAnalyteData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
                                    filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
-                                   repFilter = input$repFilter, averageResults = ifelse(input$averageParameters == 'Report all available parameters', FALSE, TRUE) ) })
-    
+                                   repFilter = input$repFilter, averageResults = ifelse(input$averageParameters == 'Average parameters by sample date', TRUE, FALSE) ) })
+  
+  
+  
   ## Data Summary  
   output$stationFieldAnalyte <-  renderDataTable({ req(stationFieldAnalyteDateRange())
     z <- stationFieldAnalyteDateRange() %>% # drop all empty columns ( this method longer but handles dttm issues)
       map(~.x) %>%
       discard(~all(is.na(.x))) %>%
       map_df(~.x)
-    print(z)
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
                              pageLength = nrow(z), 
@@ -182,7 +199,7 @@ shinyServer(function(input, output, session) {
     datatable(basicStationSummary(), rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px', pageLength = nrow(basicStationSummary()), 
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSbasicFieldAnalyteData',input$station, Sys.Date())),
-                                                                                    'colvis')), selection = 'none')})
+                                          'colvis')), selection = 'none')})
   
   ## Visualization Tools: Parameter Plot Tab
   
@@ -190,7 +207,88 @@ shinyServer(function(input, output, session) {
     parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup) })
   
   ## Visualization Tools: Probabilistic Estimates Tab
+  centralTendencies <- reactive({ req(basicStationSummary())
+    centralTendenciesCalculation(basicStationSummary())})
   
-  #output$test1 <- renderPrint({reactive_objects$stationFieldData})
-  #output$test2 <- renderPrint({reactive_objects$stationAnalyteData})
+  output$centralTendencies <- renderDataTable({ req(centralTendencies())
+    datatable(centralTendencies(), rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '125px', pageLength = nrow(centralTendencies()), 
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSsummaryFieldAnalyteData',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none') })
+  # %>% the row number gets colored as well making table ineffective
+  #formatStyle("pH", backgroundColor = styleInterval(pHRiskTable$brks, pHRiskTable$clrs))%>%
+  #formatStyle("Dissolved Oxygen", backgroundColor = styleInterval(DORiskTable$brks, DORiskTable$clrs)) %>%
+  #formatStyle("Total Nitrogen", backgroundColor = styleInterval(TNRiskTable$brks, TNRiskTable$clrs))%>%
+  #formatStyle("Total Phosphorus", backgroundColor = styleInterval(TPRiskTable$brks, TPRiskTable$clrs))%>%
+  ##formatStyle("TotalHabitat", backgroundColor = styleInterval(TotHabRiskTable$brks, TotHabRiskTable$clrs))%>%
+  ##formatStyle("LRBS", backgroundColor = styleInterval(LRBSRiskTable$brks, LRBSRiskTable$clrs))%>%
+  ##formatStyle("MetalsCCU", backgroundColor = styleInterval(MetalsCCURiskTable$brks, MetalsCCURiskTable$clrs))%>%
+  #formatStyle("Specific Conductance", backgroundColor = styleInterval(SpCondRiskTable$brks, SpCondRiskTable$clrs))%>%
+  #formatStyle("Total Dissolved Solids", backgroundColor = styleInterval(TDSRiskTable$brks, TDSRiskTable$clrs))%>%
+  #formatStyle("Sulfate", backgroundColor = styleInterval(DSulfateRiskTable$brks, DSulfateRiskTable$clrs))%>%
+  #formatStyle("Chloride", backgroundColor = styleInterval(DChlorideRiskTable$brks, DChlorideRiskTable$clrs))%>%
+  #formatStyle("Potassium", backgroundColor = styleInterval(DPotassiumRiskTable$brks, DPotassiumRiskTable$clrs))%>%
+  #formatStyle("Sodium", backgroundColor = styleInterval(DSodiumRiskTable$brks, DSodiumRiskTable$clrs)) })
+  
+  
+  
+  
+  # Percentile Data
+  observe({ req(nrow(basicStationSummary()) > 0, nrow(WQM_Station_Full_REST()) > 0)
+    reactive_objects$percentiles <- percentileList(probEst, centralTendencies(), probIndicators, unique(WQM_Station_Full_REST()$ProbSuperBasin), 
+                                                   unique(WQM_Station_Full_REST()$ProbBasin), unique(WQM_Station_Full_REST()$EPA_ECO_US_L3NAME), NA)  })
+  
+  
+  # Statewide CDF plot
+  output$Statewide <- renderPlot({ req(reactive_objects$percentiles, input$parameterSelect)
+    parameterSwitch <- as.character(filter(probIndicators, AltName %in% input$parameterSelect)$Parameter)
+    cdfplot(probEst, as.character(input$parameterSelect), parameterSwitch,  
+            'Virginia', reactive_objects$percentiles, CDFsettingsList[[parameterSwitch]] )  })
+  
+  
+  # SuperBasin CDF plot
+  output$SuperBasin <- renderPlot({ req(reactive_objects$percentiles, input$parameterSelect)
+    if(!is.na(as.character(unique(WQM_Station_Full_REST()$ProbSuperBasin)))){
+      parameterSwitch <- as.character(filter(probIndicators, AltName %in% input$parameterSelect)$Parameter)
+      cdfplot(probEst, as.character(input$parameterSelect), parameterSwitch,    
+              as.character(unique(WQM_Station_Full_REST()$ProbSuperBasin)), reactive_objects$percentiles, CDFsettingsList[[parameterSwitch]] )
+    } })
+  
+  # Basin CDF plot
+  output$Basin <- renderPlot({ req(reactive_objects$percentiles, input$parameterSelect)
+    parameterSwitch <- as.character(filter(probIndicators, AltName %in% input$parameterSelect)$Parameter)
+    cdfplot(probEst, as.character(input$parameterSelect), parameterSwitch,    
+            as.character(unique(WQM_Station_Full_REST()$ProbBasin)), reactive_objects$percentiles, CDFsettingsList[[parameterSwitch]] )  })
+  
+  
+  # Ecoregion CDF plot
+  output$Ecoregion <- renderPlot({ req(reactive_objects$percentiles, input$parameterSelect)
+    parameterSwitch <- as.character(filter(probIndicators, AltName %in% input$parameterSelect)$Parameter)
+    cdfplot(probEst, as.character(input$parameterSelect), parameterSwitch,  
+            as.character(unique(WQM_Station_Full_REST()$EPA_ECO_US_L3NAME)), reactive_objects$percentiles, CDFsettingsList[[parameterSwitch]] )  })
+  
+  
+  
+  
+  # Raw Field Data
+  output$fieldDataRaw <- renderDataTable({ req(reactive_objects$stationFieldData)
+    datatable(reactive_objects$stationFieldData, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationFieldData), 
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawFieldData',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none') })
+  
+  output$analyteDataRaw <- renderDataTable({ req(reactive_objects$stationAnalyteData)
+    datatable(reactive_objects$stationAnalyteData, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationAnalyteData), 
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawAnalyteData',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none') })
+  
+  
+  
+  #output$test1 <- renderPrint({ 
+  #  parameterSwitch <- as.character(filter(probIndicators, AltName %in% input$parameterSelect)$Parameter)
+  #  #print(parameterSwitch)}) 
+  #  glimpse(reactive_objects$percentiles )})
+  
+  #output$test2 <- renderPrint({reactive_objects$percentiles$DO$percentiles})
 })

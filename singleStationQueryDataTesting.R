@@ -11,11 +11,27 @@ assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
   st_transform( st_crs(4326)) 
 subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
   rename('SUBBASIN' = 'SUBBASIN_1') %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN)))
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
+  mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
+                               SUBBASIN == 'Chowan River' ~ 'Chowan',
+                               SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
+                               SUBBASIN == 'New River' ~ 'New',
+                               SUBBASIN == 'Potomac River' ~ 'Potomac',
+                               SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
+                               SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
+                               SUBBASIN == 'Roanoke River' ~ 'Roanoke',
+                               SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
+                               SUBBASIN == 'Holston River' ~ 'Holston',
+                               SUBBASIN == 'York River' ~ 'York',
+                               TRUE ~ as.character(NA)),
+         ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
+                                    SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
+                                    SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
+                                    TRUE ~ as.character(NA))) 
 subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
   filter(!is.na(SubbasinVAHU6code)) %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) %>%
-  dplyr::select(SUBBASIN, SubbasinVAHU6code)
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
+  #dplyr::select(SUBBASIN, SubbasinVAHU6code)
 
 WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
 # while server is down
@@ -25,10 +41,10 @@ WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
 
 ## Pull one station
 
-station <- '2-JKS023.61'
-dateRange <- c(as.Date('2015-01-01'), as.Date(Sys.Date()))
+station <- '2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+dateRange <- c(as.Date('1970-01-01'), as.Date(Sys.Date()))
 #dateRangeFilter <- c(as.Date(Sys.Date())-years(3), as.Date(Sys.Date()))
-dateRangeFilter <- c(as.Date('2015-02-24'), as.Date(Sys.Date()))
+dateRangeFilter <-  c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
 
 
 ### Geospatial Information
@@ -40,7 +56,7 @@ stationInfo <- pool %>% tbl( "Wqm_Stations_View") %>%
 
 # Pull as many details about station from REST service (if available). Work around provided in case station isn't on REST server
 ## Pull station info from REST service
-WQM_Station_Full_REST <- WQM_Station_Full_REST_request(pool, '2-JKS023.61')
+WQM_Station_Full_REST <- WQM_Station_Full_REST_request(pool, station, subbasinVAHU6crosswalk, subbasins, ecoregion)
 
 ## Pull CEDS Station Information 
 stationInfoFin <- stationInfoConsolidated(pool, station, WQM_Station_Full_REST)
@@ -51,6 +67,10 @@ stationInfo_sf <- WQM_Station_Full_REST
 # Quick Station Sampling Information
 stationInfoSampleMetrics <- stationSummarySampingMetrics(stationInfo_sf)
 
+userSuperBasin <- WQM_Station_Full_REST$ProbSuperBasin[1]
+userBasin <- WQM_Station_Full_REST$ProbBasin[1]
+userEcoregion <- WQM_Station_Full_REST$EPA_ECO_US_L3NAME[1]#, EPA_ECO_US_L3CODE
+userOrder <- NA
 
 ### Field Data Information
 
@@ -73,17 +93,28 @@ stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
 stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
                                                       filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
                                                       repFilter = c('R','S1'),
-                                                      averageResults = TRUE)
+                                                      averageResults = FALSE)
 #stationFieldAnalyte2 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
 #                                                      filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
 #                                                      repFilter = c('R','S1'),
 #                                                      averageResults = FALSE)
-View(
-stationFieldAnalyte1 %>%
+z <- stationFieldAnalyte1 %>% # drop all empty columns ( this method longer but handles dttm issues)
   map(~.x) %>%
   discard(~all(is.na(.x))) %>%
-  map_df(~.x) )
-
+  map_df(~.x)
+if(exists('z')){
+datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+          options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                         pageLength = nrow(z), 
+                         buttons=list('copy',#list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
+                                      'colvis')), selection = 'none')
+} else {
+  datatable(stationFieldAnalyte1, rownames = F, escape= F, extensions = 'Buttons',
+            options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                           pageLength = nrow(stationFieldAnalyte1), 
+                           buttons=list('copy',#list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
+                                        'colvis')), selection = 'none')
+}
 
 # Collection info
 uniqueCollector(stationFieldAnalyte1)
@@ -98,7 +129,7 @@ uniqueComments(stationFieldAnalyte1)
 basicData <- basicSummary(stationFieldAnalyte1)
 
 # parameter graph
-parameterPlotly(basicData, 'Temperature', unitData, WQSlookup) 
+parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup) 
 
 
 # Compare to Prob Estimates section
@@ -107,158 +138,39 @@ parameterPlotly(basicData, 'Temperature', unitData, WQSlookup)
 #probEst <- filter(probEst, Indicator %in% filter(unitData, AltName %in% names(basicData))$Indicator) 
 
 # Find central tendency of each parameter based on filtered window
-probComparison <- centralTendencies(basicData)  
+probComparison <- centralTendenciesCalculation(basicData)  
   
+
+
 # User chooses an indicator
-indicatorOptions <- probIndicators$AltName[1]
-parameter <- filter(probIndicators, Parameter %in% indicatorOptions)$Parameter
+#indicatorOptions <- probIndicators$AltName[1]
+#parameter <- filter(probIndicators, Parameter %in% indicatorOptions)$Parameter
 
-# Compare median of selected indicator to prob estimates
-percentiles <- percentileTable(probEst, probComparison, 'DO', 'James Basin', "Blue Ridge Mountains" , NA)
 
+statsAndPercentiles <- percentileList(probEst, probComparison, probIndicators, userSuperBasin, userBasin, userEcoregion, userOrder)
+                    
+                    
 # Plot mean and median
-cdfplot(probEst, 'Dissolved Oxygen', 'DO',  "Blue Ridge Mountains", percentiles, DOsettingsCDF)
-  
+#cdfdata <- probEst
+prettyParameterName <- 'Silver' #'Potassium'#probIndicators$AltName[1]
 
+parameterSwitch <- filter(probIndicators, AltName %in% prettyParameterName)$Parameter
 
+parameter <- parameterSwitch
+subpopulation <- userBasin
+dataset <- statsAndPercentiles#statsAndPercentiles[[parameter]]
+#CDFsettings <- CDFsettingsList[[parameter]] #paste0(dataset,'settingsCDF')
 
+cdfplot(probEst, prettyParameterName , parameterSwitch,  
+        as.character(unique(WQM_Station_Full_REST$EPA_ECO_US_L3NAME)), statsAndPercentiles, CDFsettingsList[[parameterSwitch]] )
 
 
 
 
+#
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-# Return percentile 
-percentileTable <- function(cdfdata, statsTable,parameter,userBasin,userEco,userOrder){
-  out <- statsTable %>%
-    dplyr::select(StationID, Statistic, starts_with(parameter))
-  va <- data.frame(filter(cdfdata,Subpopulation=='Virginia',Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
-  basin <- data.frame(filter(cdfdata,Subpopulation==userBasin,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
-  eco <- data.frame(filter(cdfdata,Subpopulation==userEco,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
-  #order <- data.frame(filter(cdfdata,Subpopulation==userOrder,Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
-  out_final <- list(statistics = out, 
-                    percentiles = data.frame(Subpopulation = 'Virginia',
-                                             Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE),
-                                             Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE)) %>%
-                      bind_rows(data.frame(Subpopulation = userBasin,
-                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE),
-                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE))) %>%
-                      bind_rows(data.frame(Subpopulation = userEco,
-                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE),
-                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE))) )
-  return(out_final)
-}
-
-
-# CDF plot function
-cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset,CDFsettings){
-  cdfsubset <- subFunction(cdfdata,parameter,subpopulation)
-  avg1 <- filter(dataset$percentiles, Subpopulation == subpopulation) %>% pull(Average)#filter(dataset$statistics, Statistic == "Mean")$DO
-  avg <- subFunction2(cdfsubset,avg1)
-  med1 <- filter(dataset$percentiles, Subpopulation == subpopulation) %>% pull(Median)
-  med <- subFunction2(cdfsubset,med1)
-  m <- max(cdfsubset$NResp)
-  p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
-    labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
-    ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
-    theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
-    theme(axis.title = element_text(face='bold',size=12))+
-    
-    CDFsettings  +
-    
-    geom_point() +
-    geom_point(data=avg,color='orange',size=4) + geom_text(data=avg,label='Average',hjust=1.2) +
-    geom_point(data=med,color='gray',size=4)+ geom_text(data=med,label='Median',hjust=1.2) 
-  return(p1)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-cdfdata <- probEst
-statsTable<- probComparison
-parameter <- 'DO'
-userBasin <- 'James Basin'
-userEco <- "Blue Ridge Mountains" 
-
-out <- statsTable %>%
-  dplyr::select(StationID, Statistic, starts_with(parameter))# %>%
-  #group_by(StationID) %>%
-  #pivot_wider(names_from = 'Statistic', values_from = starts_with(parameter))
-  #pivot_longer(cols = starts_with(parameter), names_to = 'Statistic', values_to = 'Value')
-va <- data.frame(filter(cdfdata,Subpopulation=='Virginia',Indicator==parameter)%>%select(Value,Estimate.P)) # needs to be df for vlookup to work
-
-
-  out_final <- list(statistics = out, 
-                    percentiles = data.frame(Subpopulation = 'Virginia',
-                                             Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE),
-                                             Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE)) %>%
-                      bind_rows(data.frame(Subpopulation = userBasin,
-                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE),
-                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE))) %>%
-                      bind_rows(data.frame(Subpopulation = userEco,
-                                           Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE),
-                                           Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE))) )
-  
-                                                     
-va2 <- data.frame(Subpopulation = 'Virginia',
-                  Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE),
-                  Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), va, 2, range=TRUE)) 
-basin2 <- data.frame(Subpopulation = userBasin,
-                  Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE),
-                  Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), basin, 2, range=TRUE))
-eco2 <- data.frame(Subpopulation = userEco,
-                  Average = vlookup(filter(out, str_detect(Statistic, 'Mean')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE),
-                  Median = vlookup(filter(out, str_detect(Statistic, 'Median')) %>% dplyr::select(starts_with(parameter)) %>% pull(), eco, 2, range=TRUE))
-
-
-percentileTable(statsTable = probComparison, parameter = "pH",userBasin = 'Roanoke Basin',userEco = 'Blue Ridge Mountains',userOrder = 'Fourth',stationName= '2-JKS023.61')
-#percentileTable(stats(),"pH",input$Basin,input$Ecoregion,input$StreamOrder,unique(inputFile()$StationID))

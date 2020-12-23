@@ -123,84 +123,73 @@ DSodiumRiskTable <- list(
   clrs = c("gray","#0072B2","#009E73","#F0E442","firebrick")
 )
 
+CDFsettingsList <- list(
+  DO = list(
+    annotate("rect", xmin=10, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2") ,
+    annotate("rect",xmin=8, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73") ,
+    annotate("rect",xmin=7, xmax=8, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442") ,
+    annotate("rect",xmin=-Inf, xmax=7, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  pH = list(
+    annotate("rect", xmin=6, xmax=9, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73"),
+    annotate("rect",xmin=9, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=-Inf, xmax=6, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442" )),
+  SpCond = list(
+    annotate("rect", xmin=-Inf, xmax=250, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=250, xmax=350, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=350, xmax=500, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=500, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  TDS = list(
+    annotate("rect", xmin=-Inf, xmax=100, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=100, xmax=250, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=250, xmax=350, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=350, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  Sf = list(
+    annotate("rect",xmin=-Inf, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=10, xmax=25, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=25, xmax=75, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=75, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  Cl = list(
+    annotate("rect",xmin=-Inf, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=10, xmax=25, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=25, xmax=50, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=50, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )), 
+  K = list(
+    annotate("rect", xmin=-Inf, xmax=1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=1, xmax=2, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=2, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=10, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  Na = list(
+    annotate("rect",xmin=-Inf, xmax=7, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=7, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=10, xmax=20, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=20, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  TN = list(
+    annotate("rect", xmin=-Inf, xmax=0.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=0.5, xmax=1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=1, xmax=2, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=2, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  TP = list(
+    annotate("rect", xmin=-Inf, xmax=.02, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=.02, xmax=.05, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=.05, xmax=.1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=.1, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  TotHab = list(
+    annotate("rect", xmin=150, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=130, xmax=150, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=100, xmax=130, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=-Inf, xmax=100, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  LRBS = list(
+    annotate("rect", xmin=-Inf, xmax=-1.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick"),
+    annotate("rect",xmin=-1.5, xmax=-1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=-1, xmax=-0.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73"),
+    annotate("rect",xmin=-0.5, xmax=0.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=0.5, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442")),
+  MCCU = list(
+    annotate("rect", xmin=-Inf, xmax=0.75, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
+    annotate("rect",xmin=0.75, xmax=1.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
+    annotate("rect",xmin=1.5, xmax=2.0, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
+    annotate("rect",xmin=2.0, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" )),
+  VSCI = list(
+    geom_vline(xintercept = 60, color="red", size=1))
+  )
 
-DOsettingsCDF <- list(
-  annotate("rect", xmin=10, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2") ,
-  annotate("rect",xmin=8, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73") ,
-  annotate("rect",xmin=7, xmax=8, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442") ,
-  annotate("rect",xmin=-Inf, xmax=7, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-pHsettingsCDF <- list(
-  annotate("rect", xmin=6, xmax=9, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73"),
-  annotate("rect",xmin=9, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=-Inf, xmax=6, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442" ))
-
-SpCondsettingsCDF <- list(
-  annotate("rect", xmin=-Inf, xmax=250, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=250, xmax=350, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=350, xmax=500, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=500, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-TDSsettingsCDF <- list(
-  annotate("rect", xmin=-Inf, xmax=100, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=100, xmax=250, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=250, xmax=350, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=350, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-DSulfatesettingsCDF <- list(
-  annotate("rect",xmin=-Inf, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=10, xmax=25, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=25, xmax=75, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=75, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-DChloridesettingsCDF <- list(
-  annotate("rect",xmin=-Inf, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=10, xmax=25, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=25, xmax=50, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=50, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-DPotassiumsettingsCDF <- list(
-  annotate("rect", xmin=-Inf, xmax=1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=1, xmax=2, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=2, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=10, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-DSodiumsettingsCDF <- list(
-  annotate("rect",xmin=-Inf, xmax=7, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=7, xmax=10, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=10, xmax=20, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=20, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-TNsettingsCDF <- list(
-  annotate("rect", xmin=-Inf, xmax=0.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=0.5, xmax=1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=1, xmax=2, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=2, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-TPsettingsCDF <- list(
-  annotate("rect", xmin=-Inf, xmax=.02, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=.02, xmax=.05, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=.05, xmax=.1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=.1, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-TotHabsettingsCDF <- list(
-  annotate("rect", xmin=150, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=130, xmax=150, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=100, xmax=130, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=-Inf, xmax=100, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-LRBSsettingsCDF <- list(
-  annotate("rect", xmin=-Inf, xmax=-1.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick"),
-  annotate("rect",xmin=-1.5, xmax=-1, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=-1, xmax=-0.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73"),
-  annotate("rect",xmin=-0.5, xmax=0.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=0.5, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"))
-
-MetalsCCUsettingsCDF <- list(
-  annotate("rect", xmin=-Inf, xmax=0.75, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#0072B2"),
-  annotate("rect",xmin=0.75, xmax=1.5, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#009E73" ),
-  annotate("rect",xmin=1.5, xmax=2.0, ymin=-Inf, ymax=Inf, alpha=0.5, fill="#F0E442"),
-  annotate("rect",xmin=2.0, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.5, fill="firebrick" ))
-
-VSCIsettingsCDF <- list(
-  geom_vline(xintercept = 60, color="red", size=1))
