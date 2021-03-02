@@ -37,11 +37,19 @@ WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
 # while server is down
 #readRDS('C:/HardDriveBackup/R/pins11182020/ejones/WQSlookup-withStandards.RDS')
 
+## For testing: connect to ODS production
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  trusted_connection = "yes"
+)
 
 
 ## Pull one station
 
-station <- '2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+station <- '2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
 dateRange <- c(as.Date('1970-01-01'), as.Date(Sys.Date()))
 #dateRangeFilter <- c(as.Date(Sys.Date())-years(3), as.Date(Sys.Date()))
 dateRangeFilter <-  c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
@@ -92,8 +100,64 @@ stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
 
 stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
                                                       filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
-                                                      repFilter = c('R','S1'),
+                                                      repFilter = c('R'),
                                                       averageResults = FALSE)
+
+#Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
+# report out where results averaged
+
+zz <- full_join(stationFieldDataRaw,
+          stationAnalyteDataRaw %>%
+            filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+            group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
+            dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
+            mutate(`Associated Analyte Records` = 1:n()) %>% 
+            pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") ,
+          by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>% 
+  dplyr::select(`Associated Analyte Records`, everything())
+
+
+z <- stationAnalyteDataRaw %>%
+  
+  filter(Ana_Sam_Fdt_Id == '72293') %>%
+  
+  filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
+  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
+  mutate(n = 1:n()) %>% 
+  pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") 
+
+
+
+z %>% dplyr::select(-Pg_Parm_Group_Code) %>% # ungroup() %>% group_by()
+  mutate(n = case_when(n > 1 ~ count(n),
+                       TRUE ~ as.numeric(n))) %>% 
+  #distinct(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, .keep_all = T) %>% 
+  #dplyr::select(-c(n, Pg_Parm_Group_Code)) %>% 
+  pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") )
+
+
+pivot_wider(stationAnalyteDataRaw %>%
+              
+              filter(Ana_Sam_Fdt_Id == '72293') %>%
+              
+              filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+              group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
+              dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
+              mutate(n = n()) , 
+            names_from = 'Pg_Parm_Name',
+            values_from = "Ana_Value", values_fn =  mean)
+
+
+if
+  
+  arrange(Pg_Parm_Name)
+  pivot_wider(names_from = 'Pg_Parm_Name', # names_sep = " | ", 
+              values_from = "Ana_Value")
+
+
+
+
 #stationFieldAnalyte2 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
 #                                                      filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
 #                                                      repFilter = c('R','S1'),
@@ -102,19 +166,23 @@ z <- stationFieldAnalyte1 %>% # drop all empty columns ( this method longer but 
   map(~.x) %>%
   discard(~all(is.na(.x))) %>%
   map_df(~.x)
-if(exists('z')){
-datatable(z, rownames = F, escape= F, extensions = 'Buttons',
-          options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
-                         pageLength = nrow(z), 
-                         buttons=list('copy',#list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
-                                      'colvis')), selection = 'none')
-} else {
-  datatable(stationFieldAnalyte1, rownames = F, escape= F, extensions = 'Buttons',
-            options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
-                           pageLength = nrow(stationFieldAnalyte1), 
+if("Associated Analyte Records" %in% names(z)){ # highlight rows where field data duplicated bc multiple analytes on same datetime
+  datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+            options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                           pageLength = nrow(z), 
                            buttons=list('copy',#list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
-                                        'colvis')), selection = 'none')
-}
+                                        'colvis')), selection = 'none') %>% 
+    formatStyle("Associated Analyte Records", target = 'row', backgroundColor = styleEqual(c(1,2,3,4,5,6,7,8,9,10), 
+                                                                                           c(NA, 'yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow')))
+}else {datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                 options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                                pageLength = nrow(z), 
+                                buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
+                                             'colvis')), selection = 'none') }
+          
+              
+              
+              
 
 # Collection info
 uniqueCollector(stationFieldAnalyte1)

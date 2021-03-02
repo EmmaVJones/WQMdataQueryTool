@@ -4,7 +4,6 @@ library(leaflet)
 library(leaflet.extras)
 library(inlmisc)
 library(DT)
-library(pool)
 library(config)
 library(sf)
 library(plotly)
@@ -13,7 +12,6 @@ library(pool)
 library(geojsonsf)
 library(pins)
 library(sqldf)
-library(config)
 
 #Bring in VLOOKUP-like function written in R
 source('vlookup.R')
@@ -29,13 +27,13 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 
 
 ## For testing: connect to ODS production
-#pool <- dbPool(
+# pool <- dbPool(
 #  drv = odbc::odbc(),
-#  Driver = "SQL Server Native Client 11.0", 
+#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
 #  Server= "DEQ-SQLODS-PROD,50000",
 #  dbname = "ODS",
 #  trusted_connection = "yes"
-#)
+# )
 
 # For deployment on the R server: Set up pool connection to production environment
 pool <- dbPool(
@@ -44,7 +42,7 @@ pool <- dbPool(
   # Production Environment
   Server= "DEQ-SQLODS-PROD,50000",
   dbname = "ODS",
-  UID = conn$UID_prod, 
+  UID = conn$UID_prod,
   PWD = conn$PWD_prod,
   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
@@ -59,6 +57,8 @@ pool <- dbPool(
 onStop(function() {
   poolClose(pool)
 })
+
+stationOptions <- pin_get('ejones/WQM-Sta-GIS-View-Stations', board= 'rsconnect')
 
 
 unitData <- read_csv('data/probParameterUnits.csv')
@@ -191,6 +191,7 @@ stationSummarySampingMetrics <- function(stationInfo_sf){
     dplyr::select(STATION_ID, WQM_YRS_SPG_CODE,WQM_YRS_YEAR,`Years Sampled`,WQM_SPG_DESCRIPTION) %>%
     st_drop_geometry() %>%
     group_by(STATION_ID, `Years Sampled`) %>%
+    distinct(WQM_YRS_SPG_CODE, .keep_all = T) %>% # drop repetitive codes for each year
     summarise(`Sample Codes` = paste0(WQM_YRS_SPG_CODE, collapse = ' | '))
 } 
 
@@ -207,17 +208,28 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
                  pivot_wider(names_from = c('Ana_Parameter_Name'), names_sep = " | ", 
                              values_from = "Ana_Value",
                              values_fn = list(Ana_Value = mean)),
-               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) )
+               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>%
+      arrange(Fdt_Sta_Id, Fdt_Date_Time))
   } else {
     suppressWarnings(
-    full_join(stationFieldDataRaw,
-               stationAnalyteDataRaw %>%
-                 filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
-                 group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd) %>%
-                 dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd, Ana_Parameter_Name, Ana_Value) %>%
-                 pivot_wider(names_from = c('Ana_Parameter_Name','Ana_Sam_Mrs_Lcc_Parm_Group_Cd'), names_sep = " | ", 
-                             values_from = "Ana_Value"),
-               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) )}
+      full_join(stationFieldDataRaw,
+                stationAnalyteDataRaw %>%
+                  filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+                  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
+                  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
+                  mutate(`Associated Analyte Records` = 1:n()) %>% 
+                  pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") ,
+                by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>% 
+        dplyr::select(`Associated Analyte Records`, everything()) %>%
+        arrange(Fdt_Sta_Id, Fdt_Date_Time) ) }
+    # full_join(stationFieldDataRaw,
+    #            stationAnalyteDataRaw %>%
+    #              filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+    #              group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd) %>%
+    #              dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd, Ana_Parameter_Name, Ana_Value) %>%
+    #              pivot_wider(names_from = c('Ana_Parameter_Name','Ana_Sam_Mrs_Lcc_Parm_Group_Cd'), names_sep = " | ", 
+    #                          values_from = "Ana_Value"),
+    #            by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) )}
 }
 
 

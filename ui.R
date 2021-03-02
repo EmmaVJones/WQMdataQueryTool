@@ -9,7 +9,8 @@ shinyUI(fluidPage(theme= "yeti.css",
                                         tabPanel("Station Data",
                                                  sidebarPanel(
                                                    helpText("Query will pull directly from CEDS. Data is refreshed nightly."),
-                                                   textInput('station', 'DEQ Station ID', placeholder = "DEQ Station ID"),
+                                                   helpText("Begin typing a DEQ StationID and available options will auto-filter based on the user input."),
+                                                   selectInput('station', 'DEQ Station ID', choices = c("", unique(stationOptions$Station_Id))),#textInput('station', 'DEQ Station ID', placeholder = "DEQ Station ID"),
                                                    dateRangeInput('dateRange',
                                                                   label = 'Filter Data By Sample Date Range (YYYY-MM-DD)',
                                                                   start = as.Date("1970-01-01"), ##################################################as.Date("2015-01-01"),  
@@ -18,12 +19,15 @@ shinyUI(fluidPage(theme= "yeti.css",
                                                    actionButton('begin', 'Pull Station',class='btn-block'),
                                                    width = 3),
                                                  mainPanel(
+                                                   helpText('This interactive map allows users to zoom and pan across different basemaps. Basemap option and Level III 
+                                                            Ecoregion and Assessment Region information are available by using the checkboxes in the layers drop down 
+                                                            on the left panel of the map.'),
                                                    leafletOutput('stationMap'),br(),
                                                    h4('Station Information'),
                                                    DT::dataTableOutput('stationInfoTable'),br(),
-                                                   h4('Full Station Sampling Summary'),
+                                                   h4('Station Sampling Summary- Based on WQM Station Information Shared with GIS Services'),
+                                                   helpText('This information may not be inclusive of all historical sample codes due to database structure.'),
                                                    DT::dataTableOutput('stationInfoSampleCodeMetrics'),br(),
-                                                   helpText('Eventually maybe some stats on n sampling events or raw field data?'),
                                                    br(), br(), br() # a little breathing room
                                                  )),
                                         tabPanel("Water Quality Data",
@@ -39,15 +43,15 @@ shinyUI(fluidPage(theme= "yeti.css",
                                                               helpText("This table presents all available field and analyte data 
                                                                         filtered by the date filter in the sidebar panel. Analyte 
                                                                         data collected more than once for a given sample event 
-                                                                        (e.g. more than one sample group code that reports the same parameter)
-                                                                       are presented as separate columns with the sample group code appended to 
-                                                                       the column name. If you wish to consolidate this information into a single 
-                                                                       measure by averaging these values, please choose the `Average similar parameters by sample date`
+                                                                        (e.g. more than one lab parameter per date time combination)
+                                                                       are presented as separate rows and can duplicate the field data associated with a given date time. Where these 
+                                                                       instances occurr, the additional rows are highlighted in yellow. If you wish to consolidate this information into a single 
+                                                                       measure by averaging these values, please choose the `Average similar parameters by sample date time`
                                                                        option below."),
-                                                              radioButtons('averageParameters', "Display Options", 
-                                                                           choices = c('Report all available parameters (If table error occurs then there are 
-                                                                                       duplicate parameter names that require advanced data manipulation. Other modules 
-                                                                                       will work, but please see Raw Data to troubleshoot issues.', 'Average parameters by sample date'),
+                                                              radioButtons('averageParameters', strong("Display Options"), 
+                                                                           choices = c('Report all available parameters and highlight rows with duplicate analyte measures. The first field named
+                                                                                       `Associated Analyte Records` identifies when multiple analytes with the same lab name are returned
+                                                                                       for a single sample event date time.', 'Average parameters by sample date time.'),
                                                                            width = '100%'),
                                                               DT::dataTableOutput('stationFieldAnalyte'),
                                                               br(),

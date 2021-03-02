@@ -1,0 +1,68 @@
+---
+title: "Nightly Pin updates"
+author: "Emma Jones"
+date: "3/2/2021"
+output: html_document
+resource_files:
+- config.yml
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(pool)
+library(DBI)
+library(pins)
+library(config)
+
+# get configuration settings
+conn <- config::get("connectionSettings")
+
+# use API key to register board
+board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_KEY"),
+                          server = conn$CONNECT_SERVER)#Sys.getenv("CONNECT_SERVER"))
+
+```
+ 
+```{r connect to ODS_test}
+## For testing: connect to ODS production
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "ODBC Driver 11 for SQL Server",#Driver = "SQL Server Native Client 11.0",
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   trusted_connection = "yes"
+# )
+
+# establish db connection on server
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  Server = "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod,# use config file         #Sys.getenv("userid"), # plug this in on server
+  PWD = conn$PWD_prod, # use config file         #Sys.getenv("pwd") # plug this in on server
+  trusted_connection = "yes"
+)
+
+# con <- dbConnect(odbc::odbc(),.connection_string = 'driver={SQL Server Native Client 11.0};server={DEQ-SQLODS-PROD,50000};database={ODS};trusted_connection=yes')
+
+```
+
+## Nightly Refreshed Data
+
+WQM_Stations, just name options. Using WQM_Sta_GIS_View because it holds more stations. Also including lat/lng in decimal degrees.
+
+```{r}
+WQM_Sta_GIS_View_Stations <- pool %>% tbl("Wqm_Sta_GIS_View") %>%
+  dplyr::select(Station_Id, Latitude, Longitude) %>%
+  as_tibble()
+
+# WQM_Stations_View <- pool %>% tbl("Wqm_Stations_View") %>%
+#   dplyr::select(Sta_Id) %>%
+#   as_tibble()
+
+pin(WQM_Sta_GIS_View_Stations, description = "Station_Id and lat/lng available in CEDS", board = "rsconnect")
+
+```
+

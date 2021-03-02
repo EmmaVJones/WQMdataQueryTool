@@ -145,7 +145,7 @@ shinyServer(function(input, output, session) {
   ## Field and Analyte Data Date Range 
   output$dateRangeFilter_ <- renderUI({ req(reactive_objects$stationFieldData)
     dateRangeInput('dateRangeFilter',
-                   label = 'Filter Data Further By Date Range (YYYY-MM-DD)',
+                   label = 'Filter Available Data Further By User Selected Date Range (YYYY-MM-DD)',
                    start = min(as.Date(reactive_objects$stationFieldData$Fdt_Date_Time)), 
                    end = max(as.Date(reactive_objects$stationFieldData$Fdt_Date_Time)))  })
   
@@ -153,7 +153,7 @@ shinyServer(function(input, output, session) {
   stationFieldAnalyteDateRange <- reactive({req(reactive_objects$stationFieldData, input$dateRangeFilter, input$repFilter, input$averageParameters)
     stationFieldAnalyteDataPretty( filter(reactive_objects$stationAnalyteData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
                                    filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
-                                   repFilter = input$repFilter, averageResults = ifelse(input$averageParameters == 'Average parameters by sample date', TRUE, FALSE) ) })
+                                   repFilter = input$repFilter, averageResults = ifelse(input$averageParameters == 'Average parameters by sample date time.', TRUE, FALSE) ) })
   
   
   
@@ -163,11 +163,21 @@ shinyServer(function(input, output, session) {
       map(~.x) %>%
       discard(~all(is.na(.x))) %>%
       map_df(~.x)
-    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
-              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
-                             pageLength = nrow(z), 
-                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
-                                          'colvis')), selection = 'none')})
+    if("Associated Analyte Records" %in% names(z)){ # highlight rows where field data duplicated bc multiple analytes on same datetime
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(z), 
+                               buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
+                                            'colvis')), selection = 'none') %>% 
+        formatStyle("Associated Analyte Records", target = 'row', 
+                    backgroundColor = styleEqual(c(1,2,3,4,5,6,7,8,9,10), c(NA, 'yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow')))
+      
+    } else {
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(z), 
+                               buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
+                                            'colvis')), selection = 'none')    } })
   
   ## Collector Summary
   output$collectorSummary <- renderDataTable({ req(stationFieldAnalyteDateRange())
@@ -273,13 +283,13 @@ shinyServer(function(input, output, session) {
   # Raw Field Data
   output$fieldDataRaw <- renderDataTable({ req(reactive_objects$stationFieldData)
     datatable(reactive_objects$stationFieldData, rownames = F, escape= F, extensions = 'Buttons',
-              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationFieldData), 
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationFieldData), 
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawFieldData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
   
   output$analyteDataRaw <- renderDataTable({ req(reactive_objects$stationAnalyteData)
     datatable(reactive_objects$stationAnalyteData, rownames = F, escape= F, extensions = 'Buttons',
-              options = list(dom = 'Bit', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationAnalyteData), 
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationAnalyteData), 
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawAnalyteData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
   
