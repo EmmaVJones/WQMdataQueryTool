@@ -27,32 +27,32 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -198,27 +198,70 @@ stationSummarySampingMetrics <- function(stationInfo_sf){
 # Organize field and analyte info into prettier table
 stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDataRaw, repFilter, averageResults){
   if(averageResults == TRUE){
+    y <- stationAnalyteDataRaw %>%
+      filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+      group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
+      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Com_Code, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
+                    Pg_Parm_Name, Ana_Value) %>% 
+      mutate(`Associated Analyte Records` = 1:n(),
+             LabComments = paste0(Pg_Parm_Name,' RMK'))
+    y1 <- y %>%
+      dplyr::select(Pg_Parm_Name, Ana_Value) %>% 
+      pivot_wider(names_from = Pg_Parm_Name, #names_sep = " | ", 
+                  values_from = "Ana_Value",
+                  values_fn = list(Ana_Value = mean) ) %>% 
+      left_join(y %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, LabComments) %>%  
+                  mutate(Ana_Com_Code2 = paste(Ana_Com_Code, sep = " ")) %>%
+                  dplyr::select(LabComments, Ana_Com_Code2) %>% 
+                  distinct() %>% 
+                  pivot_wider(names_from = LabComments, values_from = Ana_Com_Code2),
+                by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc")) %>% 
+      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, sort(names(.)))
     suppressWarnings(
-    full_join(stationFieldDataRaw,
-               stationAnalyteDataRaw %>%
-                 filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
-                 group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
-                 dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
-                               Ana_Parameter_Name, Ana_Value) %>%
-                 pivot_wider(names_from = c('Ana_Parameter_Name'), names_sep = " | ", 
-                             values_from = "Ana_Value",
-                             values_fn = list(Ana_Value = mean)),
-               by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>%
-      arrange(Fdt_Sta_Id, Fdt_Date_Time))
+      full_join(stationFieldDataRaw, y1, by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>%
+        arrange(Fdt_Sta_Id, Fdt_Date_Time))
+    # original method
+    # suppressWarnings(
+    # full_join(stationFieldDataRaw,
+    #            stationAnalyteDataRaw %>%
+    #              filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+    #              group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
+    #              dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
+    #                            Ana_Parameter_Name, Ana_Value) %>%
+    #              pivot_wider(names_from = c('Ana_Parameter_Name'), names_sep = " | ", 
+    #                          values_from = "Ana_Value",
+    #                          values_fn = list(Ana_Value = mean)),
+    #            by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>%
+    #   arrange(Fdt_Sta_Id, Fdt_Date_Time))
   } else {
+    z <- stationAnalyteDataRaw %>%
+      filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+      group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
+      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Com_Code, Ana_Value) %>%
+      mutate(`Associated Analyte Records` = 1:n(),
+             LabComments = paste0(Pg_Parm_Name,' RMK'))
+    
+    z1 <-  z %>% 
+      dplyr::select(`Associated Analyte Records`, Pg_Parm_Name, Ana_Value) %>% 
+      pivot_wider(names_from = Pg_Parm_Name, values_from = Ana_Value) %>%
+      left_join(z %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc,Ana_Lab_Seq_Num) %>%  
+                  dplyr::select(`Associated Analyte Records`, LabComments, Ana_Com_Code) %>% 
+                  pivot_wider(names_from = LabComments, values_from = Ana_Com_Code),
+                by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc", "Ana_Lab_Seq_Num", 
+                       "Associated Analyte Records")) %>% 
+      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, 
+                    `Associated Analyte Records`, sort(names(.)))
+    
+    
     suppressWarnings(
-      full_join(stationFieldDataRaw,
-                stationAnalyteDataRaw %>%
-                  filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
-                  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
-                  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
-                  mutate(`Associated Analyte Records` = 1:n()) %>% 
-                  pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") ,
+      full_join(stationFieldDataRaw, 
+                z1,
+                # stationAnalyteDataRaw %>%
+                #   filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+                #   group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
+                #   dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, Pg_Parm_Name , Ana_Value) %>%
+                #   mutate(`Associated Analyte Records` = 1:n()) %>% 
+                #   pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") ,
                 by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>% 
         dplyr::select(`Associated Analyte Records`, everything()) %>%
         arrange(Fdt_Sta_Id, Fdt_Date_Time) ) }

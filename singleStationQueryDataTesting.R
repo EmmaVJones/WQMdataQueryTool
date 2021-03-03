@@ -32,6 +32,9 @@ subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
   filter(!is.na(SubbasinVAHU6code)) %>%
   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
   #dplyr::select(SUBBASIN, SubbasinVAHU6code)
+labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
+
+
 
 WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
 # while server is down
@@ -47,12 +50,9 @@ pool <- dbPool(
 )
 
 
-## Pull one station
-
-station <- '2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
-dateRange <- c(as.Date('1970-01-01'), as.Date(Sys.Date()))
-#dateRangeFilter <- c(as.Date(Sys.Date())-years(3), as.Date(Sys.Date()))
-dateRangeFilter <-  c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
+station <- '2-JKS067.00'#'1AOCC002.47'#'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+dateRange <- c(as.Date('2010-01-01'), as.Date(Sys.Date()))
 
 
 ### Geospatial Information
@@ -84,21 +84,32 @@ userOrder <- NA
 
 stationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
   filter(Fdt_Sta_Id %in% !! station &
-           between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ) %>% # x >= left & x <= right
+           between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) & # x >= left & x <= right
+           Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% 
   as_tibble()
-
 
 ### Analyte information
 
 stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
   filter(Ana_Sam_Fdt_Id %in% !! stationFieldData$Fdt_Id &
-           between(as.Date(Ana_Received_Date), !! dateRange[1], !! dateRange[2]) ) %>% # x >= left & x <= right
+           between(as.Date(Ana_Received_Date), !! dateRange[1], !! dateRange[2]) & # x >= left & x <= right
+           Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
   as_tibble() %>%
   left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) 
 
+
+
+# User filters
+dateRangeFilter <-  c(as.Date('2010-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+labCodesIncluded <- sort(unique(stationAnalyteData$Ana_Com_Code))
+
+
+
 ### Organize field and analyte info into prettier table
 
-stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
+
+stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2])  &
+                                                               Ana_Com_Code %in% labCodesIncluded), 
                                                       filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
                                                       repFilter = c('R'),
                                                       averageResults = FALSE)
@@ -106,62 +117,98 @@ stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData,
 #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
 # report out where results averaged
 
-zz <- full_join(stationFieldDataRaw,
-          stationAnalyteDataRaw %>%
-            filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
-            group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
-            dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
-            mutate(`Associated Analyte Records` = 1:n()) %>% 
-            pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") ,
-          by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>% 
-  dplyr::select(`Associated Analyte Records`, everything())
-
-
 z <- stationAnalyteDataRaw %>%
-  
-  filter(Ana_Sam_Fdt_Id == '72293') %>%
-  
   filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
-  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
-  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
-  mutate(n = 1:n()) %>% 
-  pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") 
+  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
+  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Com_Code, Ana_Value) %>%
+  mutate(`Associated Analyte Records` = 1:n(),
+         LabComments = paste0(Pg_Parm_Name,' RMK'))
 
-
-
-z %>% dplyr::select(-Pg_Parm_Group_Code) %>% # ungroup() %>% group_by()
-  mutate(n = case_when(n > 1 ~ count(n),
-                       TRUE ~ as.numeric(n))) %>% 
-  #distinct(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, .keep_all = T) %>% 
-  #dplyr::select(-c(n, Pg_Parm_Group_Code)) %>% 
-  pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") )
-
-
-pivot_wider(stationAnalyteDataRaw %>%
-              
-              filter(Ana_Sam_Fdt_Id == '72293') %>%
-              
-              filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
-              group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
-              dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name , Ana_Value) %>%
-              mutate(n = n()) , 
-            names_from = 'Pg_Parm_Name',
-            values_from = "Ana_Value", values_fn =  mean)
-
-
-if
+z1 <-  z %>% 
+  dplyr::select(`Associated Analyte Records`, Pg_Parm_Name, Ana_Value) %>% 
+  pivot_wider(names_from = Pg_Parm_Name, values_from = Ana_Value) %>%
+  left_join(z %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc,Ana_Lab_Seq_Num) %>%  
+              dplyr::select(`Associated Analyte Records`, LabComments, Ana_Com_Code) %>% 
+              pivot_wider(names_from = LabComments, values_from = Ana_Com_Code),
+            by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc", "Ana_Lab_Seq_Num", 
+                   "Associated Analyte Records")) %>% 
+  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, 
+                `Associated Analyte Records`, sort(names(.)))
   
-  arrange(Pg_Parm_Name)
-  pivot_wider(names_from = 'Pg_Parm_Name', # names_sep = " | ", 
-              values_from = "Ana_Value")
 
 
+y <- stationAnalyteDataRaw %>%
+  filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+  group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
+  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Com_Code, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
+                Pg_Parm_Name, Ana_Value) %>% 
+  mutate(`Associated Analyte Records` = 1:n(),
+         LabComments = paste0(Pg_Parm_Name,' RMK'))
+y1 <- y %>%
+  dplyr::select(Pg_Parm_Name, Ana_Value) %>% 
+  pivot_wider(names_from = Pg_Parm_Name, #names_sep = " | ", 
+              values_from = "Ana_Value",
+              values_fn = list(Ana_Value = mean) ) %>% 
+  left_join(y %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, LabComments) %>%  
+              mutate(Ana_Com_Code2 = paste(Ana_Com_Code, sep = " ")) %>%
+              dplyr::select(LabComments, Ana_Com_Code2) %>% 
+              distinct() %>% 
+              pivot_wider(names_from = LabComments, values_from = Ana_Com_Code2),
+            by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc")) %>% 
+  dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, 
+                sort(names(.)))
+
+y2 <-y %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, LabComments) %>%  
+  mutate(Ana_Com_Code2 = paste(Ana_Com_Code, sep = " ")) %>%
+  dplyr::select(LabComments, Ana_Com_Code2) %>% 
+  distinct() %>% 
+  pivot_wider(names_from = LabComments, values_from = Ana_Com_Code2)
+
+  
+y3 <- y %>%
+  dplyr::select(Pg_Parm_Name, Ana_Value) %>% 
+  pivot_wider(names_from = Pg_Parm_Name, #names_sep = " | ", 
+              values_from = "Ana_Value",
+              values_fn = list(Ana_Value = mean) ) %>% 
+  left_join(y2, by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc"))
 
 
-#stationFieldAnalyte2 <- stationFieldAnalyteDataPretty(filter(stationAnalyteData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
-#                                                      filter(stationFieldData, between(as.Date(Fdt_Date_Time), dateRangeFilter[1], dateRangeFilter[2]) ), 
-#                                                      repFilter = c('R','S1'),
-#                                                      averageResults = FALSE)
+  
+
+zz <- z %>%  
+  dplyr::select(Pg_Parm_Name, Ana_Com_Code) %>% 
+  pivot_longer(cols = Ana_Com_Code, names_to = 'Variable', values_to = 'Value') %>%
+  bind_rows(z %>% 
+              dplyr::select(Pg_Parm_Name, Ana_Value) %>% 
+              pivot_longer(cols =contains( 'Ana_Value'), names_to = 'Variable', values_to = 'Value') )
+  
+  
+         AnalyteComment = paste0(Pg_Parm_Name, ' Comment')) %>%
+  pivot_wider(names_from = c('Pg_Parm_Name', 'AnalyteComment'),values_from = c("Ana_Value", 'Ana_Com_Code') ) #%>%
+  #filter(`Associated Analyte Records` > 1)
+    
+# zz <- stationAnalyteDataRaw %>%
+#   filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+#   group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
+#   dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Value) %>%
+#   mutate(`Associated Analyte Records` = 1:n()) %>% 
+#   pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") %>%
+#   filter(Ana_Sam_Fdt_Id %in% z$Ana_Sam_Fdt_Id)
+
+# glimpse(z)
+# 
+# z <- full_join(stationFieldDataRaw,
+#           stationAnalyteDataRaw %>%
+#             filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
+#             group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
+#             dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name,Ana_Lab_Seq_Num, Ana_Value) %>%
+#             #mutate(`Associated Analyte Records` = 1:n()) %>% 
+#             pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") ,
+#           by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>% 
+#   dplyr::select(`Associated Analyte Records`, everything())
+# 
+
+
 z <- stationFieldAnalyte1 %>% # drop all empty columns ( this method longer but handles dttm issues)
   map(~.x) %>%
   discard(~all(is.na(.x))) %>%

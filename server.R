@@ -29,6 +29,11 @@ subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
 #dplyr::select(SUBBASIN, SubbasinVAHU6code)
 
+# labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
+#   as_tibble()
+# pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
+labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
+
 WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
 
 
@@ -70,18 +75,18 @@ shinyServer(function(input, output, session) {
     ## Field Data Information
     reactive_objects$stationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
       filter(Fdt_Sta_Id %in% !! input$station &
-               between(as.Date(Fdt_Date_Time), !! input$dateRange[1], !! input$dateRange[2]) ) %>% # x >= left & x <= right
+               between(as.Date(Fdt_Date_Time), !! input$dateRange[1], !! input$dateRange[2]) & # x >= left & x <= right
+               Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% 
       as_tibble()
     
     ### Analyte information
     reactive_objects$stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
       filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$stationFieldData$Fdt_Id &
-               between(as.Date(Ana_Received_Date), !! input$dateRange[1], !! input$dateRange[2]) ) %>% # x >= left & x <= right
+               between(as.Date(Ana_Received_Date), !! input$dateRange[1], !! input$dateRange[2])& # x >= left & x <= right
+               Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
       as_tibble() %>%
       left_join(dplyr::select(reactive_objects$stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), 
-                by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) 
-    
-  })
+                by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))   })
   
   ## Display Station Information
   output$stationInfoTable <- DT::renderDataTable({
@@ -149,10 +154,40 @@ shinyServer(function(input, output, session) {
                    start = min(as.Date(reactive_objects$stationFieldData$Fdt_Date_Time)), 
                    end = max(as.Date(reactive_objects$stationFieldData$Fdt_Date_Time)))  })
   
+  ## Lab codes based on original dataset brought back from ODS
+  output$labCodesIncluded_ <- renderUI({ req(reactive_objects$stationAnalyteData)
+    codeOptions <- sort(unique(reactive_objects$stationAnalyteData$Ana_Com_Code))
+    list(helpText('Below are the unique lab codes retrieved based on the initial query parameters of StationID and Date Range filters on 
+                  the Station Data tab. Please uncheck any lab codes you do not want included in any further analyses. For assistance with
+                  lab code descriptions, please click the button below.'),
+         actionButton('reviewLabCodes',"Lab Code Table",class='btn-block'),
+         checkboxGroupInput('labCodesIncluded', 'Lab Codes Included in Futher Analyses',
+                            choices = codeOptions)   ) })#, selected = all)   ) })
+  
+  ## Lab Code Module
+  observeEvent(input$reviewLabCodes,{
+    showModal(modalDialog(
+      title="Lab Code Descriptions",
+      DT::dataTableOutput('labCodeTable'),
+      easyClose = TRUE))  })
+  
+  output$labCodeTable <- renderDataTable({req(input$reviewLabCodes)
+    datatable(labCommentCodes %>% arrange(Com_Code), rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                             pageLength = nrow(labCommentCodes), 
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSlabCodes')),
+                                          'colvis')), selection = 'none')   })
+  
+  
+  ## Drop any unwanted Analyte codes
+  observe({req(reactive_objects$stationFieldData, input$dateRangeFilter, reactive_objects$stationAnalyteData, input$labCodesIncluded) 
+    reactive_objects$stationFieldDataUserFilter <- filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) )
+    reactive_objects$stationAnalyteDataUserFilter <- filter(reactive_objects$stationAnalyteData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ) %>% 
+      filter(Ana_Com_Code %in% input$labCodesIncluded)})
+  
   ### Filter by user input
-  stationFieldAnalyteDateRange <- reactive({req(reactive_objects$stationFieldData, input$dateRangeFilter, input$repFilter, input$averageParameters)
-    stationFieldAnalyteDataPretty( filter(reactive_objects$stationAnalyteData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
-                                   filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ),
+  stationFieldAnalyteDateRange <- reactive({req(reactive_objects$stationFieldDataUserFilter, input$dateRangeFilter, reactive_objects$stationAnalyteDataUserFilter, input$repFilter, input$averageParameters)
+    stationFieldAnalyteDataPretty(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter, 
                                    repFilter = input$repFilter, averageResults = ifelse(input$averageParameters == 'Average parameters by sample date time.', TRUE, FALSE) ) })
   
   
@@ -282,13 +317,13 @@ shinyServer(function(input, output, session) {
   
   # Raw Field Data
   output$fieldDataRaw <- renderDataTable({ req(reactive_objects$stationFieldData)
-    datatable(reactive_objects$stationFieldData, rownames = F, escape= F, extensions = 'Buttons',
+    datatable(reactive_objects$stationFieldDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationFieldData), 
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawFieldData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
   
   output$analyteDataRaw <- renderDataTable({ req(reactive_objects$stationAnalyteData)
-    datatable(reactive_objects$stationAnalyteData, rownames = F, escape= F, extensions = 'Buttons',
+    datatable(reactive_objects$stationAnalyteDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationAnalyteData), 
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawAnalyteData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })

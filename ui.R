@@ -33,6 +33,7 @@ shinyUI(fluidPage(theme= "yeti.css",
                                         tabPanel("Water Quality Data",
                                                  sidebarPanel(
                                                    uiOutput('dateRangeFilter_'),
+                                                   uiOutput('labCodesIncluded_'),
                                                    checkboxGroupInput('repFilter', "Filter Reps", 
                                                                       choices = c('R','S1', 'S2'), selected = 'R'),
                                                    width = 3),
