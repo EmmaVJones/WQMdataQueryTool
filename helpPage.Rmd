@@ -1,0 +1,23 @@
+---
+title: "CEDS Water Quality Monitoring Data Query Tool Help Page "
+author: "Emma Jones"
+date: "3/4/2021"
+output: html_document
+---
+<br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;This application is designed to assist users with water quality monitoring data acquisition and reporting. The application is divided into two sections to meet analytical needs. The `Single Station Query` tab allows single station queries directly from the production environment. The `Multiple Station Query` tab allows for more complicated spatial and temporal analyses of monitoring data.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;All tables feature interactive column sorting, column visibility, and data download features. Tables can be sorted by specific column using the gray arrows next to the column of interest. The `Column Visibility` button allows users to turn columns on or off to aid data visualization. The `Copy` button copies table data to the user's clipboard for use in other applications. Some tables feature `Search` boxes where users may enter character strings to interactively filter table contents. 
+
+## General Querying Conditions
+
+This application queries data from the ODS production environment. Nightly database rebuilds ensure data entered the previous day are available the follow morning. The application automatically filters out any analyte data with the lab code 'INVALID DATA SET QUALITY ASSURANCE FAILURE' from all analyses. Further filtering on specific laboratory codes presented to the user on the `Water Quality Data` tab.
+
+### Single Station Query
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Queries from this tab are restricted to single stations, allowing users access to the most recent data available. Nightly database rebuilds ensure data entered the previous day are available the follow morning.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Users begin the query process by typing a DEQ Station ID into the text box on the `Station Data` tab. After clicking the `Pull Station` button, the application compiles available station data from the production CEDS environment and GIS REST services. If an invalid DEQ Station ID is entered, a notification in the bottom right corner will appear alerting users that the entered Station ID does not exist. Upon retrieving data, the application plots the station on an interactive map, identifies key station information in the `Station Information` table, and compiles sampling history in the `Sampling Summary` table. The interactive map has a Level III Ecoregion and DEQ Assessment Region layers hidden that can be plotted by hovering the mouse over the layers button in the top left corner of the map. Links to the chosen station in CEDS and in the GIS Staff app are available in the `Station Information` table.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;After a station is retrieved, the user may use the `Benthic Data` and `Habitat Data` tabs. The `Benthic Data` tab allows users to analyze benthic results on the fly using their SCI method of choice, filter results by specific collection date ranges, view unrarified samples, and filter results by replicate number. The `Sampling Metrics` tab averages SCI scores by specific windows (reactive to the selected benthic data range), details collector and taxonomist information, and highlights sample information. The `Detailed SCI Results` tab allows users to visualize SCI scores in an interactive plot and details SCI metrics by BenSampID. The interactive SCI bar plot is color coded by season and allows users to turn layers on and off in the legend on the right panel. Additional features such as zooming, panning, and plot downloads are available in the top right corner of the plot by hovering the mouse on the plot. The `Raw Benthic Data` tab features subtabs that organize raw benthic data by BenSampID in wide or long formats called `Crosstab View` and `Long View`, respectively.
