@@ -27,32 +27,32 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 
 
 ## For testing: connect to ODS production
-pool <- dbPool(
- drv = odbc::odbc(),
- Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
- Server= "DEQ-SQLODS-PROD,50000",
- dbname = "ODS",
- trusted_connection = "yes"
-)
+# pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  trusted_connection = "yes"
+# )
 
 # For deployment on the R server: Set up pool connection to production environment
-# pool <- dbPool(
-#   drv = odbc::odbc(),
-#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-#   # Production Environment
-#   Server= "DEQ-SQLODS-PROD,50000",
-#   dbname = "ODS",
-#   UID = conn$UID_prod,
-#   PWD = conn$PWD_prod,
-#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-#   # Test environment
-#   #Server= "WSQ04151,50000",
-#   #dbname = "ODS_test",
-#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-#   trusted_connection = "yes"
-# )
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod,
+  PWD = conn$PWD_prod,
+  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+  # Test environment
+  #Server= "WSQ04151,50000",
+  #dbname = "ODS_test",
+  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+  trusted_connection = "yes"
+)
 
 onStop(function() {
   poolClose(pool)
@@ -196,10 +196,9 @@ stationSummarySampingMetrics <- function(stationInfo_sf){
 } 
 
 # Organize field and analyte info into prettier table
-stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDataRaw, repFilter, averageResults){
+stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDataRaw, averageResults){
   if(averageResults == TRUE){
     y <- stationAnalyteDataRaw %>%
-      filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
       group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
       dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Com_Code, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
                     Pg_Parm_Name, Ana_Value) %>% 
@@ -235,7 +234,6 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
     #   arrange(Fdt_Sta_Id, Fdt_Date_Time))
   } else {
     z <- stationAnalyteDataRaw %>%
-      filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
       group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
       dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Com_Code, Ana_Value) %>%
       mutate(`Associated Analyte Records` = 1:n(),

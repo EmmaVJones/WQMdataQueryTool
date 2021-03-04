@@ -1,4 +1,7 @@
-shinyUI(fluidPage(theme= "yeti.css",
+shinyUI(fluidPage(tags$head(
+  tags$style(
+    HTML(".shiny-notification {position:fixed; top: calc(60%); left: calc(10%); }"))),
+  theme= "yeti.css",
                   navbarPage("CEDS Water Quality Monitoring Data Query Tool",
                              
                              #tabPanel('How To',
@@ -33,13 +36,17 @@ shinyUI(fluidPage(theme= "yeti.css",
                                         tabPanel("Water Quality Data",
                                                  sidebarPanel(
                                                    uiOutput('dateRangeFilter_'),
-                                                   uiOutput('labCodesIncluded_'),
+                                                   uiOutput('labCodesDropped_'),
                                                    checkboxGroupInput('repFilter', "Filter Reps", 
                                                                       choices = c('R','S1', 'S2'), selected = 'R'),
                                                    width = 3),
                                                  mainPanel(
                                                    tabsetPanel(
                                                      tabPanel('Station Data',
+                                                              
+                                                              #verbatimTextOutput('test'),
+                                                              
+                                                              
                                                               h4('Field and Chemistry Data Combined'),
                                                               helpText("This table presents all available field and analyte data 
                                                                         filtered by the date filter in the sidebar panel. Analyte 
