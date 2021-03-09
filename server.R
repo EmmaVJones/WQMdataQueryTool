@@ -253,9 +253,21 @@ shinyServer(function(input, output, session) {
                                           'colvis')), selection = 'none')})
 
   ## Visualization Tools: Parameter Plot Tab
+  observe({req(nrow(basicStationSummary()) > 0, input$parameterPlotlySelection)
+    if(input$parameterPlotlySelection %in% names(basicStationSummary())){
+      z <- dplyr::select(basicStationSummary(), parameterPlot = !! input$parameterPlotlySelection) %>% # rename clutch for nse
+        filter(!is.na(parameterPlot)) 
+      if(nrow(z) == 0){
+        showNotification('No data to plot for selected parameter.',duration = 3 )}
+    } else {showNotification('No data to plot for selected parameter.', duration = 3  )}      })
 
-  output$parameterPlot <- renderPlotly({ req(nrow(basicStationSummary()) > 0, input$parameterPlotlySelection)
-    parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup) })
+  output$parameterPlot <- renderPlotly({ req(nrow(filter(basicStationSummary(), !is.na(input$parameterPlotlySelection))) > 0, input$parameterPlotlySelection)
+   suppressWarnings(suppressMessages(
+     parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup) ))   })
+  
+  # observe(  
+  #      })
+  # 
 
   ## Visualization Tools: Probabilistic Estimates Tab
   centralTendencies <- reactive({ req(basicStationSummary())

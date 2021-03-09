@@ -27,32 +27,32 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 
 
 ## For testing: connect to ODS production
-pool <- dbPool(
- drv = odbc::odbc(),
- Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
- Server= "DEQ-SQLODS-PROD,50000",
- dbname = "ODS",
- trusted_connection = "yes"
-)
+# pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  trusted_connection = "yes"
+# )
 
 # For deployment on the R server: Set up pool connection to production environment
-# pool <- dbPool(
-#   drv = odbc::odbc(),
-#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-#   # Production Environment
-#   Server= "DEQ-SQLODS-PROD,50000",
-#   dbname = "ODS",
-#   UID = conn$UID_prod,
-#   PWD = conn$PWD_prod,
-#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-#   # Test environment
-#   #Server= "WSQ04151,50000",
-#   #dbname = "ODS_test",
-#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-#   trusted_connection = "yes"
-# )
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod,
+  PWD = conn$PWD_prod,
+  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+  # Test environment
+  #Server= "WSQ04151,50000",
+  #dbname = "ODS_test",
+  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+  trusted_connection = "yes"
+)
 
 onStop(function() {
   poolClose(pool)
@@ -402,7 +402,10 @@ basicSummary <- function(stationFieldAnalyte){
          `Fecal Coliform` = concatenateCols(stationFieldAnalyte, "FECAL COLIFORM,MEMBR FILTER,M-FC BROTH,44.5 C"),                       
          `Total Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, TOTAL ORGANIC (MG/L AS C)'),
          `Dissolved Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, DISSOLVED ORGANIC (MG/L AS C)'),
-         `Benthic Ash Free Dry Mass` = concatenateCols(stationFieldAnalyte, 'BENTHIC ASH FREE DRY MASS, GM/M2')) %>%
+         `Benthic Ash Free Dry Mass` = concatenateCols(stationFieldAnalyte, 'BENTHIC ASH FREE DRY MASS, GM/M2'),
+         `Benthic Chlorophyll a` = concatenateCols(stationFieldAnalyte, 'BENTHIC CHLOROPHYLL A, MG/M2'), # billy addition
+         `Benthic Chlorophyll b` = concatenateCols(stationFieldAnalyte, 'BENTHIC, CHLOROPHYLL B, MG/M2'),# billy addition
+         `Benthic Pheophytin a` = concatenateCols(stationFieldAnalyte, 'BENTHIC, PHEOPHYTIN A, MG/M2')) %>% # billy addition
     dplyr::select(StationID, `Collection Date`, Comments, `Collector ID`, `Run ID`, `SPG Code`, `SPG Description`,
                   Depth, `Weather Code`, `Tide Code`, Temperature, pH, `Dissolved Oxygen`, `DO Percent Saturation`,
                   `Specific Conductance`, Salinity, Turbidity, `Secchi Depth`, Hardness, Ecoli, Enterococci, `Fecal Coliform`,
@@ -411,7 +414,7 @@ basicSummary <- function(stationFieldAnalyte){
                   `Suspended Sediment Concentration Fine`, `Calcium`, `Magnesium`, `Sodium`, `Potassium`, `Chloride`, `Sulfate`, `Arsenic`, 
                   `Barium`, `Beryllium`, `Cadmium`, `Chromium`, `Copper`, `Iron`, `Lead`, `Manganese`, `Thallium`, `Nickel`, `Silver`, 
                   `Strontium`, `Zinc`, `Antimony`, `Aluminum`, `Selenium`, `Fecal Coliform`, `Total Organic Carbon`, `Dissolved Organic Carbon`, 
-                  `Benthic Ash Free Dry Mass` )   )
+                  `Benthic Ash Free Dry Mass`,`Benthic Chlorophyll a`, `Benthic Chlorophyll b`, `Benthic Pheophytin a` )   )
 }
 
 
@@ -419,60 +422,65 @@ parameterPlotly <- function(basicData,
                             parameter,
                             unitData,
                             WQSlookup){
-  parameterUnits <- filter(unitData, AltName %in% !!parameter)$Units
-  if(parameter %in% c('Temperature', 'Dissolved Oxygen', "pH")){
-    if(parameter == 'Temperature'){parameterLimit <- 'Max Temperature (C)'; specialStandards <- NULL}
-    if(parameter == 'Dissolved Oxygen'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
-    if(parameter == 'pH'){
-      parameterLimit <- c('pH Min', 'pH Max')
-      if(nrow(filter(WQSlookup, StationID %in% unique(basicData$StationID)) %>% 
-              filter(str_detect(as.character(SPSTDS), '6.5-9.5'))) > 0){specialStandards <- c(6.5, 9.5)
-      } else {specialStandards <- NULL}}
-  } else { parameterLimit <- NULL 
-  specialStandards <- NULL  }
-  
-  dat <- dplyr::select(basicData, StationID, `Collection Date`, Depth, Measure = !! parameter) %>%
-    filter( !is.na(Measure))
-  
-  if(nrow(dat) > 0){
-    dat <- left_join(dat, WQSlookup, by = c('StationID')) %>%
-      mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
-      mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
-      # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
-      left_join(WQSvalues, by = 'CLASS_BASIN') %>%
-      dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
-      rename('CLASS' = 'CLASS.x') %>%
-      # add standards info if available
-      {if(!is.null(parameterLimit))
-        dplyr::select(., StationID, `Collection Date`, Depth, Measure, Standard = !!parameterLimit) 
-        else dplyr::select(., StationID, `Collection Date`, Depth, Measure) } %>%
-      # pH special standards correction
-      {if(!is.null(specialStandards))
-        mutate(., Standard1 = specialStandards[1], Standard2 = specialStandards[2])
-        else . } %>%
-      mutate(units = parameterUnits) 
-    #return(dat)
-    plot_ly(data=dat) %>%
-      {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
-        add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
-                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-        else . } %>%
-      {if(parameter %in% c('pH'))
-        add_lines(.,  x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
-                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
-          add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
+  z <- dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
+    filter(!is.na(parameterPlot)) 
+  if(nrow(z) != 0){
+    parameterUnits <- filter(unitData, AltName %in% !!parameter)$Units
+    if(parameter %in% c('Temperature', 'Dissolved Oxygen', "pH")){
+      if(parameter == 'Temperature'){parameterLimit <- 'Max Temperature (C)'; specialStandards <- NULL}
+      if(parameter == 'Dissolved Oxygen'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
+      if(parameter == 'pH'){
+        parameterLimit <- c('pH Min', 'pH Max')
+        if(nrow(filter(WQSlookup, StationID %in% unique(basicData$StationID)) %>% 
+                filter(str_detect(as.character(SPSTDS), '6.5-9.5'))) > 0){specialStandards <- c(6.5, 9.5)
+        } else {specialStandards <- NULL}}
+    } else { parameterLimit <- NULL 
+    specialStandards <- NULL  }
+    
+    dat <- dplyr::select(basicData, StationID, `Collection Date`, Depth, Measure = !! parameter) %>%
+      filter( !is.na(Measure))
+    
+    if(nrow(dat) > 0){
+      dat <- left_join(dat, WQSlookup, by = c('StationID')) %>%
+        mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
+        mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
+        # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
+        left_join(WQSvalues, by = 'CLASS_BASIN') %>%
+        dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
+        rename('CLASS' = 'CLASS.x') %>%
+        # add standards info if available
+        {if(!is.null(parameterLimit))
+          dplyr::select(., StationID, `Collection Date`, Depth, Measure, Standard = !!parameterLimit) 
+          else dplyr::select(., StationID, `Collection Date`, Depth, Measure) } %>%
+        # pH special standards correction
+        {if(!is.null(specialStandards))
+          mutate(., Standard1 = specialStandards[1], Standard2 = specialStandards[2])
+          else . } %>%
+        mutate(units = parameterUnits) 
+      #return(dat)
+      plot_ly(data=dat) %>%
+        {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+          add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
                     hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-        else . } %>%
-      add_markers(data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
-                  marker = list(color= '#535559'), hoverinfo="text",
-                  text=~paste(sep="<br>",
-                              paste("Sample Date: ",`Collection Date`),
-                              paste("Depth: ",Depth, "m"),
-                              paste(parameter, ": ",Measure," (mg/L)"))) %>%
-      layout(showlegend=FALSE,
-             yaxis=list(title=paste(parameter, unique(dat$units))),
-             xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
-  }
+          else . } %>%
+        {if(parameter %in% c('pH'))
+          add_lines(.,  x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
+                    hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
+            add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
+                      hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+          else . } %>%
+        add_markers(data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
+                    marker = list(color= '#535559'), hoverinfo="text",
+                    text=~paste(sep="<br>",
+                                paste("Sample Date: ",`Collection Date`),
+                                paste("Depth: ",Depth, "m"),
+                                paste(parameter, ": ",Measure," (mg/L)"))) %>%
+        layout(showlegend=FALSE,
+               yaxis=list(title=paste(parameter, unique(dat$units))),
+               xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
+    } } 
+  
+  
 }
 
 
@@ -578,7 +586,7 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
   if(is.null(CDFsettings)){
     p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
       labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
-      ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
+      ggtitle(paste(subpopulation,'\n', prettyParameterName,"\n Percentile Graph ( n = ",m,")",sep=" ")) +#ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
       theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
       theme(axis.title = element_text(face='bold',size=12))+
       geom_point() +
@@ -587,7 +595,7 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
   } else {
     p1 <- ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
       labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
-      ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
+      ggtitle(paste(subpopulation,'\n', prettyParameterName,"\n Percentile Graph ( n = ",m,")",sep=" ")) +#ggtitle(paste(subpopulation,prettyParameterName,"Percentile Graph ( n = ",m,")",sep=" ")) + 
       theme(plot.title = element_text(hjust=0.5,face='bold',size=15)) +
       theme(axis.title = element_text(face='bold',size=12))+
       

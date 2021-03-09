@@ -85,7 +85,9 @@ shinyUI(fluidPage(tags$head(
                                                                                   all available parameters in the selected data window to visualize temporal changes.',
                                                                                   span(strong('Where the information is available, the appropriate Water Quality Standard is
                                                                                               plotted with the station data'))),
-                                                                         selectInput('parameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(unitData$AltName)),
+                                                                        # fluidRow(column(3, 
+                                                                        selectInput('parameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName)),#)
+                                                                        #          column(3, uiOutput('noParameterDataWarning')),
                                                                          plotlyOutput('parameterPlot'), br(), br(), br()),
                                                                 tabPanel('Probabilistic Estimates',
                                                                          h4('Comparison to Freshwater Probabilistic Estimates'),
