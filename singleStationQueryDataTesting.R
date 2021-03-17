@@ -80,7 +80,7 @@ stationInfoFin <- stationInfoConsolidated(pool, station, WQM_Station_Full_REST)
 stationInfo_sf <- WQM_Station_Full_REST
 
 # Quick Station Sampling Information
-stationInfoSampleMetrics <- stationSummarySampingMetrics(stationInfo_sf)
+stationInfoSampleMetrics <- stationSummarySampingMetrics(stationInfo_sf, 'single')
 
 userSuperBasin <- WQM_Station_Full_REST$ProbSuperBasin[1]
 userBasin <- WQM_Station_Full_REST$ProbBasin[1]

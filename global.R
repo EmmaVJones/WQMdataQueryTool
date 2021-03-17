@@ -27,32 +27,32 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -109,7 +109,7 @@ WQSvalues <- tibble(CLASS_BASIN = c('I',"II","II_7","III","IV","V","VI","VII"),
 WQM_Station_Full_REST_request <- function(pool, station, subbasinVAHU6crosswalk, subbasins, ecoregion){
   WQM_Station_Full_REST <- suppressWarnings(
     geojson_sf(
-      paste0("http://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%27",
+      paste0("https://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%27",
              toupper(station),"%27&outFields=*&f=geojson"))) 
 
   if(nrow(WQM_Station_Full_REST ) > 0){
@@ -135,7 +135,7 @@ WQM_Station_Full_REST_request <- function(pool, station, subbasinVAHU6crosswalk,
     # pull a known station to steal data structure
     WQM_Station_Full_REST <- suppressWarnings(
       geojson_sf(
-        paste0("http://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%272-JKS023.61%27&outFields=*&f=geojson")))[1,] %>%
+        paste0("https://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%272-JKS023.61%27&outFields=*&f=geojson")))[1,] %>%
       mutate(WQM_YRS_YEAR = ifelse(!is.na(WQM_YRS_YEAR), lubridate::year(as.Date(as.POSIXct(WQM_YRS_YEAR/1000, origin="1970-01-01"))), NA)) %>% 
       left_join(dplyr::select(subbasinVAHU6crosswalk, SubbasinVAHU6code, BASIN_NAME), by = c('BASINS_VAHUSB' = 'SubbasinVAHU6code')) %>%
       st_drop_geometry()
@@ -184,10 +184,12 @@ stationInfoConsolidated <- function(pool, station, WQM_Station_Full_REST){
 
 
 # Quick Station Sampling Summary Information
-stationSummarySampingMetrics <- function(stationInfo_sf){
+stationSummarySampingMetrics <- function(stationInfo_sf, singleOrMulti){
   stationInfo_sf %>%
     group_by(STATION_ID) %>%
-    mutate(`Years Sampled` = WQM_YRS_YEAR) %>% #paste0(year(WQM_YRS_YEAR))) %>% # for when column coming in as date
+    {if(singleOrMulti == 'single')
+      mutate(., `Years Sampled` = WQM_YRS_YEAR)
+      else mutate(., `Years Sampled` = year(WQM_YRS_YEAR)) } %>% 
     dplyr::select(STATION_ID, WQM_YRS_SPG_CODE,WQM_YRS_YEAR,`Years Sampled`,WQM_SPG_DESCRIPTION) %>%
     st_drop_geometry() %>%
     group_by(STATION_ID, `Years Sampled`) %>%
@@ -608,3 +610,60 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
   
   return(p1)
 }
+
+
+
+
+### Multistation Specific functions
+
+# # Pull WQM stations based on spatial and analyte info
+WQM_Stations_Filter_function <- function(pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
+                                         ecoregionFilter, dateRange_multistation, analyte_Filter){
+  # preliminary stations before daterange filter
+  preliminaryStations <- WQM_Stations_Spatial %>%
+    # go small to large spatial filters
+    {if(!is.null(VAHU6Filter))
+      filter(., VAHU6 %in% VAHU6Filter)
+      #st_intersection(., filter(assessmentLayer, VAHU6 %in% VAHU6Filter))
+      else .} %>%
+    {if(is.null(VAHU6Filter) & !is.null(subbasinFilter))
+      filter(., Basin_Code %in% subbasinFilter)
+      #st_intersection(., filter(subbasins, SUBBASIN %in% subbasinFilter))
+      else .} %>%
+    {if(is.null(VAHU6Filter) & !is.null(assessmentRegionFilter)) # don't need assessment region filter if VAHU6 available
+      filter(., ASSESS_REG %in% assessmentRegionFilter)
+      #st_intersection(., filter(assessmentRegions, ASSESS_REG %in% assessmentRegionFilter))
+      else .} %>%
+    {if(!is.null(ecoregionFilter))
+      filter(., US_L3NAME %in% ecoregionFilter)
+      #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
+      else .}
+
+  # add daterange filter based on preliminary station results
+  if(nrow(preliminaryStations) > 0){
+    if(!is.null(dateRange_multistation)){
+    stationField <- pool %>% tbl("Wqm_Field_Data_View") %>%
+      filter(Fdt_Sta_Id %in% !! preliminaryStations$StationID &
+               between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2]) ) %>% # & # x >= left & x <= right
+               #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%
+     # dplyr::select(Fdt_Sta_Id, Fdt_Id) %>% # save time by only bringing back station names
+      as_tibble()
+
+    preliminaryStations <- filter(preliminaryStations, StationID %in% stationField$Fdt_Sta_Id)  }
+  } else {
+    return(preliminaryStations)
+  }
+
+  if(!is.null(analyte_Filter)){
+    stationAnalyte <- pool %>% tbl("Wqm_Analytes_View") %>%
+      filter(Ana_Sam_Fdt_Id %in% !!  stationField$Fdt_Id &
+               between(as.Date(Ana_Received_Date), !! dateRange_multistation[1], !! dateRange_multistation[2]) & # x >= left & x <= right
+               Pg_Parm_Name %in% analyte_Filter) %>%
+      dplyr::select(Ana_Sam_Fdt_Id) %>% # save time by only bringing back station names
+      as_tibble() %>%
+      # need to join back to field data to get station name
+      left_join(stationField, by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) %>%
+      distinct(Fdt_Sta_Id)
+    preliminaryStations <- filter(preliminaryStations, StationID %in% stationAnalyte$Fdt_Sta_Id)  }
+
+  return(preliminaryStations) }
