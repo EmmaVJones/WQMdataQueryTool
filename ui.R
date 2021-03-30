@@ -135,21 +135,21 @@ shinyUI(fluidPage(tags$head(
                                                 sidebarPanel(
                                                   helpText("Query uses spatial data stored on R server. Spatial data is refreshed weekly."),
                                                   radioButtons('queryType', "How would you like to query stations?",
-                                                               choices = c('Spatial Filters', 'Wildcard Selection', 'Manually Specify Stations')),
+                                                               choices = c('Spatial Filters', 'Wildcard Selection', 
+                                                                           'Manually Specify Stations (takes a few seconds for the station text box to appear)')),
                                                 
                                                   # Spatial filters
-                                                  conditionalPanel(
-                                                    condition = "input.queryType == 'Spatial Filters'",
+                                                  conditionalPanel(condition = "input.queryType == 'Spatial Filters'",
                                                     uiOutput('spatialFilters_assessmentRegion'),
                                                     uiOutput('spatialFilters_subbasin'),
-                                                    uiOutput('spatialFilters_VAHU6'),
-                                                    hr(),
-                                                    helpText("Additional filter(s) applied on 'Pull Stations' request. "),
-                                                    uiOutput('spatialFilters_Ecoregion'),
-                                                    uiOutput('dateRange_multistationUI'),
-                                                    uiOutput('analyte_FilterUI'),
-                                                    br(),
-                                                    actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
+                                                    uiOutput('spatialFilters_VAHU6')),
+                                                    # hr(),
+                                                    # helpText("Additional filter(s) applied on 'Pull Stations' request. "),
+                                                    # uiOutput('spatialFilters_Ecoregion'),
+                                                    # uiOutput('dateRange_multistationUI'),
+                                                    # uiOutput('analyte_FilterUI'),
+                                                    # br(),
+                                                    #actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
 
                                                   # 
                                                   # # Wildcard Selection
@@ -162,15 +162,26 @@ shinyUI(fluidPage(tags$head(
                                                   # 
                                                   # Manually Specify Stations Selection
                                                   conditionalPanel(
-                                                    condition = "input.queryType == 'Manually Specify Stations'",
-                                                    uiOutput('manualSelectionUI'),
-                                                    #hr(),
-                                                    #uiOutput('dateRange_multistationUI'),
-                                                    br(),
-                                                    actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
-
+                                                    condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
+                                                    uiOutput('manualSelectionUI')),
+                                                    ###hr(),
+                                                    ###uiOutput('dateRange_multistationUI'),
+                                                    #br(),
+                                                    #actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
+                                                  hr(),
+                                                  helpText("Additional filter(s) applied on 'Pull Stations' request. "),
+                                                  uiOutput('spatialFilters_Ecoregion'),
+                                                  uiOutput('dateRange_multistationUI'),
+                                                  uiOutput('analyte_FilterUI'),
+                                                  # add in appropriate pull data button based on query type
+                                                  conditionalPanel(condition = "input.queryType == 'Spatial Filters'",
+                                                                   actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
+                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
+                                                                   actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
+                                                
+                                               
                                                 mainPanel(
-                                                  verbatimTextOutput('test')#,
+                                                  verbatimTextOutput('test'),
                                                   
                                                   # leafletOutput('multistationMap'),
                                                   # helpText('Stations identified in the spatial filter are displayed below unless user further refines 
@@ -184,7 +195,7 @@ shinyUI(fluidPage(tags$head(
                                                   #           (older) samples could be lacking the sample code but have benthic data for exploration 
                                                   #           in subsequent sections of the application.'),
                                                   # DT::dataTableOutput('multistationInfoSampleMetrics'),
-                                                  # br(), br(), br() # a little breathing room
+                                                   br(), br(), br() # a little breathing room
                                                 ))))
                                        
                                        )))

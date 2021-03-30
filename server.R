@@ -401,25 +401,24 @@ shinyServer(function(input, output, session) {
         distinct(VAHU6) %>% arrange(VAHU6) %>%  pull()  }
     selectInput('VAHU6Filter','VAHU6', choices = choices, multiple = T) })
 
-  output$spatialFilters_Ecoregion <- renderUI({req(input$queryType == 'Spatial Filters')
+  output$spatialFilters_Ecoregion <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('ecoregionFilter','Level 3 Ecoregion', choices = unique(ecoregion$US_L3NAME), multiple = T) })
 
-  output$dateRange_multistationUI <- renderUI({
-    req(input$queryType == 'Spatial Filters')
+  output$dateRange_multistationUI <- renderUI({#req(input$queryType == 'Spatial Filters')
     dateRangeInput('dateRange_multistation',
                    label = 'Filter Stations By Sample Date Range (YYYY-MM-DD)',
                    start = as.Date("1970-01-01"),
                    end = as.Date(Sys.Date()- 7))   })
 
-  output$analyte_FilterUI <- renderUI({
+  output$analyte_FilterUI <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('analyte_Filter', 'Filter Stations By Analytes Collected',
                 choices = Wqm_Parameter_Grp_Cds_Codes_Wqm_View, multiple = TRUE) })
 
   # Query by spatial filter selection
   observeEvent(input$begin_multistation_spatial,{
-    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function(pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
-                                                          input$assessmentRegionFilter, input$ecoregionFilter,
-                                                          input$dateRange_multistation, input$analyte_Filter) })
+    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
+                                                          input$assessmentRegionFilter, input$ecoregionFilter, input$dateRange_multistation, input$analyte_Filter,
+                                                          manualSelection = NULL) })
   
   # Query by wildcard selection
   
@@ -427,12 +426,16 @@ shinyServer(function(input, output, session) {
   
   
   # Query by manual selection
-  output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations')
+  output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)')
     list(helpText('Begin typing station names and the app will filter available data by input text. Multiple stations are allowed.'),
          selectInput('manualSelection','Station ID', choices = sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)) })
   
   observeEvent(input$begin_multistation_manual, {
-    reactive_objects$WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(input$manualSelection))    })
+    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
+                                                                         pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
+                                                                         ecoregionFilter = input$ecoregionFilter, dateRange_multistation = input$dateRange_multistation,
+                                                                         analyte_Filter = input$analyte_Filter,   manualSelection = as.character(input$manualSelection)) })
+      #filter(WQM_Stations_Spatial, StationID %in% as.character(input$manualSelection))    })
   
   
   

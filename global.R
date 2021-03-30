@@ -617,27 +617,31 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
 ### Multistation Specific functions
 
 # # Pull WQM stations based on spatial and analyte info
-WQM_Stations_Filter_function <- function(pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, dateRange_multistation, analyte_Filter){
+WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
+                                         ecoregionFilter, dateRange_multistation, analyte_Filter, manualSelection){
   # preliminary stations before daterange filter
-  preliminaryStations <- WQM_Stations_Spatial %>%
-    # go small to large spatial filters
-    {if(!is.null(VAHU6Filter))
-      filter(., VAHU6 %in% VAHU6Filter)
-      #st_intersection(., filter(assessmentLayer, VAHU6 %in% VAHU6Filter))
-      else .} %>%
-    {if(is.null(VAHU6Filter) & !is.null(subbasinFilter))
-      filter(., Basin_Code %in% subbasinFilter)
-      #st_intersection(., filter(subbasins, SUBBASIN %in% subbasinFilter))
-      else .} %>%
-    {if(is.null(VAHU6Filter) & !is.null(assessmentRegionFilter)) # don't need assessment region filter if VAHU6 available
-      filter(., ASSESS_REG %in% assessmentRegionFilter)
-      #st_intersection(., filter(assessmentRegions, ASSESS_REG %in% assessmentRegionFilter))
-      else .} %>%
-    {if(!is.null(ecoregionFilter))
-      filter(., US_L3NAME %in% ecoregionFilter)
-      #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
-      else .}
+  if(queryType == 'Spatial Filters' ){
+    preliminaryStations <- WQM_Stations_Spatial %>%
+      # go small to large spatial filters
+      {if(!is.null(VAHU6Filter))
+        filter(., VAHU6 %in% VAHU6Filter)
+        #st_intersection(., filter(assessmentLayer, VAHU6 %in% VAHU6Filter))
+        else .} %>%
+      {if(is.null(VAHU6Filter) & !is.null(subbasinFilter))
+        filter(., Basin_Code %in% subbasinFilter)
+        #st_intersection(., filter(subbasins, SUBBASIN %in% subbasinFilter))
+        else .} %>%
+      {if(is.null(VAHU6Filter) & !is.null(assessmentRegionFilter)) # don't need assessment region filter if VAHU6 available
+        filter(., ASSESS_REG %in% assessmentRegionFilter)
+        #st_intersection(., filter(assessmentRegions, ASSESS_REG %in% assessmentRegionFilter))
+        else .} %>%
+      {if(!is.null(ecoregionFilter))
+        filter(., US_L3NAME %in% ecoregionFilter)
+        #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
+        else .}  }
+  if(str_detect(queryType, 'Manually Specify')){
+    preliminaryStations <-  filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection))  }
+  
 
   # add daterange filter based on preliminary station results
   if(nrow(preliminaryStations) > 0){

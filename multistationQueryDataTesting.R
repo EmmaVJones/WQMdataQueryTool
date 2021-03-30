@@ -59,12 +59,28 @@ Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Code
 
 
 # user inputs
-queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection #'Manually Specify Stations'
+queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
+
+ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
+dateRange_multistation <- c(as.Date('1970-01-01'), as.Date(Sys.Date()- 7))
+## pull based on parameter
+analyte_Filter <- #NULL#
+  c('SODIUM (NA), ATM DEP, WET, DISS, MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)', 'SODIUM, TOTAL (MG/L AS NA)', 'SODIUM-TOTAL  UG/L (AS NA)')
+# 'FECAL COLIFORM,7 HR,M-7HR FC MED MF,41.5C,#/100ML', 'FECAL COLIFORM,A-1 MOD,WATER,44.5C,24HR MPN/100ML', 
+# 'FECAL COLIFORM,MEMBR FILTER,M-FC BROTH,44.5 C', 'FECAL COLIFORM,MPN,BORIC ACID LACTOSE BR,43C,48HR', 
+# 'FECAL COLIFORM,MPN,EC MED,44.5C (TUBE 31614)', 'FECAL COLIFORM,MPN,TUBE CONFIGURATION',
+# 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3)', 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED', 
+# 'HARDNESS, CARBONATE (MG/L AS CACO3)', 'HARDNESS, TOTAL (MG/L AS CACO3)')
 
 
 # manually specify troubleshooting
 manualSelection1 <- c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
-WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection1))  
+#WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection1))  
+WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
+                                                    pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
+                                                    ecoregionFilter = "Ridge and Valley", dateRange_multistation, analyte_Filter, 
+                                                    manualSelection = manualSelection1)
+
 # skip down to multistationInfoFin
 
 
@@ -80,21 +96,11 @@ VAHU6Filter <- NULL#'JU11'#NULL
 # filter(WQM_Stations_Spatial, ASSESS_REG %in% assessmentRegionFilter) %>%
 #   filter(Basin_Code %in% subbasinFilter) %>% 
 #   distinct(VAHU6) %>%  pull()
-ecoregionFilter <- "Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
-dateRange_multistation <- c(as.Date('1970-01-01'), as.Date(Sys.Date()- 7))
-## pull based on parameter
-analyte_Filter <- NULL#c('SODIUM (NA), ATM DEP, WET, DISS, MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)', 
-                    #'SODIUM, TOTAL (MG/L AS NA)', 'SODIUM-TOTAL  UG/L (AS NA)')#,
-                    # 'FECAL COLIFORM,7 HR,M-7HR FC MED MF,41.5C,#/100ML', 'FECAL COLIFORM,A-1 MOD,WATER,44.5C,24HR MPN/100ML', 
-                    # 'FECAL COLIFORM,MEMBR FILTER,M-FC BROTH,44.5 C', 'FECAL COLIFORM,MPN,BORIC ACID LACTOSE BR,43C,48HR', 
-                    # 'FECAL COLIFORM,MPN,EC MED,44.5C (TUBE 31614)', 'FECAL COLIFORM,MPN,TUBE CONFIGURATION',
-                    # 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3)', 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED', 
-                    # 'HARDNESS, CARBONATE (MG/L AS CACO3)', 'HARDNESS, TOTAL (MG/L AS CACO3)')
 
 
 
-WQM_Stations_Filter <- WQM_Stations_Filter_function(pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, dateRange_multistation, analyte_Filter)
+WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
+                                         ecoregionFilter, dateRange_multistation, analyte_Filter, manualSelection = NULL)
 
 
 ### end  
@@ -108,7 +114,9 @@ WQM_Station_Full_REST <- filter(WQM_Stations_Full, WQM_STA_ID %in% WQM_Stations_
 stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST, 'multi')
 
 ## Pull CEDS Station Information 
-stationInfoFin <- stationInfoConsolidated(pool, WQM_Stations_Filter$StationID, WQM_Station_Full_REST)
+if(nrow(WQM_Stations_Filter) > 0){
+  stationInfoFin <- stationInfoConsolidated(pool, WQM_Stations_Filter$StationID, WQM_Station_Full_REST)
+}
 
 # Quick Station Sampling Information
 stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST, 'multi')
