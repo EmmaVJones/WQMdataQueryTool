@@ -618,7 +618,7 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
 
 # # Pull WQM stations based on spatial and analyte info
 WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, dateRange_multistation, analyte_Filter, manualSelection){
+                                         ecoregionFilter, dateRange_multistation, analyte_Filter, manualSelection, wildcardSelection){
   # preliminary stations before daterange filter
   if(queryType == 'Spatial Filters' ){
     preliminaryStations <- WQM_Stations_Spatial %>%
@@ -628,7 +628,7 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
         #st_intersection(., filter(assessmentLayer, VAHU6 %in% VAHU6Filter))
         else .} %>%
       {if(is.null(VAHU6Filter) & !is.null(subbasinFilter))
-        filter(., Basin_Code %in% subbasinFilter)
+        filter(., Basin_Name %in% subbasinFilter)
         #st_intersection(., filter(subbasins, SUBBASIN %in% subbasinFilter))
         else .} %>%
       {if(is.null(VAHU6Filter) & !is.null(assessmentRegionFilter)) # don't need assessment region filter if VAHU6 available
@@ -641,6 +641,9 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
         else .}  }
   if(str_detect(queryType, 'Manually Specify')){
     preliminaryStations <-  filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection))  }
+  if(queryType == 'Wildcard Selection' ){
+    preliminaryStations <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
+                                        wildcardSelection, '"'))  }
   
 
   # add daterange filter based on preliminary station results

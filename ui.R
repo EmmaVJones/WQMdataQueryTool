@@ -151,31 +151,32 @@ shinyUI(fluidPage(tags$head(
                                                     # br(),
                                                     #actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
 
-                                                  # 
-                                                  # # Wildcard Selection
-                                                  # conditionalPanel(
-                                                  #   condition = "input.queryType == 'Wildcard Selection'",
-                                                  #   uiOutput('wildcardSelection'),
-                                                  #   #helpText('Please reload the application if you want to return to the spatial filtering method.'),
-                                                  #   br(),
-                                                  #   actionButton('begin_multistation_wildcard', 'Pull Stations',class='btn-block')),
-                                                  # 
+
+                                                  # Wildcard Selection
+                                                  conditionalPanel(condition = "input.queryType == 'Wildcard Selection'",
+                                                    uiOutput('wildcardSelection')),
+                                                    # #helpText('Please reload the application if you want to return to the spatial filtering method.'),
+                                                    # br(),
+                                                    # actionButton('begin_multistation_wildcard', 'Pull Stations',class='btn-block')),
+
                                                   # Manually Specify Stations Selection
-                                                  conditionalPanel(
-                                                    condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
+                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
                                                     uiOutput('manualSelectionUI')),
                                                     ###hr(),
                                                     ###uiOutput('dateRange_multistationUI'),
                                                     #br(),
                                                     #actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
-                                                  hr(),
+                                                  hr(), # keep these at the top level to allow reuse of same filter parameters
                                                   helpText("Additional filter(s) applied on 'Pull Stations' request. "),
                                                   uiOutput('spatialFilters_Ecoregion'),
                                                   uiOutput('dateRange_multistationUI'),
                                                   uiOutput('analyte_FilterUI'),
+                                                  
                                                   # add in appropriate pull data button based on query type
                                                   conditionalPanel(condition = "input.queryType == 'Spatial Filters'",
                                                                    actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
+                                                  conditionalPanel(condition = "input.queryType == 'Wildcard Selection'",
+                                                                   actionButton('begin_multistation_wildcard', 'Pull Stations',class='btn-block')),
                                                   conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
                                                                    actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
                                                 

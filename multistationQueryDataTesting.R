@@ -37,7 +37,8 @@ labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
 
 
 WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
-WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect")
+WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
+  rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
 WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
 # while server is down
 #readRDS('C:/HardDriveBackup/R/pins11182020/ejones/WQSlookup-withStandards.RDS')
@@ -79,10 +80,16 @@ manualSelection1 <- c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                     ecoregionFilter = "Ridge and Valley", dateRange_multistation, analyte_Filter, 
-                                                    manualSelection = manualSelection1)
+                                                    manualSelection = manualSelection1, wildcardSelection = NULL)
 
-# skip down to multistationInfoFin
-
+# wildcard troubleshooting
+wildcardText1 <- '2-JKS%'
+# wildcardResults <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
+#                                 wildcardText1, '"'))
+WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
+                                                    pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
+                                                    ecoregionFilter = "Ridge and Valley", dateRange_multistation, analyte_Filter= NULL, 
+                                                    manualSelection = NULL, wildcardSelection = wildcardText1)
 
 
 
@@ -91,19 +98,19 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (
 assessmentRegionFilter <- c("PRO")#c("BRRO")#NULL#c("PRO")#unique(subbasins$ASSESS_REG)
 subbasinFilter <- "Appomattox"#"James-Upper"# c("James-Middle",'Potomac-Lower')#NULL# c("James River - Middle",'Potomac River')#NULL#"James River - Lower"
 # filter(WQM_Stations_Spatial, ASSESS_REG %in% assessmentRegionFilter) %>%
-#   distinct(Basin_Code) %>%  pull()
+#   distinct(Basin_Name) %>%  pull()
 VAHU6Filter <- NULL#'JU11'#NULL 
 # filter(WQM_Stations_Spatial, ASSESS_REG %in% assessmentRegionFilter) %>%
-#   filter(Basin_Code %in% subbasinFilter) %>% 
+#   filter(Basin_Name %in% subbasinFilter) %>% 
 #   distinct(VAHU6) %>%  pull()
 
 
 
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, dateRange_multistation, analyte_Filter, manualSelection = NULL)
+                                         ecoregionFilter, dateRange_multistation, analyte_Filter, manualSelection = NULL, wildcardSelection = NULL)
 
-
-### end  
+ 
+### end filter options
 
 # Pull as many details about station from REST service (if available). Work around provided in case station isn't on REST server
 ## Pull station info from REST service

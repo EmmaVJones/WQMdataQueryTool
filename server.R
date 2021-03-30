@@ -35,7 +35,8 @@ subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
 labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
 
 WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
-WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect")
+WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
+  rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
 WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
 
 
@@ -381,23 +382,23 @@ shinyServer(function(input, output, session) {
 
   output$spatialFilters_subbasin <- renderUI({req(input$queryType == 'Spatial Filters')
     if(is.null(input$assessmentRegionFilter)){
-      choices <- distinct(WQM_Stations_Spatial, Basin_Code) %>% drop_na() %>% arrange(Basin_Code) %>% pull()
+      choices <- distinct(WQM_Stations_Spatial, Basin_Name) %>% drop_na() %>% arrange(Basin_Name) %>% pull()
       }else{
         choices <- filter(WQM_Stations_Spatial, ASSESS_REG %in% input$assessmentRegionFilter) %>%
-          distinct(Basin_Code) %>% arrange(Basin_Code) %>%  pull()  }
+          distinct(Basin_Name) %>% arrange(Basin_Name) %>%  pull()  }
     selectInput('subbasinFilter','Basin', choices = choices, multiple = T) })
 
   output$spatialFilters_VAHU6 <- renderUI({  req(input$queryType == 'Spatial Filters')
     if(is.null(input$assessmentRegionFilter) & is.null(input$subbasinFilter)){choices <- sort(unique(assessmentLayer$VAHU6))}
     if(is.null(input$assessmentRegionFilter) & !is.null(input$subbasinFilter)){
-      choices <-  filter(WQM_Stations_Spatial, Basin_Code %in% input$subbasinFilter) %>%
+      choices <-  filter(WQM_Stations_Spatial, Basin_Name %in% input$subbasinFilter) %>%
         distinct(VAHU6) %>% arrange(VAHU6) %>% pull() }
     if(!is.null(input$assessmentRegionFilter) & is.null(input$subbasinFilter)){
       choices <- filter(WQM_Stations_Spatial, ASSESS_REG %in% input$assessmentRegionFilter) %>%
         distinct(VAHU6) %>% arrange(VAHU6) %>% pull() }
     if(!is.null(input$assessmentRegionFilter) & !is.null(input$subbasinFilter)){
       choices <- filter(WQM_Stations_Spatial, ASSESS_REG %in% input$assessmentRegionFilter) %>%
-        filter(Basin_Code %in% input$subbasinFilter) %>%
+        filter(Basin_Name %in% input$subbasinFilter) %>%
         distinct(VAHU6) %>% arrange(VAHU6) %>%  pull()  }
     selectInput('VAHU6Filter','VAHU6', choices = choices, multiple = T) })
 
@@ -418,9 +419,23 @@ shinyServer(function(input, output, session) {
   observeEvent(input$begin_multistation_spatial,{
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
                                                           input$assessmentRegionFilter, input$ecoregionFilter, input$dateRange_multistation, input$analyte_Filter,
-                                                          manualSelection = NULL) })
+                                                          manualSelection = NULL, wildcardSelection = NULL) })
   
   # Query by wildcard selection
+  output$wildcardSelection <- renderUI({req(input$queryType == 'Wildcard Selection')
+    list(
+      helpText('Remember, use % as your wildcard, not *'),
+      textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )     })
+  
+  observeEvent(input$begin_multistation_wildcard,{
+    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
+                                                                         pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
+                                                                         ecoregionFilter = input$ecoregionFilter, dateRange_multistation = input$dateRange_multistation,
+                                                                         analyte_Filter = input$analyte_Filter, manualSelection = NULL, 
+                                                                         wildcardSelection = as.character(toupper(input$wildcardText))) })
+                                                  
+  
+  #output$test <- renderPrint({input$wildcardText})
   
   
   
@@ -434,9 +449,9 @@ shinyServer(function(input, output, session) {
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, dateRange_multistation = input$dateRange_multistation,
-                                                                         analyte_Filter = input$analyte_Filter,   manualSelection = as.character(input$manualSelection)) })
-      #filter(WQM_Stations_Spatial, StationID %in% as.character(input$manualSelection))    })
-  
+                                                                         analyte_Filter = input$analyte_Filter, manualSelection = as.character(input$manualSelection),
+                                                                         wildcardSelection = NULL) })
+
   
   
   
