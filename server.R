@@ -456,8 +456,187 @@ shinyServer(function(input, output, session) {
   
   
   
-  output$test <- renderPrint({ reactive_objects$WQM_Stations_Filter }) #input$begin_multistation_spatial})#
   
+  observe({ req(reactive_objects$WQM_Stations_Filter)
+    ## Basic Station Info
+    reactive_objects$multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data instead of calling stationInfo bc app crashes
+                                                        filter(Sta_Id %in% reactive_objects$WQM_Stations_Filter$StationID) %>%
+                                                        as_tibble() %>%
+                                                        # add link to data and add link to internal GIS web app with WQS layer on there
+                                                        mutate(`CEDS Station View Link` = paste0("<b><a href='https://ceds.deq.virginia.gov/ui#wqmStations/",
+                                                                                                 Sta_Id,"'", 
+                                                                                                 " target= '_blank'> View Monitoring Station in CEDS</a></b>"),
+                                                               `DEQ GIS Web App Link` =  paste0("<b><a href='https://gis.deq.virginia.gov/GISStaffApplication/?query=WQM%20Stations%20(All%20stations%20with%20full%20attributes),STATION_ID,",
+                                                                                                Sta_Id, 
+                                                                                                "&showLayers=DEQInternalDataViewer_1723;WATER%20LAYERS;WQM%20Stations%20(All%20stations%20with%20full%20attributes);", 
+                                                                                                ";2020%20Draft%20ADB%20WQA%20Layers;2020%20Rivers%20(Any%20Use)&level=14' target='_blank'>View Monitoring Station in DEQ Staff App</a></b>" )) %>%
+                                                        dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, everything()), 
+                                                      ########filter(WQM_Station_View, Sta_Id %in% toupper(input$station)), # need to filter instead of calling stationInfo bc app crashes
+                                                      dplyr::select(WQM_Station_Full, 
+                                                                    STATION_ID, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
+                                                                    EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
+                                                                    WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, WQM_YRS_YEAR, WQM_YRS_SPG_CODE),
+                                                      by = c('Sta_Id' = 'STATION_ID')) %>%
+      dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
+                    EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
+                    WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything()) 
+    
+    # Empty station user selection to start with
+    reactive_objects$selectedSites <- NULL
+    
+  })
+  
+  output$test <- renderPrint({ reactive_objects$multistationInfoFin })#WQM_Stations_Filter }) #input$begin_multistation_spatial})#
+  
+  
+  output$multistationMap <- renderLeaflet({req(reactive_objects$WQM_Stations_Filter)
+    # color palette for assessment polygons
+    pal <- colorFactor(
+      palette = topo.colors(7),
+      domain = assessmentRegions$ASSESS_REG)
+    pal2 <- colorFactor(
+      palette = rainbow(7),
+      domain = ecoregion$US_L3NAME)
+
+    CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
+                 options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
+                                         preferCanvas = TRUE)) %>%
+      setView(-79.1, 37.7, zoom=7)  %>%
+      addPolygons(data= ecoregion,  color = 'gray', weight = 1,
+                  fillColor= ~pal2(ecoregion$US_L3NAME), fillOpacity = 0.5,stroke=0.1,
+                  group="Level III Ecoregions",label = ~US_L3NAME) %>% hideGroup('Level III Ecoregions') %>%
+      addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
+                  fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
+                  group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
+      inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
+      addDrawToolbar(
+        targetGroup='Selected',
+        polylineOptions=FALSE,
+        markerOptions = FALSE,
+        polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+        rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+        circleOptions = FALSE,
+        circleMarkerOptions = FALSE,
+        editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
+      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+                       overlayGroups = c("Level III Ecoregions", 'Assessment Regions'),
+                       options=layersControlOptions(collapsed=T),
+                       position='topleft')        })
+
+  map_proxy_multi <- leafletProxy("multistationMap")
+
+  # # Add layers to map as requested
+  assessmentLayerFilter <- reactive({req(nrow(reactive_objects$WQM_Stations_Filter) > 0)
+    filter(assessmentLayer, VAHU6 %in% reactive_objects$WQM_Stations_Filter$VAHU6) })
+    # assessmentLayer %>%
+    #   {if(!is.null(input$subbasinFilter))
+    #     filter(., VAHUSB %in% (filter(st_drop_geometry(subbasins), SUBBASIN %in% input$subbasinFilter) %>%
+    #                              left_join(subbasinVAHU6crosswalk, by='SUBBASIN') %>% distinct(SubbasinVAHU6code) %>% pull()))
+    #     else .} %>%
+    #   {if(!is.null(input$assessmentRegionFilter))
+    #     filter(., ASSESS_REG %in% input$assessmentRegionFilter)
+    #     else .} })
+  
+  observe({req(nrow(reactive_objects$WQM_Stations_Filter) > 0)
+    map_proxy_multi %>%
+      addCircleMarkers(data = reactive_objects$WQM_Stations_Filter,
+                       color='blue', fillColor='gray', radius = 4,
+                       fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
+                       label = ~StationID, layerId = ~StationID,
+                       popup = leafpop::popupTable(reactive_objects$WQM_Stations_Filter, zcol=c('StationID'))) %>%
+      {if(nrow(assessmentLayerFilter()) > 0)
+        addPolygons(., data= assessmentLayerFilter(),  color = 'black', weight = 1,
+                    fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
+                    group="VAHU6", label = ~VAHU6) %>% hideGroup('VAHU6')
+        else . } %>%
+      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+                       overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
+                       options=layersControlOptions(collapsed=T),
+                       position='topleft')  })
+
+
+  # 
+  # ## User polygon selection feature
+  # observeEvent(input$multistationMap_draw_new_feature,{
+  # 
+  #   shape = input$multistationMap_draw_new_feature
+  # 
+  #   # derive polygon coordinates and feature_type from shape input
+  #   polygon_coordinates <- shape$geometry$coordinates
+  #   feature_type <- shape$properties$feature_type
+  # 
+  #   if(feature_type %in% c("rectangle","polygon")) {
+  #     # change user coordinates into sf multipolygon
+  #     poly <- st_sf(what = 'user selected polygon',
+  #                   geom = st_sfc(st_cast(st_polygon(list(do.call(rbind,lapply(polygon_coordinates[[1]],function(x){c(x[[1]][1],x[[2]][1])})))), 'MULTIPOLYGON') ))
+  #     st_crs(poly) <- 4326 # set crs (can't do in one step???)
+  # 
+  #     # select sites inside polygon
+  #     if(is.null(reactive_objects$selectedSites)){
+  #       reactive_objects$selectedSites <- st_intersection(reactive_objects$WQM_Stations_Filter,poly)
+  #     } else {
+  #       reactive_objects$selectedSites <- rbind(reactive_objects$selectedSites, st_intersection(reactive_objects$WQM_Stations_Filter,poly))
+  #     }
+  #   } })
+  # 
+  # # Highlight selected sites from polygon
+  # observe({req(nrow(reactive_objects$selectedSites) > 0)
+  #   map_proxy_multi %>%
+  #     addCircleMarkers(data = reactive_objects$selectedSites,
+  #                      color='blue', fillColor='yellow', radius = 4,
+  #                      fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="User Selected Station(s)",
+  #                      label = ~StationID, layerId = ~StationID,
+  #                      popup = leafpop::popupTable(reactive_objects$selectedSites, zcol=c('StationID'))) %>%
+  #     addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+  #                      overlayGroups = c("User Selected Station(s)","Spatial Filter Station(s)","VAHU6", "Level III Ecoregions", 'Assessment Regions'),
+  #                      options=layersControlOptions(collapsed=T),
+  #                      position='topleft')  })
+  # 
+  # # redraw all sites if user selection deleted
+  # observeEvent(input$multistationMap_draw_deleted_features,{
+  #   reactive_objects$selectedSites <- NULL
+  # 
+  #   map_proxy_multi %>%
+  #     clearGroup(group="User Selected Station(s)") %>%
+  #     addCircleMarkers(data = reactive_objects$WQM_Stations_Filter,
+  #                      color='blue', fillColor='gray', radius = 4,
+  #                      fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
+  #                      label = ~StationID, layerId = ~StationID,
+  #                      popup = leafpop::popupTable(reactive_objects$selectedSites, zcol=c('StationID'))) %>%
+  #     addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+  #                      overlayGroups = c("Spatial Filter Station(s)","VAHU6","Level III Ecoregions", 'Assessment Regions'),
+  #                      options=layersControlOptions(collapsed=T),
+  #                      position='topleft')    })
+  # 
+  # # Update "final" site selection after user input
+  # observe({req(reactive_objects$multistationInfoFin)
+  #   # "final sites"
+  #   reactive_objects$multistationSelection <- reactive_objects$multistationInfoFin %>%
+  #     {if(!is.null(reactive_objects$selectedSites))
+  #       filter(., Sta_Id %in% reactive_objects$selectedSites$StationID)
+  #       else . }
+# 
+#     ## Station Sampling Information
+#     reactive_objects$multistationInfoSampleMetrics <- reactive_objects$multistationSelection %>%
+#       group_by(Sta_Id) %>%
+#       mutate(`Years Sampled` = paste0(year(WQM_YRS_YEAR))) %>%
+#       dplyr::select(Sta_Id, WQM_YRS_SPG_CODE,WQM_YRS_YEAR,`Years Sampled`) %>%
+#       group_by(Sta_Id, `Years Sampled`) %>%
+#       summarise(`Sample Codes` = paste0(WQM_YRS_SPG_CODE, collapse = ' | '))           })
+
+  ## Display Station Information
+  output$multistationInfoTable <- DT::renderDataTable({
+    req(reactive_objects$multistationSelection)
+    datatable(reactive_objects$multistationSelection %>% distinct(Sta_Id, .keep_all = T) %>% arrange(Sta_Id),
+              rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
+                             pageLength = nrow(reactive_objects$multistationSelection %>% distinct(Sta_Id, .keep_all = T)),
+                             buttons=list('copy','colvis')))  })
+
+
+
+
+
   
   
   

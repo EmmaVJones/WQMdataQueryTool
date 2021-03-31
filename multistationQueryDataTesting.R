@@ -129,3 +129,70 @@ if(nrow(WQM_Stations_Filter) > 0){
 stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST, 'multi')
 
 
+
+## For map stuff
+multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data instead of calling stationInfo bc app crashes
+                                   filter(Sta_Id %in% WQM_Stations_Filter$StationID) %>%
+                                   as_tibble() %>%
+                                   # add link to data and add link to internal GIS web app with WQS layer on there
+                                   mutate(`CEDS Station View Link` = paste0("<b><a href='https://ceds.deq.virginia.gov/ui#wqmStations/",
+                                                                            Sta_Id,"'", 
+                                                                            " target= '_blank'> View Monitoring Station in CEDS</a></b>"),
+                                          `DEQ GIS Web App Link` =  paste0("<b><a href='https://gis.deq.virginia.gov/GISStaffApplication/?query=WQM%20Stations%20(All%20stations%20with%20full%20attributes),STATION_ID,",
+                                                                           Sta_Id, 
+                                                                           "&showLayers=DEQInternalDataViewer_1723;WATER%20LAYERS;WQM%20Stations%20(All%20stations%20with%20full%20attributes);", 
+                                                                           ";2020%20Draft%20ADB%20WQA%20Layers;2020%20Rivers%20(Any%20Use)&level=14' target='_blank'>View Monitoring Station in DEQ Staff App</a></b>" )) %>%
+                                   dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, everything()), 
+                                 ########filter(WQM_Station_View, Sta_Id %in% toupper(input$station)), # need to filter instead of calling stationInfo bc app crashes
+                                 dplyr::select(WQM_Station_Full, 
+                                               STATION_ID, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
+                                               EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
+                                               WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, WQM_YRS_YEAR, WQM_YRS_SPG_CODE),
+                                 by = c('Sta_Id' = 'STATION_ID')) %>%
+  dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
+                EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
+                WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything()) 
+
+
+
+# color palette for assessment polygons
+pal <- colorFactor(
+  palette = topo.colors(7),
+  domain = assessmentRegions$ASSESS_REG)
+pal2 <- colorFactor(
+  palette = rainbow(7),
+  domain = ecoregion$US_L3NAME)
+
+CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
+             options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
+                                     preferCanvas = TRUE)) %>%
+  setView(-79.1, 37.7, zoom=7)  %>%
+  addPolygons(data= ecoregion,  color = 'gray', weight = 1,
+              fillColor= ~pal2(ecoregion$US_L3NAME), fillOpacity = 0.5,stroke=0.1,
+              group="Level III Ecoregions",label = ~US_L3NAME) %>% hideGroup('Level III Ecoregions') %>%
+  addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
+              fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
+              group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
+  
+  
+  addCircleMarkers(data = WQM_Stations_Filter,
+                   color='blue', fillColor='gray', radius = 4,
+                   fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
+                   label = ~StationID, layerId = ~StationID,
+                   popup = leafpop::popupTable(WQM_Stations_Filter, zcol=c('StationID'))) %>% 
+  
+  
+  inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
+  addDrawToolbar(
+    targetGroup='Selected',
+    polylineOptions=FALSE,
+    markerOptions = FALSE,
+    polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+    rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+    circleOptions = FALSE,
+    circleMarkerOptions = FALSE,
+    editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
+  addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+                   overlayGroups = c("Level III Ecoregions", 'Assessment Regions'),
+                   options=layersControlOptions(collapsed=T),
+                   position='topleft')    

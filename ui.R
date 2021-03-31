@@ -143,35 +143,17 @@ shinyUI(fluidPage(tags$head(
                                                     uiOutput('spatialFilters_assessmentRegion'),
                                                     uiOutput('spatialFilters_subbasin'),
                                                     uiOutput('spatialFilters_VAHU6')),
-                                                    # hr(),
-                                                    # helpText("Additional filter(s) applied on 'Pull Stations' request. "),
-                                                    # uiOutput('spatialFilters_Ecoregion'),
-                                                    # uiOutput('dateRange_multistationUI'),
-                                                    # uiOutput('analyte_FilterUI'),
-                                                    # br(),
-                                                    #actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
-
-
                                                   # Wildcard Selection
                                                   conditionalPanel(condition = "input.queryType == 'Wildcard Selection'",
                                                     uiOutput('wildcardSelection')),
-                                                    # #helpText('Please reload the application if you want to return to the spatial filtering method.'),
-                                                    # br(),
-                                                    # actionButton('begin_multistation_wildcard', 'Pull Stations',class='btn-block')),
-
                                                   # Manually Specify Stations Selection
                                                   conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
                                                     uiOutput('manualSelectionUI')),
-                                                    ###hr(),
-                                                    ###uiOutput('dateRange_multistationUI'),
-                                                    #br(),
-                                                    #actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
                                                   hr(), # keep these at the top level to allow reuse of same filter parameters
                                                   helpText("Additional filter(s) applied on 'Pull Stations' request. "),
                                                   uiOutput('spatialFilters_Ecoregion'),
                                                   uiOutput('dateRange_multistationUI'),
                                                   uiOutput('analyte_FilterUI'),
-                                                  
                                                   # add in appropriate pull data button based on query type
                                                   conditionalPanel(condition = "input.queryType == 'Spatial Filters'",
                                                                    actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
@@ -179,23 +161,20 @@ shinyUI(fluidPage(tags$head(
                                                                    actionButton('begin_multistation_wildcard', 'Pull Stations',class='btn-block')),
                                                   conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
                                                                    actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
-                                                
-                                               
-                                                mainPanel(
+                                                 mainPanel(
                                                   verbatimTextOutput('test'),
-                                                  
-                                                  # leafletOutput('multistationMap'),
-                                                  # helpText('Stations identified in the spatial filter are displayed below unless user further refines 
-                                                  #         selected stations with polygon and rectangle drawing tools in map.'),
-                                                  # br(),
-                                                  # h4('Station Information'),
-                                                  # DT::dataTableOutput('multistationInfoTable'),
-                                                  # br(),
-                                                  # h4('Sampling Summary'),
-                                                  # helpText('The records listed below are limited to records with associated sample codes. Additional 
-                                                  #           (older) samples could be lacking the sample code but have benthic data for exploration 
-                                                  #           in subsequent sections of the application.'),
-                                                  # DT::dataTableOutput('multistationInfoSampleMetrics'),
+                                                  leafletOutput('multistationMap'),
+                                                  helpText('Stations identified in the spatial filter are displayed below unless user further refines
+                                                          selected stations with polygon and rectangle drawing tools in map.'),
+                                                  br(),
+                                                  h4('Station Information'),
+                                                  DT::dataTableOutput('multistationInfoTable'),
+                                                  br(),
+                                                  h4('Sampling Summary'),
+                                                  helpText('The records listed below are limited to records with associated sample codes. Additional
+                                                            (older) samples could be lacking the sample code but have benthic data for exploration
+                                                            in subsequent sections of the application.'),
+                                                  DT::dataTableOutput('multistationInfoSampleMetrics'),
                                                    br(), br(), br() # a little breathing room
                                                 ))))
                                        
