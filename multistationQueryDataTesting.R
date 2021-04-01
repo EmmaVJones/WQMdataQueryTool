@@ -83,7 +83,7 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
 # wildcard troubleshooting
-wildcardText1 <- '2-JKS%'
+wildcardText1 <- '3-RPP%'
 # wildcardResults <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
 #                                 wildcardText1, '"'))
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
@@ -152,7 +152,8 @@ multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data in
   dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
                 EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
                 WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything()) 
-
+# Empty station user selection to start with
+selectedSites <- NULL 
 
 
 # color palette for assessment polygons
@@ -162,6 +163,9 @@ pal <- colorFactor(
 pal2 <- colorFactor(
   palette = rainbow(7),
   domain = ecoregion$US_L3NAME)
+
+assessmentLayerFilter <- filter(assessmentLayer, VAHU6 %in% WQM_Stations_Filter$VAHU6) 
+
 
 CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
              options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
@@ -179,9 +183,13 @@ CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
                    color='blue', fillColor='gray', radius = 4,
                    fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
                    label = ~StationID, layerId = ~StationID,
-                   popup = leafpop::popupTable(WQM_Stations_Filter, zcol=c('StationID'))) %>% 
-  
-  
+                   popup = leafpop::popupTable(WQM_Stations_Filter, zcol=c('StationID'))) %>%
+  {if(nrow(assessmentLayerFilter) > 0)
+    addPolygons(., data= assessmentLayerFilter,  color = 'black', weight = 1,
+                fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
+                group="VAHU6", label = ~VAHU6) %>% hideGroup('VAHU6')
+    else . } %>%
+    
   inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
   addDrawToolbar(
     targetGroup='Selected',
@@ -193,6 +201,8 @@ CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
     circleMarkerOptions = FALSE,
     editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
   addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
-                   overlayGroups = c("Level III Ecoregions", 'Assessment Regions'),
+                   overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
                    options=layersControlOptions(collapsed=T),
-                   position='topleft')    
+                   position='topleft') 
+
+

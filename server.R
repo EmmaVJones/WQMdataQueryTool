@@ -566,7 +566,12 @@ shinyServer(function(input, output, session) {
                    crs = 4326) %>% 
           st_intersection(poly)
       } else {
-        reactive_objects$selectedSites <- rbind(reactive_objects$selectedSites, st_intersection(reactive_objects$WQM_Stations_Filter,poly))
+        addedSites <- reactive_objects$WQM_Stations_Filter %>% 
+          st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
+                   remove = F, # don't remove these lat/lon cols from df
+                   crs = 4326) %>% 
+          st_intersection(poly)
+        reactive_objects$selectedSites <- rbind(reactive_objects$selectedSites, addedSites)
       }
     } })
   
@@ -623,6 +628,14 @@ shinyServer(function(input, output, session) {
               options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
                              pageLength = nrow(reactive_objects$multistationSelection %>% distinct(Sta_Id, .keep_all = T)),
                              buttons=list('copy','colvis')))  })
+  
+  output$multistationInfoSampleMetrics <- DT::renderDataTable({req(reactive_objects$multistationInfoSampleMetrics)
+    datatable(reactive_objects$multistationInfoSampleMetrics, 
+              rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
+                             pageLength = nrow(reactive_objects$multistationInfoSampleMetrics),
+                             buttons=list('copy','colvis')) ) })
+  
   
   
   
