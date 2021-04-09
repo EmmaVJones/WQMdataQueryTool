@@ -51,8 +51,8 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
-dateRange <- c(as.Date('1970-01-01'),  as.Date(Sys.Date())) #as.Date('1985-01-01'))#
+station <- '2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+dateRange <- c(as.Date('2000-01-01'),  as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
 # z <- pool %>% tbl( "Wqm_Field_data_View") %>%
