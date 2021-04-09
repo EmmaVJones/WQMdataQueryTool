@@ -162,7 +162,6 @@ shinyUI(fluidPage(tags$head(
                                                   conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
                                                                    actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
                                                  mainPanel(
-                                                  verbatimTextOutput('test'),
                                                   leafletOutput('multistationMap'),
                                                   helpText('Stations identified in the spatial filter are displayed below unless user further refines
                                                           selected stations with polygon and rectangle drawing tools in map.'),
@@ -175,8 +174,71 @@ shinyUI(fluidPage(tags$head(
                                                             (older) samples could be lacking the sample code but have benthic data for exploration
                                                             in subsequent sections of the application.'),
                                                   DT::dataTableOutput('multistationInfoSampleMetrics'),
-                                                   br(), br(), br() # a little breathing room
-                                                ))))
+                                                   br(), br(), br() )), # a little breathing room
+                                       tabPanel("Water Quality Data",
+                                                sidebarPanel(
+                                                  uiOutput('multistationDateRangeFilter_'),
+                                                  uiOutput('multistationLabCodesDropped_'),
+                                                  checkboxGroupInput('multistationRepFilter', "Filter Reps",
+                                                                     choices = c('R','S1', 'S2'), selected = 'R'), width = 3),
+                                                mainPanel(
+                                                  tabsetPanel(
+                                                    tabPanel('Station Data',
+                                                             h4('Field and Chemistry Data Combined'),
+                                                             helpText("This table presents all available field and analyte data for each station
+                                                                                           filtered by the date filter in the sidebar panel. Analyte
+                                                                                           data collected more than once for a given sample event
+                                                                                           (e.g. more than one lab parameter per date time combination)
+                                                                                          are presented as separate rows and can duplicate the field data associated with a given date time. Where these
+                                                                                          instances occurr, the additional rows are highlighted in yellow. If you wish to consolidate this information into a single
+                                                                                          measure by averaging these values, please choose the `Average similar parameters by sample date time`
+                                                                                          option below."),
+                                                             radioButtons('multistationAverageParameters', strong("Display Options"),
+                                                                          choices = c('Report all available parameters and highlight rows with duplicate analyte measures. The first field named
+                                                                                                          `Associated Analyte Records` identifies when multiple analytes with the same lab name are returned
+                                                                                                          for a single sample event date time.', 'Average parameters by sample date time.'),
+                                                                          width = '100%'),
+                                                             DT::dataTableOutput('multistationFieldAnalyte'),
+                                                             br(),
+                                                             h4('Sample Metrics'),
+                                                             fluidRow(
+                                                               column(6,h5('Collector Information'),
+                                                                      DT::dataTableOutput('multistationCollectorSummary')),
+                                                               column(6, h5('Sample Code Summary'),
+                                                                      DT::dataTableOutput('multistationSampleCodeSummary'))),
+                                                             h5('Sample Comment Summary'),
+                                                             DT::dataTableOutput('multistationSampleCommentSummary'),br(), br(), br()),
+                                                    tabPanel('Visualization Tools',
+                                                             tabsetPanel(
+                                                               tabPanel('Simplified Dataset',
+                                                                        h4('Simplified Field and Chemistry Dataset'),
+                                                                        helpText('This dataset cleans up the CEDS default parameter names and simplifies
+                                                                                            results to one measure per sample event (using a median statistic where more than
+                                                                                                     one measure per sampel event is available).'),
+                                                                        DT::dataTableOutput('multistationBasicSummary'), br(), br(), br()),
+                                                               tabPanel('Parameter Plot',
+                                                                        h4('Interactive Parameter Plot'),
+                                                                        helpText('Based on the Simplified Field and Chemistry Dataset, users may plot
+                                                                                                     all available parameters in the selected data window to visualize temporal changes.',
+                                                                                 span(strong('Where the information is available, the appropriate Water Quality Standard is
+                                                                                                                 plotted with the station data'))),
+                                                                        # fluidRow(column(3,
+                                                                        selectInput('multistationParameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName)),#)
+                                                                        plotlyOutput('multistationParameterPlot'), br(), br(), br())))))) 
+                                                               
+                                                               
+                                                    
+                                                    #verbatimTextOutput('test'),
+                                                    
+                                                    
+                                                    
+                                                                   
+                                                                    
+                                                                        
+                                       
+                                       
+                                       
+                                       ))
                                        
                                        )))
                                          

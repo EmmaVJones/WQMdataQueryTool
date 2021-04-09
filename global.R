@@ -208,14 +208,14 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
     y <- stationAnalyteDataRaw %>%
       group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
       dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Com_Code, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
-                    Pg_Parm_Name, Ana_Value) %>% 
+                    Pg_Parm_Name, Ana_Uncensored_Value) %>% 
       mutate(`Associated Analyte Records` = 1:n(),
              LabComments = paste0(Pg_Parm_Name,' RMK'))
     y1 <- y %>%
-      dplyr::select(Pg_Parm_Name, Ana_Value) %>% 
+      dplyr::select(Pg_Parm_Name, Ana_Uncensored_Value) %>% 
       pivot_wider(names_from = Pg_Parm_Name, #names_sep = " | ", 
-                  values_from = "Ana_Value",
-                  values_fn = list(Ana_Value = mean) ) %>% 
+                  values_from = "Ana_Uncensored_Value",
+                  values_fn = list(Ana_Uncensored_Value = mean) ) %>% 
       left_join(y %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, LabComments) %>%  
                   mutate(Ana_Com_Code2 = paste(Ana_Com_Code, sep = " ")) %>%
                   dplyr::select(LabComments, Ana_Com_Code2) %>% 
@@ -233,22 +233,22 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
     #              filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
     #              group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
     #              dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
-    #                            Ana_Parameter_Name, Ana_Value) %>%
+    #                            Ana_Parameter_Name, Ana_Uncensored_Value) %>%
     #              pivot_wider(names_from = c('Ana_Parameter_Name'), names_sep = " | ", 
-    #                          values_from = "Ana_Value",
-    #                          values_fn = list(Ana_Value = mean)),
+    #                          values_from = "Ana_Uncensored_Value",
+    #                          values_fn = list(Ana_Uncensored_Value = mean)),
     #            by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>%
     #   arrange(Fdt_Sta_Id, Fdt_Date_Time))
   } else {
     z <- stationAnalyteDataRaw %>%
       group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
-      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Com_Code, Ana_Value) %>%
+      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Com_Code, Ana_Uncensored_Value) %>%
       mutate(`Associated Analyte Records` = 1:n(),
              LabComments = paste0(Pg_Parm_Name,' RMK'))
     
     z1 <-  z %>% 
-      dplyr::select(`Associated Analyte Records`, Pg_Parm_Name, Ana_Value) %>% 
-      pivot_wider(names_from = Pg_Parm_Name, values_from = Ana_Value) %>%
+      dplyr::select(`Associated Analyte Records`, Pg_Parm_Name, Ana_Uncensored_Value) %>% 
+      pivot_wider(names_from = Pg_Parm_Name, values_from = Ana_Uncensored_Value) %>%
       left_join(z %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc,Ana_Lab_Seq_Num) %>%  
                   dplyr::select(`Associated Analyte Records`, LabComments, Ana_Com_Code) %>% 
                   pivot_wider(names_from = LabComments, values_from = Ana_Com_Code),
@@ -264,9 +264,9 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
                 # stationAnalyteDataRaw %>%
                 #   filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
                 #   group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name) %>%
-                #   dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, Pg_Parm_Name , Ana_Value) %>%
+                #   dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, Pg_Parm_Name , Ana_Uncensored_Value) %>%
                 #   mutate(`Associated Analyte Records` = 1:n()) %>% 
-                #   pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Value") ,
+                #   pivot_wider(names_from = 'Pg_Parm_Name',values_from = "Ana_Uncensored_Value") ,
                 by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>% 
         dplyr::select(`Associated Analyte Records`, everything()) %>%
         arrange(Fdt_Sta_Id, Fdt_Date_Time) ) }
@@ -274,9 +274,9 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
     #            stationAnalyteDataRaw %>%
     #              filter(Ana_Sam_Mrs_Container_Id_Desc %in% repFilter) %>%
     #              group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd) %>%
-    #              dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd, Ana_Parameter_Name, Ana_Value) %>%
+    #              dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Sam_Mrs_Lcc_Parm_Group_Cd, Ana_Parameter_Name, Ana_Uncensored_Value) %>%
     #              pivot_wider(names_from = c('Ana_Parameter_Name','Ana_Sam_Mrs_Lcc_Parm_Group_Cd'), names_sep = " | ", 
-    #                          values_from = "Ana_Value"),
+    #                          values_from = "Ana_Uncensored_Value"),
     #            by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) )}
 }
 
@@ -286,7 +286,7 @@ uniqueCollector <- function(stationFieldAnalyte){
   stationFieldAnalyte %>%
     group_by(Fdt_Sta_Id, Fdt_Collector_Id) %>%
     summarise(`n Samples` = n()) %>%
-    arrange(desc(`n Samples`))
+    arrange(Fdt_Sta_Id, desc(`n Samples`))
 }
 
 
@@ -476,12 +476,21 @@ parameterPlotly <- function(basicData,
             add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
                       hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
           else . } %>%
-        add_markers(data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
-                    marker = list(color= '#535559'), hoverinfo="text",
-                    text=~paste(sep="<br>",
-                                paste("Sample Date: ",`Collection Date`),
-                                paste("Depth: ",Depth, "m"),
-                                paste(parameter, ": ",Measure," (mg/L)"))) %>%
+        {if(length(unique(dat$StationID)) > 1)
+          add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
+                      color=~StationID,#marker = list(color= '#535559'), 
+                      hoverinfo="text",
+                      text=~paste(sep="<br>",
+                                  paste("StationID: ",StationID),
+                                  paste("Sample Date: ",`Collection Date`),
+                                  paste("Depth: ",Depth, "m"),
+                                  paste(parameter, ": ",Measure," (mg/L)")))
+          else add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
+                           marker = list(color= '#535559'), hoverinfo="text",
+                           text=~paste(sep="<br>",
+                                       paste("Sample Date: ",`Collection Date`),
+                                       paste("Depth: ",Depth, "m"),
+                                       paste(parameter, ": ",Measure," (mg/L)"))) } %>%
         layout(showlegend=FALSE,
                yaxis=list(title=paste(parameter, unique(dat$units))),
                xaxis=list(title="Sample Date",tickfont = list(size = 10))) 

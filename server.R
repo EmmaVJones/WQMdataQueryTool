@@ -618,7 +618,25 @@ shinyServer(function(input, output, session) {
       mutate(`Years Sampled` = paste0(year(WQM_YRS_YEAR))) %>%
       dplyr::select(Sta_Id, WQM_YRS_SPG_CODE,WQM_YRS_YEAR,`Years Sampled`) %>%
       group_by(Sta_Id, `Years Sampled`) %>%
-      summarise(`Sample Codes` = paste0(WQM_YRS_SPG_CODE, collapse = ' | '))           })
+      summarise(`Sample Codes` = paste0(WQM_YRS_SPG_CODE, collapse = ' | '))         
+    
+    ## Field Data Information
+    reactive_objects$multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
+      filter(Fdt_Sta_Id %in% !! reactive_objects$WQM_Stations_Filter$StationID &
+               between(as.Date(Fdt_Date_Time), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
+               Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% 
+      as_tibble()
+    
+    ### Analyte information
+    if(nrow(reactive_objects$multistationFieldData) == 0){
+      showNotification("No data for selected window.", duration = 30, type = 'error')   
+      } else {
+        reactive_objects$multistationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
+          filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$multistationFieldData$Fdt_Id &
+                   between(as.Date(Ana_Received_Date), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
+                   Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
+          as_tibble() %>%
+          left_join(dplyr::select(reactive_objects$multistationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) }    })
   
   ## Display Station Information
   output$multistationInfoTable <- DT::renderDataTable({
@@ -637,12 +655,130 @@ shinyServer(function(input, output, session) {
                              buttons=list('copy','colvis')) ) })
   
   
+  ### Water Quality Data Tab----------------------------------------------------------------------------------------------------------------
   
-  
-  
-  
-  
-  output$test <- renderPrint({ reactive_objects$multistationInfoFin })#WQM_Stations_Filter }) #input$begin_multistation_spatial})#
+  output$multistationDateRangeFilter_ <- renderUI({ req(nrow(reactive_objects$multistationFieldData) > 0)
+      dateRangeInput('multistationDateRangeFilter',
+                     label = 'Filter Available Data Further By User Selected Date Range (YYYY-MM-DD)',
+                     start = min(as.Date(reactive_objects$multistationFieldData$Fdt_Date_Time)),
+                     end = max(as.Date(reactive_objects$multistationFieldData$Fdt_Date_Time)))  })
+
+    ## Lab codes based on original dataset brought back from ODS
+    output$multistationLabCodesDropped_ <- renderUI({ req(nrow(reactive_objects$multistationAnalyteData) > 0)
+      codeOptions <- sort(unique(reactive_objects$multistationAnalyteData$Ana_Com_Code))
+      list(helpText('Below are the unique lab codes retrieved based on the initial query parameters of StationID and Date Range filters on
+                    the Station Data tab. Please check any lab codes you do not want included in any further analyses. For assistance with
+                    lab code descriptions, please click the button below.'),
+           actionButton('multistationReviewLabCodes',"Lab Code Table",class='btn-block'),
+           checkboxGroupInput('multistationLabCodesDropped', 'Lab Codes Revoved From Futher Analyses',
+                              choices = codeOptions, inline = TRUE, selected = c('QF'))   ) })
+
+    ## Lab Code Module
+    observeEvent(input$multistationReviewLabCodes,{
+      showModal(modalDialog(
+        title="Lab Code Descriptions",
+        DT::dataTableOutput('multistationLabCodeTable'),
+        easyClose = TRUE))  })
+
+    output$multistationLabCodeTable <- renderDataTable({req(input$multistationReviewLabCodes)
+      datatable(labCommentCodes %>% arrange(Com_Code), rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(labCommentCodes),
+                               buttons=list('copy',list(extend='excel',filename=paste0('CEDSlabCodes')),
+                                            'colvis')), selection = 'none')   })
+    
+    # Drop any unwanted Analyte codes
+    observe({req(nrow(reactive_objects$multistationFieldData) > 0, input$multistationDateRangeFilter, nrow(reactive_objects$multistationAnalyteData)>0)
+      reactive_objects$multistationFieldDataUserFilter <- filter(reactive_objects$multistationFieldData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) )
+      reactive_objects$multistationAnalyteDataUserFilter <- filter(reactive_objects$multistationAnalyteData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) ) %>%
+        filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$multistationRepFilter) %>%
+        filter(! Ana_Com_Code %in% input$multistationLabCodesDropped)
+      })
+    
+    
+    
+    
+    ### Filter by user input
+    multistationFieldAnalyteDateRange <- reactive({req(reactive_objects$multistationFieldDataUserFilter, input$multistationDateRangeFilter, reactive_objects$multistationAnalyteDataUserFilter, input$multistationRepFilter, input$multistationAverageParameters)
+      stationFieldAnalyteDataPretty(reactive_objects$multistationAnalyteDataUserFilter, reactive_objects$multistationFieldDataUserFilter,
+                                    averageResults = ifelse(input$multistationAverageParameters == 'Average parameters by sample date time.', TRUE, FALSE) ) })
+
+    ## Data Summary
+    output$multistationFieldAnalyte <-  renderDataTable({ req(multistationFieldAnalyteDateRange())
+      z <- multistationFieldAnalyteDateRange() %>% # drop all empty columns ( this method longer but handles dttm issues)
+        map(~.x) %>%
+        discard(~all(is.na(.x))) %>%
+        map_df(~.x)
+      if("Associated Analyte Records" %in% names(z)){ # highlight rows where field data duplicated bc multiple analytes on same datetime
+        datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                  options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                                 pageLength = nrow(z),
+                                 buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData_multistationQuery', Sys.Date())),
+                                              'colvis')), selection = 'none') %>%
+          formatStyle("Associated Analyte Records", target = 'row',
+                      backgroundColor = styleEqual(c(1,2,3,4,5,6,7,8,9,10), c(NA, 'yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow')))
+
+      } else {
+        datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                  options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                                 pageLength = nrow(z),
+                                 buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData_multistationQuery', Sys.Date())),
+                                              'colvis')), selection = 'none')    } })
+
+    ## Collector Summary
+    output$multistationCollectorSummary <- renderDataTable({ req(multistationFieldAnalyteDateRange())
+      z <- uniqueCollector(multistationFieldAnalyteDateRange())
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
+
+    ## Sample Code Summary
+    output$multistationSampleCodeSummary <- renderDataTable({ req(multistationFieldAnalyteDateRange())
+      z <- uniqueSampleCodes(multistationFieldAnalyteDateRange())
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
+
+    ## Sample Comment Summary
+    output$multistationSampleCommentSummary <- renderDataTable({ req(multistationFieldAnalyteDateRange())
+      z <- uniqueComments(multistationFieldAnalyteDateRange())
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
+
+
+
+    ## Visualization Tools: Simplified Dataset Tab
+    multistationBasicSummary <- reactive({req(multistationFieldAnalyteDateRange())
+      basicSummary(multistationFieldAnalyteDateRange()) })
+
+    output$multistationBasicSummary <- renderDataTable({ req(multistationBasicSummary())
+      datatable(multistationBasicSummary(), rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px', pageLength = nrow(multistationBasicSummary()),
+                               buttons=list('copy',list(extend='excel',filename=paste0('CEDSbasicFieldAnalyteData_multistationQuery', Sys.Date())),
+                                            'colvis')), selection = 'none')})
+
+    ## Visualization Tools: Parameter Plot Tab
+    observe({req(nrow(multistationBasicSummary()) > 0, input$multistationParameterPlotlySelection)
+      if(input$multistationParameterPlotlySelection %in% names(multistationBasicSummary())){
+        z <- dplyr::select(multistationBasicSummary(), parameterPlot = !! input$multistationParameterPlotlySelection) %>% # rename clutch for nse
+          filter(!is.na(parameterPlot))
+        if(nrow(z) == 0){
+          showNotification('No data to plot for selected parameter.',duration = 3 )}
+      } else {showNotification('No data to plot for selected parameter.', duration = 3  )}      })
+
+    output$multistationParameterPlot <- renderPlotly({ req(nrow(filter(multistationBasicSummary(), !is.na(input$multistationParameterPlotlySelection))) > 0, input$multistationParameterPlotlySelection)
+     suppressWarnings(suppressMessages(
+       parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup) ))   })
+
+
+
+
+
+    #output$test <- renderPrint({ reactive_objects$multistationAnalyteDataUserFilter}) #multistationFieldAnalyteDateRange() })#reactive_objects$multistationAnalyteData }) #reactive_objects$multistationInfoFin })#WQM_Stations_Filter }) #input$begin_multistation_spatial})#
+    
+
+
   
 
 

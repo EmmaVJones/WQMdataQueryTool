@@ -60,12 +60,12 @@ Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Code
 
 
 # user inputs
-queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
+#queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
 
 ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
-dateRange_multistation <- c(as.Date('1970-01-01'), as.Date(Sys.Date()- 7))
+dateRange_multistation <- c(as.Date('2015-01-01'), as.Date(Sys.Date()- 7))
 ## pull based on parameter
-analyte_Filter <- #NULL#
+analyte_Filter <- NULL#
   c('SODIUM (NA), ATM DEP, WET, DISS, MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)', 'SODIUM, TOTAL (MG/L AS NA)', 'SODIUM-TOTAL  UG/L (AS NA)')
 # 'FECAL COLIFORM,7 HR,M-7HR FC MED MF,41.5C,#/100ML', 'FECAL COLIFORM,A-1 MOD,WATER,44.5C,24HR MPN/100ML', 
 # 'FECAL COLIFORM,MEMBR FILTER,M-FC BROTH,44.5 C', 'FECAL COLIFORM,MPN,BORIC ACID LACTOSE BR,43C,48HR', 
@@ -79,11 +79,11 @@ manualSelection1 <- c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
 #WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection1))  
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                    ecoregionFilter = "Ridge and Valley", dateRange_multistation, analyte_Filter, 
+                                                    ecoregionFilter = ecoregionFilter, dateRange_multistation, analyte_Filter, 
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
 # wildcard troubleshooting
-wildcardText1 <- '3-RPP%'
+wildcardText1 <- '2-JKS02%'#'3-RPP10%'
 # wildcardResults <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
 #                                 wildcardText1, '"'))
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
@@ -124,9 +124,6 @@ stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST, 
 if(nrow(WQM_Stations_Filter) > 0){
   stationInfoFin <- stationInfoConsolidated(pool, WQM_Stations_Filter$StationID, WQM_Station_Full_REST)
 }
-
-# Quick Station Sampling Information
-stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST, 'multi')
 
 
 
@@ -204,5 +201,98 @@ CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
                    overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
                    options=layersControlOptions(collapsed=T),
                    position='topleft') 
+
+
+
+
+## Actual data querying bit
+
+### Field Data Information
+
+multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
+  filter(Fdt_Sta_Id %in% !! WQM_Stations_Filter$StationID &
+           between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2]) & # x >= left & x <= right
+           Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% 
+  as_tibble()
+
+
+### Analyte information
+
+multistationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
+  filter(Ana_Sam_Fdt_Id %in% !! multistationFieldData$Fdt_Id &
+           between(as.Date(Ana_Received_Date), !! dateRange_multistation[1], !! dateRange_multistation[2]) & # x >= left & x <= right
+           Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
+  as_tibble() %>%
+  left_join(dplyr::select(multistationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) 
+
+
+
+# User filters
+multistationDateRangeFilter <-  c(as.Date('2015-01-01'), as.Date(Sys.Date()))#as.Date('2011-01-01'), as.Date('2011-12-31'))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+multistationLabCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
+multistationRepFilter <- c('R')
+
+multistationFieldDataUserFilter <- filter(multistationFieldData, between(as.Date(Fdt_Date_Time), multistationDateRangeFilter[1], multistationDateRangeFilter[2]) )
+
+multistationAnalyteDataUserFilter <- filter(multistationAnalyteData, between(as.Date(Fdt_Date_Time), multistationDateRangeFilter[1], multistationDateRangeFilter[2]) )  %>% 
+  filter(Ana_Sam_Mrs_Container_Id_Desc %in% multistationRepFilter) %>% 
+  filter(! Ana_Com_Code %in% multistationLabCodesDropped)
+
+reactive_objects$multistationAnalyteDataUserFilter <- filter(reactive_objects$multistationAnalyteData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) )  %>%
+  filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$multistationRepFilter) %>%
+  filter(! Ana_Com_Code %in% input$multistationLabCodesDropped)})
+
+
+
+
+### Organize field and analyte info into prettier table
+
+multistationFieldAnalyte1 <- stationFieldAnalyteDataPretty(multistationAnalyteDataUserFilter, multistationFieldDataUserFilter, averageResults = FALSE)
+
+#Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
+# report out where results averaged
+
+z <- multistationFieldAnalyte1 %>% # drop all empty columns ( this method longer but handles dttm issues)
+  map(~.x) %>%
+  discard(~all(is.na(.x))) %>%
+  map_df(~.x)
+if("Associated Analyte Records" %in% names(z)){ # highlight rows where field data duplicated bc multiple analytes on same datetime
+  datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+            options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                           pageLength = nrow(z), 
+                           buttons=list('copy',#list(extend='excel',filename=paste0('CEDSFieldAnalyteData',input$station, Sys.Date())),
+                                        'colvis')), selection = 'none') %>% 
+    formatStyle("Associated Analyte Records", target = 'row', backgroundColor = styleEqual(c(1,2,3,4,5,6,7,8,9,10), 
+                                                                                           c(NA, 'yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow')))
+}else {datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                 options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                                pageLength = nrow(z), 
+                                buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData',station, Sys.Date())),
+                                             'colvis')), selection = 'none') }
+
+
+
+
+
+# Collection info
+uniqueCollector(multistationFieldAnalyte1)
+
+# Sample Codes Summary
+uniqueSampleCodes(multistationFieldAnalyte1)
+
+# Special Comments
+uniqueComments(multistationFieldAnalyte1)
+
+# Basic Dataset people will actually use
+basicData <- basicSummary(multistationFieldAnalyte1)
+
+# parameter graph
+parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup) #unique(filter(unitData, !is.na(AltName))$AltName)
+parameterPlotly(basicData, "Secci Depth", unitData, WQSlookup) 
+
+names(basicData)[names(basicData) %in% unitData$AltName]
+dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
+  filter(!is.na(parameterPlot)) 
+
 
 
