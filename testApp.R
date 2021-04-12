@@ -1,28 +1,61 @@
-source('global.R')
-subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
-  filter(!is.na(SubbasinVAHU6code)) %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
-subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
-  rename('SUBBASIN' = 'SUBBASIN_1') %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
-  mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
-                               SUBBASIN == 'Chowan River' ~ 'Chowan',
-                               SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
-                               SUBBASIN == 'New River' ~ 'New',
-                               SUBBASIN == 'Potomac River' ~ 'Potomac',
-                               SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
-                               SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
-                               SUBBASIN == 'Roanoke River' ~ 'Roanoke',
-                               SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
-                               SUBBASIN == 'Holston River' ~ 'Holston',
-                               SUBBASIN == 'York River' ~ 'York',
-                               TRUE ~ as.character(NA)),
-         ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
-                                    SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
-                                    SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
-                                    TRUE ~ as.character(NA)))
+library(tidyverse)
+library(sf)
+library(shiny)
+library(leaflet)
+library(leaflet.extras)
+library(inlmisc)
+library(DT)
+library(DBI)
+#library(measurements) #only necessary if don't use Rex's dataset for points
+library(plotly)
+library(lubridate)
+library(pool)
+library(geojsonsf)
+library(pins)
+library(sqldf)
+library(config)
+library(readxl)
 
-ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+# get configuration settings
+conn <- config::get("connectionSettings")
+
+board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_KEY"),
+                         server = conn$CONNECT_SERVER)#Sys.getenv("CONNECT_SERVER"))
+
+
+# Set up pool connection to production environment
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod,
+  PWD = conn$PWD_prod,
+  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+  # Test environment
+  #Server= "WSQ04151,50000",
+  #dbname = "ODS_test",
+  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+  trusted_connection = "yes"
+)
+onStop(function() {
+  poolClose(pool)
+})
+
+# ## For testing: connect to ODS production
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "ODBC Driver 11 for SQL Server",#Driver = "SQL Server Native Client 11.0",
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   trusted_connection = "yes"
+# )
+
+stationOptions <- pin_get('ejones/WQM-Sta-GIS-View-Stations', board= 'rsconnect')
+
 
 ui <- shinyUI(fluidPage(tags$head(
   tags$style(
@@ -37,19 +70,20 @@ ui <- shinyUI(fluidPage(tags$head(
                                    helpText("Query will pull directly from CEDS. Data is refreshed nightly."),
                                    helpText("Begin typing a DEQ StationID and available options will auto-filter based on the user input."),
                                    selectInput('station', 'DEQ Station ID', choices = c("", unique(stationOptions$Station_Id))),#textInput('station', 'DEQ Station ID', placeholder = "DEQ Station ID"),
-                                   dateRangeInput('dateRange',
-                                                  label = 'Filter Data By Sample Date Range (YYYY-MM-DD)',
-                                                  start = as.Date("1970-01-01"), ##################################################as.Date("2015-01-01"),
-                                                  end = as.Date(Sys.Date()- 1)),
+                                   
                                    br(),
                                    actionButton('begin', 'Pull Station',class='btn-block'),
                                    width = 3),
                                  mainPanel(
-                                   helpText('This interactive map allows users to zoom and pan across different basemaps. Basemap option and Level III
-                                                            Ecoregion and Assessment Region information are available by using the checkboxes in the layers drop down
-                                                            on the left panel of the map.'),
+                                   helpText('The URL sent from the R server to the GIS REST service was:'),
                                    verbatimTextOutput('test'),
-                                   leafletOutput('stationMap'),br()
+                                   helpText('And the geojson call returned:'),
+                                   verbatimTextOutput('test1'),
+                                   br(),
+                                   helpText('Trying with https results in:'),
+                                   verbatimTextOutput('test2')
+                                   
+                                   
                                  )))))))
 
 
@@ -81,7 +115,16 @@ server <- shinyServer(function(input, output, session) {
     
     #WQM_Station_Full_REST_request(pool, input$station, subbasinVAHU6crosswalk, subbasins, ecoregion)})
   
-  output$test <- renderPrint({WQM_Station_Full_REST()})
+  output$test <- renderPrint({paste0("http://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%27",
+                                     toupper(input$station),"%27&outFields=*&f=geojson")})
+  
+  output$test1 <- renderPrint({glimpse(WQM_Station_Full_REST())})
+  
+  output$test2 <- renderPrint({req(input$begin, nrow(reactive_objects$stationInfo) != 0)
+    glimpse(suppressWarnings(
+    geojson_sf(
+      paste0("https://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%27",
+             toupper(input$station),"%27&outFields=*&f=geojson"))))})
   
 })
 
