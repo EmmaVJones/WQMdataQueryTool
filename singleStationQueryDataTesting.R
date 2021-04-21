@@ -51,7 +51,7 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+station <- '2-JKS023.61'#'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
 dateRange <- c(as.Date('2000-01-01'),  as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
@@ -107,7 +107,7 @@ stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
 
 
 # User filters
-dateRangeFilter <-  c(as.Date('1970-01-01'), as.Date(Sys.Date()))#as.Date('2011-01-01'), as.Date('2011-12-31'))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+dateRangeFilter <-  c(as.Date('2011-01-01'), as.Date('2011-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
 labCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
 repFilter <- c('R')
 
@@ -206,19 +206,30 @@ ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) +
 
 
 # BSA tool data output
-BSAtooloutput <- stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = FALSE) %>%
-  dplyr::select(one_of(c('Fdt_Sta_Id', 'Fdt_Date_Time', 'Fdt_Temp_Celcius', 'Fdt_Field_Ph', 'Fdt_Do_Probe', 'Fdt_Do_Optical', 'Fdt_Do_Winkler', 
-                'Fdt_Specific_Conductance','NITROGEN, TOTAL (MG/L AS N)', 'PHOSPHORUS, TOTAL (MG/L AS P)', 'SULFATE, TOTAL (MG/L AS SO4)',
-                'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L', 'SULFATE, TOTAL (MG/L AS SO4)','CHLORIDE,TOTAL IN WATER MG/L',
-                'SODIUM, DISSOLVED (MG/L AS NA)'))) %>% 
+
+tibble('Fdt_Sta_Id'= NA, 'Fdt_Date_Time'= NA, 'Fdt_Temp_Celcius'= NA, 'Fdt_Field_Ph'= NA, 'Fdt_Do_Probe'= NA, 'Fdt_Do_Optical'= NA, 'Fdt_Do_Winkler'= NA, 
+  'Fdt_Specific_Conductance'= NA,'NITROGEN, TOTAL (MG/L AS N)'= NA, 'PHOSPHORUS, TOTAL (MG/L AS P)'= NA, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'= NA,
+  'SULFATE, TOTAL (MG/L AS SO4)'= NA, 'CHLORIDE,TOTAL IN WATER MG/L'= NA,  'SODIUM, DISSOLVED (MG/L AS NA)'= NA)
+
+BSAtooloutput <- bind_rows(tibble('Fdt_Sta_Id'= NA, 'Fdt_Date_Time'= NA, 'Fdt_Temp_Celcius'= NA, 'Fdt_Field_Ph'= NA, 'Fdt_Do_Probe'= NA, 'Fdt_Do_Optical'= NA, 'Fdt_Do_Winkler'= NA, 
+                                  'Fdt_Specific_Conductance'= NA,'NITROGEN, TOTAL (MG/L AS N)'= NA, 'PHOSPHORUS, TOTAL (MG/L AS P)'= NA, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'= NA,
+                                  'SULFATE, TOTAL (MG/L AS SO4)'= NA, 'CHLORIDE,TOTAL IN WATER MG/L'= NA,  'SODIUM, DISSOLVED (MG/L AS NA)'= NA),
+                           stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = FALSE) %>%
+                             dplyr::select(one_of(c('Fdt_Sta_Id', 'Fdt_Date_Time', 'Fdt_Temp_Celcius', 'Fdt_Field_Ph', 'Fdt_Do_Probe', 'Fdt_Do_Optical', 'Fdt_Do_Winkler', 
+                                                    'Fdt_Specific_Conductance','NITROGEN, TOTAL (MG/L AS N)', 'PHOSPHORUS, TOTAL (MG/L AS P)', 'SULFATE, TOTAL (MG/L AS SO4)',
+                                                    'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L','CHLORIDE,TOTAL IN WATER MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)')))) %>% 
   mutate(`Dissolved Oxygen` = case_when(!is.na(Fdt_Do_Probe) ~ Fdt_Do_Probe,
                                         !is.na(Fdt_Do_Optical) ~ Fdt_Do_Optical,
                                         !is.na(Fdt_Do_Winkler) ~ Fdt_Do_Winkler,
                                         TRUE ~ as.numeric(NA))) %>%
-  left_join(dplyr::select(stationInfo_sf, STATION_ID, Latitude, Longitude) %>% distinct(STATION_ID), by = c('Fdt_Sta_Id'='STATION_ID')) %>% 
-  rename("StationID"=  'Fdt_Sta_Id',
-         "CollectionDateTime" = "Fdt_Date_Time") %>% 
-  dplyr::select(StationID, CollectionDateTime, Latitude, Longitude,  Fdt_Temp_Celcius)
+  left_join(dplyr::select(stationInfo_sf, STATION_ID, Latitude, Longitude) %>% 
+              distinct(STATION_ID, .keep_all= T) %>% 
+              st_drop_geometry(), by = c('Fdt_Sta_Id'='STATION_ID')) %>% 
+  dplyr::select(StationID = Fdt_Sta_Id, CollectionDateTime = Fdt_Date_Time, Latitude, Longitude, 
+                
+                `Temperature (C)` = Fdt_Temp_Celcius)
+                            
+
 
 ## stopped here bc it's a mess if you don't have exactly the data you need in the filtered dataset (use 2-jks023.61 matching the template dates (2011)
 ##  for example... sodium is missing)
