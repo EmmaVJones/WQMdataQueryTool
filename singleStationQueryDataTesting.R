@@ -207,27 +207,92 @@ ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) +
 
 # BSA tool data output
 
-tibble('Fdt_Sta_Id'= NA, 'Fdt_Date_Time'= NA, 'Fdt_Temp_Celcius'= NA, 'Fdt_Field_Ph'= NA, 'Fdt_Do_Probe'= NA, 'Fdt_Do_Optical'= NA, 'Fdt_Do_Winkler'= NA, 
-  'Fdt_Specific_Conductance'= NA,'NITROGEN, TOTAL (MG/L AS N)'= NA, 'PHOSPHORUS, TOTAL (MG/L AS P)'= NA, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'= NA,
-  'SULFATE, TOTAL (MG/L AS SO4)'= NA, 'CHLORIDE,TOTAL IN WATER MG/L'= NA,  'SODIUM, DISSOLVED (MG/L AS NA)'= NA)
+# Habitat Data pull for BSA
+BSAhabitatQuery <- function(pool, station, dateRangeFilter){
+  totalHabitatSample <- pool %>% tbl("Edas_Habitat_Sample_View") %>%
+    filter(STA_ID %in% !! toupper(station) &  between(as.Date(FDT_DATE_TIME), !!dateRangeFilter[1], !!dateRangeFilter[2])) %>%
+    as_tibble() %>% 
+    rename("StationID" = "STA_ID",
+           "HabSampID" = "WHS_SAMP_ID",
+           "Entered Date" = "WHS_INSERTED_DATE",
+           "Entered By" = "WHS_INSERTED_BY",
+           "Field Team" = "WHS_FIELD_TEAM",
+           "HabSample Comment" = "WHS_COMMENT",
+           "Gradient" = "WSGC_DESCRIPTION",
+           "Collection Date" = "FDT_DATE_TIME") %>%
+    # Add sample season 
+    mutate(monthday = as.numeric(paste0(sprintf("%02d",month(`Collection Date`)),
+                                        sprintf("%02d",day(`Collection Date`)))),
+           Season = case_when(monthday >= 0215 & monthday <= 0615 ~ 'Spring',
+                              monthday >= 0815 & monthday <= 1215 ~ 'Fall',
+                              TRUE ~ as.character("Outside Sample Window"))) %>%
+    dplyr::select(HabSampID, StationID, `Collection Date`, `Entered By`, `Entered Date`, `Field Team`, `HabSample Comment`, Gradient, Season)
+  totalHabitat <- pool %>% tbl("Edas_Habitat_Values_View") %>%
+    filter(WHS_SAMP_ID %in% !! totalHabitatSample$HabSampID) %>%
+    as_tibble() %>%
+    rename("HabSampID" = "WHS_SAMP_ID",
+           "HabParameter" = "WHVP_CODE",
+           "HabParameterDescription" = "WHVP_DESCRIPTION",
+           "HabValue" = "WHV_HAB_VALUE",
+           "HabValue Comment" = "WHV_COMMENT") %>%
+    left_join(dplyr::select(totalHabitatSample, StationID, HabSampID, `Collection Date`), by = 'HabSampID') %>% 
+    # what I really want after BSA update
+    #dplyr::select(StationID, `Collection Date`, HabParameter, HabParameterDescription, HabValue, `HabValue Comment`, Gradient, Season)
+    dplyr::select(StationID, CollDate = `Collection Date`, HabParameter, HabValue) %>% 
+    group_by(StationID, CollDate) %>% 
+    mutate(`Total Habitat Score` = sum(HabValue, na.rm = T)) %>%  ungroup()
+  return(totalHabitat)
+}
+#BSAhabitatQuery(pool, station, dateRangeFilter)
 
-BSAtooloutput <- bind_rows(tibble('Fdt_Sta_Id'= NA, 'Fdt_Date_Time'= NA, 'Fdt_Temp_Celcius'= NA, 'Fdt_Field_Ph'= NA, 'Fdt_Do_Probe'= NA, 'Fdt_Do_Optical'= NA, 'Fdt_Do_Winkler'= NA, 
-                                  'Fdt_Specific_Conductance'= NA,'NITROGEN, TOTAL (MG/L AS N)'= NA, 'PHOSPHORUS, TOTAL (MG/L AS P)'= NA, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'= NA,
-                                  'SULFATE, TOTAL (MG/L AS SO4)'= NA, 'CHLORIDE,TOTAL IN WATER MG/L'= NA,  'SODIUM, DISSOLVED (MG/L AS NA)'= NA),
-                           stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = FALSE) %>%
-                             dplyr::select(one_of(c('Fdt_Sta_Id', 'Fdt_Date_Time', 'Fdt_Temp_Celcius', 'Fdt_Field_Ph', 'Fdt_Do_Probe', 'Fdt_Do_Optical', 'Fdt_Do_Winkler', 
-                                                    'Fdt_Specific_Conductance','NITROGEN, TOTAL (MG/L AS N)', 'PHOSPHORUS, TOTAL (MG/L AS P)', 'SULFATE, TOTAL (MG/L AS SO4)',
-                                                    'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L','CHLORIDE,TOTAL IN WATER MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)')))) %>% 
-  mutate(`Dissolved Oxygen` = case_when(!is.na(Fdt_Do_Probe) ~ Fdt_Do_Probe,
-                                        !is.na(Fdt_Do_Optical) ~ Fdt_Do_Optical,
-                                        !is.na(Fdt_Do_Winkler) ~ Fdt_Do_Winkler,
-                                        TRUE ~ as.numeric(NA))) %>%
-  left_join(dplyr::select(stationInfo_sf, STATION_ID, Latitude, Longitude) %>% 
-              distinct(STATION_ID, .keep_all= T) %>% 
-              st_drop_geometry(), by = c('Fdt_Sta_Id'='STATION_ID')) %>% 
+
+
+
+BSAtooloutputFunction <- function(pool, station, stationAnalyteDataUserFilter, stationFieldDataUserFilter){
+  # Get habitat Information
+  totHab <- BSAhabitatQuery(pool, station, dateRangeFilter) %>% 
+    distinct(CollDate, .keep_all = T) %>% 
+    dplyr::select(-c(HabParameter, HabValue))
+  
+  # Get LRBS information
+  
+  # Get Metals Information
+  
+  BSAtooloutput <- bind_rows(tibble('Fdt_Sta_Id'= 'FakeRow', 'Fdt_Date_Time'= NA, 'Fdt_Temp_Celcius'= NA, 'Fdt_Field_Ph'= NA, 'Fdt_Do_Probe'= NA, 'Fdt_Do_Optical'= NA, 'Fdt_Do_Winkler'= NA, 
+                                    'Fdt_Specific_Conductance'= NA,'NITROGEN, TOTAL (MG/L AS N)'= NA, 'PHOSPHORUS, TOTAL (MG/L AS P)'= NA, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'= NA,
+                                    'SULFATE, TOTAL (MG/L AS SO4)'= NA, 'CHLORIDE,TOTAL IN WATER MG/L'= NA,  'SODIUM, DISSOLVED (MG/L AS NA)'= NA, 'POTASSIUM, DISSOLVED (MG/L AS K)' = NA),
+                             stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = FALSE) %>%
+                               dplyr::select(one_of(c('Fdt_Sta_Id', 'Fdt_Date_Time', 'Fdt_Temp_Celcius', 'Fdt_Field_Ph', 'Fdt_Do_Probe', 'Fdt_Do_Optical', 'Fdt_Do_Winkler', 
+                                                      'Fdt_Specific_Conductance','NITROGEN, TOTAL (MG/L AS N)', 'PHOSPHORUS, TOTAL (MG/L AS P)', 'SULFATE, TOTAL (MG/L AS SO4)',
+                                                      'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L','CHLORIDE,TOTAL IN WATER MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)',
+                                                      'POTASSIUM, DISSOLVED (MG/L AS K)')))) %>% 
+    filter(Fdt_Sta_Id != 'FakeRow') %>% 
+    mutate(`Dissolved Oxygen` = case_when(!is.na(Fdt_Do_Probe) ~ Fdt_Do_Probe,
+                                          !is.na(Fdt_Do_Optical) ~ Fdt_Do_Optical,
+                                          !is.na(Fdt_Do_Winkler) ~ Fdt_Do_Winkler,
+                                          TRUE ~ as.numeric(NA))) %>%
+    left_join(dplyr::select(stationInfo_sf, STATION_ID, Latitude, Longitude) %>% 
+                distinct(STATION_ID, .keep_all= T) %>% 
+                st_drop_geometry(), by = c('Fdt_Sta_Id'='STATION_ID')) %>% 
+    full_join(totHab, by = c('Fdt_Sta_Id'= 'StationID', 'Fdt_Date_Time' = 'CollDate')) # full join in case benthic date/time doesn't match somewhere in CEDS
+   
+  
+  
+} 
+  
+  
+  
+  
+  
   dplyr::select(StationID = Fdt_Sta_Id, CollectionDateTime = Fdt_Date_Time, Latitude, Longitude, 
-                
-                `Temperature (C)` = Fdt_Temp_Celcius)
+                `pH (unitless)` = Fdt_Field_Ph, `DO (mg/L)` = `Dissolved Oxygen`, `TN (mg/L)` = `NITROGEN, TOTAL (MG/L AS N)`,
+                `TP (mg/L)` = `PHOSPHORUS, TOTAL (MG/L AS P)`, 
+                `Total Habitat (unitless)` = TotalHabitat, 
+                `LRBS (unitless)` = LRBS,
+                `Metals CCU (unitless)` = MetalsCCU,
+                `SpCond (uS/cm)` = Fdt_Specific_Conductance, `TDS (mg/L)` = `TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L`,
+                `DSulfate (mg/L)` = `SULFATE, TOTAL (MG/L AS SO4)`, `DChloride (mg/L)` = `CHLORIDE,TOTAL IN WATER MG/L`, 
+                `DPotassium (mg/L)` = `POTASSIUM, DISSOLVED (MG/L AS K)`, `DSodium (mg/L)` = `SODIUM, DISSOLVED (MG/L AS NA)`, `Temperature (C)` = Fdt_Temp_Celcius)
                             
 
 
