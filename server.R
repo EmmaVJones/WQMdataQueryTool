@@ -346,16 +346,38 @@ shinyServer(function(input, output, session) {
   # Raw Field Data
   output$fieldDataRaw <- renderDataTable({ req(reactive_objects$stationFieldDataUserFilter)
     datatable(reactive_objects$stationFieldDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
-              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationFieldDataUserFilter),
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(reactive_objects$stationFieldDataUserFilter),
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawFieldData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
 
   output$analyteDataRaw <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
     datatable(reactive_objects$stationAnalyteDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
-              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$stationAnalyteDataUserFilter),
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(reactive_objects$stationAnalyteDataUserFilter),
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawAnalyteData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
-
+  
+  output$BSAtemplateData <- renderDataTable({ req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
+    z <-  BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf, 
+                                reactive_objects$stationAnalyteDataUserFilter, reactive_objects$stationFieldDataUserFilter)
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
+                             buttons=list('copy',
+                                          list(extend='csv',filename=paste0('BSAtemplateData',input$station, Sys.Date())),
+                                          list(extend='excel',filename=paste0('BSAtemplateData',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none') })
+  
+  output$BSAmetalsTemplateData <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
+    z <- BSAtoolMetalsFunction(input$station, reactive_objects$stationInfo_sf, reactive_objects$stationAnalyteDataUserFilter)
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
+                             buttons=list('copy',
+                                          list(extend='csv',filename=paste0('BSAmetalsTemplateData',input$station, Sys.Date())),
+                                          list(extend='excel',filename=paste0('BSAmetalsTemplateData',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none') })
+  
+  # output$test <- renderPrint({ BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf, 
+  #                                                    reactive_objects$stationAnalyteDataUserFilter, reactive_objects$stationFieldDataUserFilter)})
+  # 
 
 
 

@@ -127,15 +127,27 @@ shinyUI(fluidPage(tags$head(
                                                                          fluidRow(column(6, plotOutput('Basin')),
                                                                                   column(6, plotOutput('Ecoregion'))),
                                                                          br(),br(), br()) )), # a little breathing room
-                                                     tabPanel('Raw Data',
-                                                              h4('Field Data'),
-                                                              helpText('This table displays field data for the selected station and filters exactly how the data are
+                                                     tabPanel('Data Download Formats',
+                                                              tabsetPanel(
+                                                                tabPanel('Raw Field Data',
+                                                                         helpText('This table displays field data for the selected station and filters exactly how the data are
                                                                        stored in CEDS.'),
-                                                              DT::dataTableOutput('fieldDataRaw'), br(),
-                                                              h4('Analyte Data'),
-                                                              helpText('This table displays analyte data for the selected station and filters exactly how the data are
+                                                                         DT::dataTableOutput('fieldDataRaw'), br(),br(),br()), # a little breathing room
+                                                                tabPanel('Raw Analyte Data',
+                                                                         #h4('Analyte Data'),
+                                                                         helpText('This table displays analyte data for the selected station and filters exactly how the data are
                                                                        stored in CEDS.'),
-                                                              DT::dataTableOutput('analyteDataRaw'),br(),br(),br()) # a little breathing room
+                                                                         DT::dataTableOutput('analyteDataRaw'),br(),br(),br()), # a little breathing room
+                                                                tabPanel('Benthic Stressor Analysis Data Formats',
+                                                                         helpText('This table displays field, analyte, habitat, and metals data for the selected station and filters 
+                                                                                  as required for upload into the Benthic Stressor Analysis Tool.'),
+                                                                         h4(strong('The BSA tool only accepts .csv data format for this dataset.')),
+                                                                         DT::dataTableOutput('BSAtemplateData'), br(),
+                                                                         helpText('This table displays dissolved metals data for the selected station and filters 
+                                                                                  as required for upload into the dissolved metals portion of theBenthic Stressor Analysis Tool.'),
+                                                                         h4(strong('The BSA tool only accepts .csv data format for this dataset.')),
+                                                                         DT::dataTableOutput('BSAmetalsTemplateData'), br(),br(),br())))
+                                                              
                                                      )
                                                  ))
                                       )),
