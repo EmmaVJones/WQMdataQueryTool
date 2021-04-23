@@ -248,15 +248,18 @@ BSAhabitatQuery <- function(pool, station, dateRangeFilter){
 
 
 
-BSAtooloutputFunction <- function(pool, station, stationAnalyteDataUserFilter, stationFieldDataUserFilter){
+BSAtooloutputFunction <- function(pool, station, dateRangeFilter, stationAnalyteDataUserFilter, stationFieldDataUserFilter){
   # Get habitat Information
   totHab <- BSAhabitatQuery(pool, station, dateRangeFilter) %>% 
     distinct(CollDate, .keep_all = T) %>% 
     dplyr::select(-c(HabParameter, HabValue))
   
   # Get LRBS information
+  lrbs <- filter(LRBS, StationID %in% station & between(Date, dateRangeFilter[1], dateRangeFilter[2])) %>% 
+    dplyr::select(StationID, Date, LRBS = LRBS2)
   
   # Get Metals Information
+  
   
   BSAtooloutput <- bind_rows(tibble('Fdt_Sta_Id'= 'FakeRow', 'Fdt_Date_Time'= NA, 'Fdt_Temp_Celcius'= NA, 'Fdt_Field_Ph'= NA, 'Fdt_Do_Probe'= NA, 'Fdt_Do_Optical'= NA, 'Fdt_Do_Winkler'= NA, 
                                     'Fdt_Specific_Conductance'= NA,'NITROGEN, TOTAL (MG/L AS N)'= NA, 'PHOSPHORUS, TOTAL (MG/L AS P)'= NA, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'= NA,
@@ -274,9 +277,9 @@ BSAtooloutputFunction <- function(pool, station, stationAnalyteDataUserFilter, s
     left_join(dplyr::select(stationInfo_sf, STATION_ID, Latitude, Longitude) %>% 
                 distinct(STATION_ID, .keep_all= T) %>% 
                 st_drop_geometry(), by = c('Fdt_Sta_Id'='STATION_ID')) %>% 
-    full_join(totHab, by = c('Fdt_Sta_Id'= 'StationID', 'Fdt_Date_Time' = 'CollDate')) # full join in case benthic date/time doesn't match somewhere in CEDS
-   
-  
+    full_join(totHab, by = c('Fdt_Sta_Id'= 'StationID', 'Fdt_Date_Time' = 'CollDate')) %>% # full join in case benthic date/time doesn't match somewhere in CEDS
+    full_join(lrbs, by = c('Fdt_Sta_Id'= 'StationID', 'Fdt_Date_Time' = 'Date')) %>% # full join in case LRBS date/time doesn't match somewhere in CEDS
+    
   
 } 
   

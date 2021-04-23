@@ -29,7 +29,7 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
 # Retrieve Pins
 WQM_Station_Full <- pin_get("ejones/WQM-Station-Full", board = "rsconnect")
 Wqm_Stations_View <- pin_get("ejones/WQM-Stations-View", board = "rsconnect")
-
+LRBS <- pin_get("ejones/LRBS", board = 'rsconnect')
 
 
 
