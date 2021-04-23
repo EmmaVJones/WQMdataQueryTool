@@ -36,32 +36,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-pool <- dbPool(
- drv = odbc::odbc(),
- Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
- Server= "DEQ-SQLODS-PROD,50000",
- dbname = "ODS",
- trusted_connection = "yes"
-)
+# pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  trusted_connection = "yes"
+# )
 
 # For deployment on the R server: Set up pool connection to production environment
-# pool <- dbPool(
-#   drv = odbc::odbc(),
-#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-#   # Production Environment
-#   Server= "DEQ-SQLODS-PROD,50000",
-#   dbname = "ODS",
-#   UID = conn$UID_prod,
-#   PWD = conn$PWD_prod,
-#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-#   # Test environment
-#   #Server= "WSQ04151,50000",
-#   #dbname = "ODS_test",
-#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-#   trusted_connection = "yes"
-# )
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod,
+  PWD = conn$PWD_prod,
+  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+  # Test environment
+  #Server= "WSQ04151,50000",
+  #dbname = "ODS_test",
+  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+  trusted_connection = "yes"
+)
 
 onStop(function() {
   poolClose(pool)
@@ -787,13 +787,13 @@ BSAtooloutputFunction <- function(pool, station, dateRangeFilter, LRBS, stationI
                                           !is.na(Fdt_Do_Optical) ~ Fdt_Do_Optical,
                                           !is.na(Fdt_Do_Winkler) ~ Fdt_Do_Winkler,
                                           TRUE ~ as.numeric(NA))) %>%
-    left_join(dplyr::select(stationInfo_sf, STATION_ID, Latitude, Longitude) %>% 
-                distinct(STATION_ID, .keep_all= T) %>% 
-                st_drop_geometry(), by = c('Fdt_Sta_Id'='STATION_ID')) %>% 
     full_join(totHab, by = c('Fdt_Sta_Id'= 'StationID', 'Fdt_Date_Time' = 'CollDate')) %>% # full join in case benthic date/time doesn't match somewhere in CEDS
     full_join(lrbs, by = c('Fdt_Sta_Id'= 'StationID', 'Fdt_Date_Time' = 'Date')) %>% # full join in case LRBS date/time doesn't match somewhere in CEDS
     full_join(metalsCCU, by = c('Fdt_Sta_Id'= 'StationID', 'Fdt_Date_Time' = 'Collection Date')) %>% # full join in case LRBS date/time doesn't match somewhere in CEDS
     filter(!is.na(Fdt_Date_Time)) %>%  #drop any empty rows after joining other datasets
+    left_join(dplyr::select(stationInfo_sf, STATION_ID, Latitude, Longitude) %>% 
+                distinct(STATION_ID, .keep_all= T) %>% 
+                st_drop_geometry(), by = c('Fdt_Sta_Id'='STATION_ID')) %>% 
     dplyr::select(StationID = Fdt_Sta_Id, CollectionDateTime = Fdt_Date_Time, Longitude,  Latitude,
                   `pH (unitless)` = Fdt_Field_Ph, `DO (mg/L)` = `Dissolved Oxygen`, `TN (mg/L)` = `NITROGEN, TOTAL (MG/L AS N)`,
                   `TP (mg/L)` = `PHOSPHORUS, TOTAL (MG/L AS P)`, `Total Habitat (unitless)` = `Total Habitat Score`, 
