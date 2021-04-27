@@ -32,6 +32,7 @@ shinyUI(fluidPage(tags$head(
                                                    actionButton('begin', 'Pull Station',class='btn-block'),
                                                    width = 3),
                                                  mainPanel(
+                                                   #verbatimTextOutput('test'),
                                                    helpText('This interactive map allows users to zoom and pan across different basemaps. Basemap option and Level III
                                                             Ecoregion and Assessment Region information are available by using the checkboxes in the layers drop down
                                                             on the left panel of the map.'),
@@ -53,10 +54,6 @@ shinyUI(fluidPage(tags$head(
                                                  mainPanel(
                                                    tabsetPanel(
                                                      tabPanel('Station Data',
-
-                                                              #verbatimTextOutput('test'),
-
-
                                                               h4('Field and Chemistry Data Combined'),
                                                               helpText("This table presents all available field and analyte data
                                                                         filtered by the date filter in the sidebar panel. Analyte

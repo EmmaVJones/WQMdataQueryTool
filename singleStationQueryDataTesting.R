@@ -51,7 +51,7 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '4ADEE000.06'#'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+station <- '4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
 dateRange <- c(as.Date('2015-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
@@ -227,20 +227,23 @@ BSAhabitatQuery <- function(pool, station, dateRangeFilter){
                               monthday >= 0815 & monthday <= 1215 ~ 'Fall',
                               TRUE ~ as.character("Outside Sample Window"))) %>%
     dplyr::select(HabSampID, StationID, `Collection Date`, `Entered By`, `Entered Date`, `Field Team`, `HabSample Comment`, Gradient, Season)
-  totalHabitat <- pool %>% tbl("Edas_Habitat_Values_View") %>%
-    filter(WHS_SAMP_ID %in% !! totalHabitatSample$HabSampID) %>%
-    as_tibble() %>%
-    rename("HabSampID" = "WHS_SAMP_ID",
-           "HabParameter" = "WHVP_CODE",
-           "HabParameterDescription" = "WHVP_DESCRIPTION",
-           "HabValue" = "WHV_HAB_VALUE",
-           "HabValue Comment" = "WHV_COMMENT") %>%
-    left_join(dplyr::select(totalHabitatSample, StationID, HabSampID, `Collection Date`), by = 'HabSampID') %>% 
-    # what I really want after BSA update
-    #dplyr::select(StationID, `Collection Date`, HabParameter, HabParameterDescription, HabValue, `HabValue Comment`, Gradient, Season)
-    dplyr::select(StationID, CollDate = `Collection Date`, HabParameter, HabValue) %>% 
-    group_by(StationID, CollDate) %>% 
-    mutate(`Total Habitat Score` = sum(HabValue, na.rm = T)) %>%  ungroup()
+  if(nrow(totalHabitatSample) > 0){
+    totalHabitat <- pool %>% tbl("Edas_Habitat_Values_View") %>%
+      filter(WHS_SAMP_ID %in% !! totalHabitatSample$HabSampID) %>%
+      as_tibble() %>%
+      rename("HabSampID" = "WHS_SAMP_ID",
+             "HabParameter" = "WHVP_CODE",
+             "HabParameterDescription" = "WHVP_DESCRIPTION",
+             "HabValue" = "WHV_HAB_VALUE",
+             "HabValue Comment" = "WHV_COMMENT") %>%
+      left_join(dplyr::select(totalHabitatSample, StationID, HabSampID, `Collection Date`), by = 'HabSampID') %>% 
+      # what I really want after BSA update
+      #dplyr::select(StationID, `Collection Date`, HabParameter, HabParameterDescription, HabValue, `HabValue Comment`, Gradient, Season)
+      dplyr::select(StationID, CollDate = `Collection Date`, HabParameter, HabValue) %>% 
+      group_by(StationID, CollDate) %>% 
+      mutate(`Total Habitat Score` = sum(HabValue, na.rm = T)) %>%  ungroup()
+  } else {
+    totalHabitat <- tibble(StationID = station, CollDate = NA, HabParameter = NA, HabValue = NA, `Total Habitat Score` = NA) }
   return(totalHabitat)
 }
 #BSAhabitatQuery(pool, station, dateRangeFilter)

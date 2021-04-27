@@ -36,32 +36,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-pool <- dbPool(
- drv = odbc::odbc(),
- Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
- Server= "DEQ-SQLODS-PROD,50000",
- dbname = "ODS",
- trusted_connection = "yes"
-)
+# pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  trusted_connection = "yes"
+# )
 
 # For deployment on the R server: Set up pool connection to production environment
-# pool <- dbPool(
-#   drv = odbc::odbc(),
-#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-#   # Production Environment
-#   Server= "DEQ-SQLODS-PROD,50000",
-#   dbname = "ODS",
-#   UID = conn$UID_prod,
-#   PWD = conn$PWD_prod,
-#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-#   # Test environment
-#   #Server= "WSQ04151,50000",
-#   #dbname = "ODS_test",
-#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-#   trusted_connection = "yes"
-# )
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod,
+  PWD = conn$PWD_prod,
+  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+  # Test environment
+  #Server= "WSQ04151,50000",
+  #dbname = "ODS_test",
+  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+  trusted_connection = "yes"
+)
 
 onStop(function() {
   poolClose(pool)
@@ -728,20 +728,23 @@ BSAhabitatQuery <- function(pool, station, dateRangeFilter){
                               monthday >= 0815 & monthday <= 1215 ~ 'Fall',
                               TRUE ~ as.character("Outside Sample Window"))) %>%
     dplyr::select(HabSampID, StationID, `Collection Date`, `Entered By`, `Entered Date`, `Field Team`, `HabSample Comment`, Gradient, Season)
-  totalHabitat <- pool %>% tbl("Edas_Habitat_Values_View") %>%
-    filter(WHS_SAMP_ID %in% !! totalHabitatSample$HabSampID) %>%
-    as_tibble() %>%
-    rename("HabSampID" = "WHS_SAMP_ID",
-           "HabParameter" = "WHVP_CODE",
-           "HabParameterDescription" = "WHVP_DESCRIPTION",
-           "HabValue" = "WHV_HAB_VALUE",
-           "HabValue Comment" = "WHV_COMMENT") %>%
-    left_join(dplyr::select(totalHabitatSample, StationID, HabSampID, `Collection Date`), by = 'HabSampID') %>% 
-    # what I really want after BSA update
-    #dplyr::select(StationID, `Collection Date`, HabParameter, HabParameterDescription, HabValue, `HabValue Comment`, Gradient, Season)
-    dplyr::select(StationID, CollDate = `Collection Date`, HabParameter, HabValue) %>% 
-    group_by(StationID, CollDate) %>% 
-    mutate(`Total Habitat Score` = sum(HabValue, na.rm = T)) %>%  ungroup()
+  if(nrow(totalHabitatSample) > 0){
+    totalHabitat <- pool %>% tbl("Edas_Habitat_Values_View") %>%
+      filter(WHS_SAMP_ID %in% !! totalHabitatSample$HabSampID) %>%
+      as_tibble() %>%
+      rename("HabSampID" = "WHS_SAMP_ID",
+             "HabParameter" = "WHVP_CODE",
+             "HabParameterDescription" = "WHVP_DESCRIPTION",
+             "HabValue" = "WHV_HAB_VALUE",
+             "HabValue Comment" = "WHV_COMMENT") %>%
+      left_join(dplyr::select(totalHabitatSample, StationID, HabSampID, `Collection Date`), by = 'HabSampID') %>% 
+      # what I really want after BSA update
+      #dplyr::select(StationID, `Collection Date`, HabParameter, HabParameterDescription, HabValue, `HabValue Comment`, Gradient, Season)
+      dplyr::select(StationID, CollDate = `Collection Date`, HabParameter, HabValue) %>% 
+      group_by(StationID, CollDate) %>% 
+      mutate(`Total Habitat Score` = sum(HabValue, na.rm = T)) %>%  ungroup()
+  } else {
+    totalHabitat <- tibble(StationID = station, CollDate = NA, HabParameter = NA, HabValue = NA, `Total Habitat Score` = NA) }
   return(totalHabitat)
 }
 #BSAhabitatQuery(pool, station, dateRangeFilter)

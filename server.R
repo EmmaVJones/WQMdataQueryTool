@@ -56,6 +56,8 @@ shinyServer(function(input, output, session) {
   
   ###----------------------------------------Single Station Query ---------------------------------------------------------------------------------------------------
   
+  #output$test <- renderPrint({input$begin})
+  
   # test station viability in separate object
   observeEvent(input$begin, {
     ## Station Information
@@ -92,7 +94,7 @@ shinyServer(function(input, output, session) {
 
     ### Analyte information
     if(nrow(reactive_objects$stationFieldData) == 0){
-      showNotification("No data for selected window.", duration = 30, type = 'error')
+      showNotification("No data for selected window.", duration = 15, type = 'error')
     } else {
       reactive_objects$stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
         filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$stationFieldData$Fdt_Id &
@@ -103,8 +105,7 @@ shinyServer(function(input, output, session) {
                   by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))  }     })
 
   ## Display Station Information
-  output$stationInfoTable <- DT::renderDataTable({
-    req(reactive_objects$stationInfoFin)
+  output$stationInfoTable <- DT::renderDataTable({req(reactive_objects$stationInfoFin)
     datatable(reactive_objects$stationInfoFin %>% distinct(Sta_Id, .keep_all = T),
               rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bt', scrollX= TRUE, scrollY = '100px',
@@ -367,8 +368,7 @@ shinyServer(function(input, output, session) {
                                           'colvis')), selection = 'none') })
   
   output$BSAmetalsTemplateData <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
-    z <- BSAtoolMetalsFunction(input$station, reactive_objects$stationInfo_sf, reactive_objects$stationAnalyteDataUserFilter) %>% 
-      st_drop_geometry() # drop spatial data before sending to spreadsheet
+    z <- BSAtoolMetalsFunction(input$station, reactive_objects$stationInfo_sf, reactive_objects$stationAnalyteDataUserFilter) 
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                              buttons=list('copy',
