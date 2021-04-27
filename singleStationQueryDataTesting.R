@@ -51,8 +51,8 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '4ADEE000.06'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
-dateRange <- c(as.Date('2015-01-01'), as.Date('2017-01-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
+station <- '4ADEE000.06'#'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+dateRange <- c(as.Date('2015-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
 # z <- pool %>% tbl( "Wqm_Field_data_View") %>%
@@ -107,7 +107,7 @@ stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
 
 
 # User filters
-dateRangeFilter <-  c(as.Date('2015-01-01'), as.Date('2016-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+dateRangeFilter <-  c(as.Date('2015-01-01'), as.Date('2020-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
 labCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
 repFilter <- c('R')
 

@@ -194,7 +194,7 @@ shinyServer(function(input, output, session) {
 
 
   ## Drop any unwanted Analyte codes
-  observe({req(nrow(reactive_objects$stationFieldData) > 0, input$dateRangeFilter, nrow(reactive_objects$stationAnalyteData)>0)
+  observe({req(nrow(reactive_objects$stationFieldData) > 0, input$dateRangeFilter, reactive_objects$stationAnalyteData)
     reactive_objects$stationFieldDataUserFilter <- filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) )
     reactive_objects$stationAnalyteDataUserFilter <- filter(reactive_objects$stationAnalyteData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) )  %>%
       filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$repFilter) %>%
@@ -367,7 +367,8 @@ shinyServer(function(input, output, session) {
                                           'colvis')), selection = 'none') })
   
   output$BSAmetalsTemplateData <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
-    z <- BSAtoolMetalsFunction(input$station, reactive_objects$stationInfo_sf, reactive_objects$stationAnalyteDataUserFilter)
+    z <- BSAtoolMetalsFunction(input$station, reactive_objects$stationInfo_sf, reactive_objects$stationAnalyteDataUserFilter) %>% 
+      st_drop_geometry() # drop spatial data before sending to spreadsheet
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                              buttons=list('copy',

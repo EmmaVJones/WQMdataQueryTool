@@ -36,32 +36,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -209,24 +209,30 @@ stationSummarySampingMetrics <- function(stationInfo_sf, singleOrMulti){
 # Organize field and analyte info into prettier table
 stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDataRaw, averageResults){
   if(averageResults == TRUE){
-    y <- stationAnalyteDataRaw %>%
-      group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
-      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Com_Code, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
-                    Pg_Parm_Name, Ana_Uncensored_Value) %>% 
-      mutate(`Associated Analyte Records` = 1:n(),
-             LabComments = paste0(Pg_Parm_Name,' RMK'))
-    y1 <- y %>%
-      dplyr::select(Pg_Parm_Name, Ana_Uncensored_Value) %>% 
-      pivot_wider(names_from = Pg_Parm_Name, #names_sep = " | ", 
-                  values_from = "Ana_Uncensored_Value",
-                  values_fn = list(Ana_Uncensored_Value = mean) ) %>% 
-      left_join(y %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, LabComments) %>%  
-                  mutate(Ana_Com_Code2 = paste(Ana_Com_Code, sep = " ")) %>%
-                  dplyr::select(LabComments, Ana_Com_Code2) %>% 
-                  distinct() %>% 
-                  pivot_wider(names_from = LabComments, values_from = Ana_Com_Code2),
-                by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc")) %>% 
-      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, sort(names(.)))
+    if(nrow(stationAnalyteDataRaw) > 0){
+      y <- stationAnalyteDataRaw %>%
+        group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc) %>%
+        dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Com_Code, #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
+                      Pg_Parm_Name, Ana_Uncensored_Value) %>% 
+        mutate(`Associated Analyte Records` = 1:n(),
+               LabComments = paste0(Pg_Parm_Name,' RMK'))
+      y1 <- y %>%
+        dplyr::select(Pg_Parm_Name, Ana_Uncensored_Value) %>% 
+        pivot_wider(names_from = Pg_Parm_Name, #names_sep = " | ", 
+                    values_from = "Ana_Uncensored_Value",
+                    values_fn = list(Ana_Uncensored_Value = mean) ) %>% 
+        left_join(y %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, LabComments) %>%  
+                    mutate(Ana_Com_Code2 = paste(Ana_Com_Code, sep = " ")) %>%
+                    dplyr::select(LabComments, Ana_Com_Code2) %>% 
+                    distinct() %>% 
+                    pivot_wider(names_from = LabComments, values_from = Ana_Com_Code2),
+                  by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc")) %>% 
+        dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, sort(names(.)))
+    } else {
+      y1 <- stationAnalyteDataRaw %>%
+        dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc)
+    }
+    
     suppressWarnings(
       full_join(stationFieldDataRaw, y1, by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>%
         arrange(Fdt_Sta_Id, Fdt_Date_Time))
@@ -244,24 +250,27 @@ stationFieldAnalyteDataPretty <- function(stationAnalyteDataRaw, stationFieldDat
     #            by = c("Fdt_Id" = "Ana_Sam_Fdt_Id", 'Fdt_Sta_Id', 'Fdt_Date_Time')) %>%
     #   arrange(Fdt_Sta_Id, Fdt_Date_Time))
   } else {
-    z <- stationAnalyteDataRaw %>%
-      group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
-      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Com_Code, Ana_Uncensored_Value) %>%
-      mutate(`Associated Analyte Records` = 1:n(),
-             LabComments = paste0(Pg_Parm_Name,' RMK'))
-    
-    z1 <-  z %>% 
-      dplyr::select(`Associated Analyte Records`, Pg_Parm_Name, Ana_Uncensored_Value) %>% 
-      pivot_wider(names_from = Pg_Parm_Name, values_from = Ana_Uncensored_Value) %>%
-      left_join(z %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc,Ana_Lab_Seq_Num) %>%  
-                  dplyr::select(`Associated Analyte Records`, LabComments, Ana_Com_Code) %>% 
-                  pivot_wider(names_from = LabComments, values_from = Ana_Com_Code),
-                by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc", "Ana_Lab_Seq_Num", 
-                       "Associated Analyte Records")) %>% 
-      dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, 
-                    `Associated Analyte Records`, sort(names(.)))
-    
-    
+    if(nrow(stationAnalyteDataRaw) > 0){
+      z <- stationAnalyteDataRaw %>%
+        group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Lab_Seq_Num) %>%
+        dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Pg_Parm_Name, Ana_Com_Code, Ana_Uncensored_Value) %>%
+        mutate(`Associated Analyte Records` = 1:n(),
+               LabComments = paste0(Pg_Parm_Name,' RMK'))
+      z1 <-  z %>% 
+        dplyr::select(`Associated Analyte Records`, Pg_Parm_Name, Ana_Uncensored_Value) %>% 
+        pivot_wider(names_from = Pg_Parm_Name, values_from = Ana_Uncensored_Value) %>%
+        left_join(z %>% ungroup() %>% group_by(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc,Ana_Lab_Seq_Num) %>%  
+                    dplyr::select(`Associated Analyte Records`, LabComments, Ana_Com_Code) %>% 
+                    pivot_wider(names_from = LabComments, values_from = Ana_Com_Code),
+                  by = c("Ana_Sam_Fdt_Id", "Fdt_Sta_Id", "Fdt_Date_Time", "Ana_Sam_Mrs_Container_Id_Desc", "Ana_Lab_Seq_Num", 
+                         "Associated Analyte Records")) %>% 
+        dplyr::select(Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, 
+                      `Associated Analyte Records`, sort(names(.)))
+    } else {
+      z1 <- stationAnalyteDataRaw %>% 
+        mutate(`Associated Analyte Records` = NA) %>% 
+        dplyr::select( Ana_Sam_Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Mrs_Container_Id_Desc, Ana_Lab_Seq_Num, 
+                         `Associated Analyte Records`)   }
     suppressWarnings(
       full_join(stationFieldDataRaw, 
                 z1,
@@ -813,34 +822,48 @@ BSAtooloutputFunction <- function(pool, station, dateRangeFilter, LRBS, stationI
 
 
 BSAtoolMetalsFunction <- function(station, stationInfo_sf, stationAnalyteDataUserFilter){
-  return(stationAnalyteDataUserFilter %>%
-           mutate(Parameter = recode(`Pg_Parm_Name`,
-                                     "SELENIUM, DISSOLVED (UG/L AS SE)" = "Selenium",
-                                     "CALCIUM, DISSOLVED (MG/L AS CA)" = "Calcium",
-                                     "MAGNESIUM, DISSOLVED (MG/L AS MG)" = "Magnesium",
-                                     "ARSENIC, DISSOLVED  (UG/L AS AS)" = "Arsenic",
-                                     "BARIUM, DISSOLVED (UG/L AS BA)" = "Barium",
-                                     "ALUMINUM, DISSOLVED (UG/L AS AL)" = "Aluminum",
-                                     "BERYLLIUM, DISSOLVED (UG/L AS BE)" = "Beryllium",
-                                     "CADMIUM, DISSOLVED (UG/L AS CD)" = "Cadmium",
-                                     "CHROMIUM, DISSOLVED (UG/L AS CR)" = "Chromium",
-                                     "COPPER, DISSOLVED (UG/L AS CU)" = "Copper", 
-                                     "IRON, DISSOLVED (UG/L AS FE)" = "Iron",
-                                     "LEAD, DISSOLVED (UG/L AS PB)" = "Lead",
-                                     "MANGANESE, DISSOLVED (UG/L AS MN)" = "Manganese",
-                                     "THALLIUM, DISSOLVED (UG/L AS TL)" = "Thallium",
-                                     "NICKEL, DISSOLVED (UG/L AS NI)" = "Nickel",
-                                     "SILVER, DISSOLVED (UG/L AS AG)" = "Silver",
-                                     "ZINC, DISSOLVED (UG/L AS ZN)" = "Zinc",
-                                     "ANTIMONY, DISSOLVED (UG/L AS SB)" = "Antimony", 
-                                     "HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED" = "Hardness")) %>% 
-           filter(Parameter %in% c('Calcium', 'Magnesium', 'Arsenic', 'Barium', 'Beryllium', 'Cadmium', 'Chromium', 'Copper', 
-                                   'Iron', 'Lead', 'Manganese', 'Thallium', 'Nickel', 'Silver', 'Zinc', 'Antimony', 'Aluminum', 'Selenium', 'Hardness')) %>% 
-           dplyr::select(StationID = Fdt_Sta_Id, CollectionDateTime =  Fdt_Date_Time, Parameter, Ana_Uncensored_Value) %>% 
-           group_by(StationID, CollectionDateTime) %>% 
-           pivot_wider(names_from = Parameter, values_from = Ana_Uncensored_Value)  %>% 
-           left_join(dplyr::select(stationInfo_sf, StationID = STATION_ID, Longitude, Latitude) %>% distinct(StationID, .keep_all= T), by = 'StationID') %>% 
-           dplyr::select(StationID, CollectionDateTime,  Longitude, Latitude, everything()) )
+
+    z <- stationAnalyteDataUserFilter %>%
+      mutate(Parameter = recode(`Pg_Parm_Name`,
+                                "SELENIUM, DISSOLVED (UG/L AS SE)" = "Selenium",
+                                "CALCIUM, DISSOLVED (MG/L AS CA)" = "Calcium",
+                                "MAGNESIUM, DISSOLVED (MG/L AS MG)" = "Magnesium",
+                                "ARSENIC, DISSOLVED  (UG/L AS AS)" = "Arsenic",
+                                "BARIUM, DISSOLVED (UG/L AS BA)" = "Barium",
+                                "ALUMINUM, DISSOLVED (UG/L AS AL)" = "Aluminum",
+                                "BERYLLIUM, DISSOLVED (UG/L AS BE)" = "Beryllium",
+                                "CADMIUM, DISSOLVED (UG/L AS CD)" = "Cadmium",
+                                "CHROMIUM, DISSOLVED (UG/L AS CR)" = "Chromium",
+                                "COPPER, DISSOLVED (UG/L AS CU)" = "Copper", 
+                                "IRON, DISSOLVED (UG/L AS FE)" = "Iron",
+                                "LEAD, DISSOLVED (UG/L AS PB)" = "Lead",
+                                "MANGANESE, DISSOLVED (UG/L AS MN)" = "Manganese",
+                                "THALLIUM, DISSOLVED (UG/L AS TL)" = "Thallium",
+                                "NICKEL, DISSOLVED (UG/L AS NI)" = "Nickel",
+                                "SILVER, DISSOLVED (UG/L AS AG)" = "Silver",
+                                "ZINC, DISSOLVED (UG/L AS ZN)" = "Zinc",
+                                "ANTIMONY, DISSOLVED (UG/L AS SB)" = "Antimony", 
+                                "HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED" = "Hardness")) %>% 
+      filter(Parameter %in% c('Calcium', 'Magnesium', 'Arsenic', 'Barium', 'Beryllium', 'Cadmium', 'Chromium', 'Copper', 
+                              'Iron', 'Lead', 'Manganese', 'Thallium', 'Nickel', 'Silver', 'Zinc', 'Antimony', 'Aluminum', 'Selenium', 'Hardness'))
+    if(nrow(z)> 0){
+      z <- bind_rows(tibble(StationID = 'FakeRow',	CollectionDateTime = NA, Longitude = NA, Latitude = NA, Calcium = NA, Magnesium = NA, 
+                       Arsenic = NA, Barium = NA, Beryllium = NA, Cadmium = NA, Chromium = NA, Copper = NA, Iron = NA, Lead = NA, Manganese = NA, Thallium = NA, 
+                       Nickel = NA, Silver = NA, Zinc = NA, Antimony = NA, Aluminum = NA, Selenium = NA, Hardness = NA),
+                z %>% 
+                  dplyr::select(StationID = Fdt_Sta_Id, CollectionDateTime =  Fdt_Date_Time, Parameter, Ana_Uncensored_Value) %>% 
+                  group_by(StationID, CollectionDateTime) %>% 
+                  pivot_wider(names_from = Parameter, values_from = Ana_Uncensored_Value)  %>% 
+                  left_join(dplyr::select(stationInfo_sf, StationID = STATION_ID, Longitude, Latitude) %>% 
+                              distinct(StationID, .keep_all= T) %>% st_drop_geometry(), by = 'StationID') %>% 
+                  dplyr::select(StationID, CollectionDateTime,  Longitude, Latitude, everything())) %>% 
+        filter(StationID != 'FakeRow')
+  } else  {
+      z <- tibble(StationID = NA, CollectionDateTime = NA, Longitude = NA, Latitude = NA, Calcium = NA, Magnesium = NA, 
+                  Arsenic = NA, Barium = NA, Beryllium = NA, Cadmium = NA, Chromium = NA, Copper = NA, Iron = NA, Lead = NA, Manganese = NA, Thallium = NA, 
+                  Nickel = NA, Silver = NA, Zinc = NA, Antimony = NA, Aluminum = NA, Selenium = NA, Hardness = NA)    }
+  
+  return(z)
 }   
 #BSAtoolMetalsFunction(station, stationInfo_sf, stationAnalyteDataUserFilter)
 
