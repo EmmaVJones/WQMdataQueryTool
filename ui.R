@@ -235,15 +235,24 @@ shinyUI(fluidPage(tags$head(
                                                                                             results to one measure per sample event (using a median statistic where more than
                                                                                                      one measure per sampel event is available).'),
                                                                         DT::dataTableOutput('multistationBasicSummary'), br(), br(), br()),
-                                                               tabPanel('Parameter Plot',
-                                                                        h4('Interactive Parameter Plot'),
+                                                               tabPanel('Parameter Scatter Plot',
+                                                                        h4('Interactive Parameter Scatter Plot'),
                                                                         helpText('Based on the Simplified Field and Chemistry Dataset, users may plot
                                                                                                      all available parameters in the selected data window to visualize temporal changes.',
                                                                                  span(strong('Where the information is available, the appropriate Water Quality Standard is
                                                                                                                  plotted with the station data'))),
                                                                         # fluidRow(column(3,
                                                                         selectInput('multistationParameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName)),#)
-                                                                        plotlyOutput('multistationParameterPlot'), br(), br(), br()))),
+                                                                        plotlyOutput('multistationParameterPlot'), br(), br(), br()),
+                                                               tabPanel('Parameter Box Plot',
+                                                                        h4('Interactive Parameter Boxplot'),
+                                                                        helpText('Based on the Simplified Field and Chemistry Dataset, users may plot
+                                                                                                     all available parameters in the selected data window to visualize individual station parameter ranges and statistics.',
+                                                                                 span(strong('Where the information is available, the appropriate Water Quality Standard is
+                                                                                                                 plotted with the station data'))),
+                                                                        fluidRow(column(3, selectInput('multistationParameterBoxPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
+                                                                                 column(3, checkboxInput('addJitter', 'Add jittered raw data'))),
+                                                                        plotlyOutput('multistationParameterBoxplot'), br(), br(), br()))),
                                                     tabPanel('Raw Data',
                                                              h4('Field Data'),
                                                              helpText('This table displays field data for the selected stations and filters exactly how the data are

@@ -501,6 +501,7 @@ parameterPlotly <- function(basicData,
           else add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
                            marker = list(color= '#535559'), hoverinfo="text",
                            text=~paste(sep="<br>",
+                                       paste("StationID: ",StationID),
                                        paste("Sample Date: ",`Collection Date`),
                                        paste("Depth: ",Depth, "m"),
                                        paste(parameter, ": ",Measure," (mg/L)"))) } %>%
@@ -871,3 +872,74 @@ BSAtoolMetalsFunction <- function(station, stationInfo_sf, stationAnalyteDataUse
 #BSAtoolMetalsFunction(station, stationInfo_sf, stationAnalyteDataUserFilter)
 
 
+
+## Individual parameter boxplot
+parameterBoxplotFunction <- function(basicData, parameter, unitData, WQSlookup, addJitter){
+  z <- dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
+    filter(!is.na(parameterPlot)) 
+  if(nrow(z) != 0){
+    parameterUnits <- filter(unitData, AltName %in% !!parameter)$Units
+    if(parameter %in% c('Temperature', 'Dissolved Oxygen', "pH")){
+      if(parameter == 'Temperature'){parameterLimit <- 'Max Temperature (C)'; specialStandards <- NULL}
+      if(parameter == 'Dissolved Oxygen'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
+      if(parameter == 'pH'){
+        parameterLimit <- c('pH Min', 'pH Max')
+        if(nrow(filter(WQSlookup, StationID %in% unique(basicData$StationID)) %>% 
+                filter(str_detect(as.character(SPSTDS), '6.5-9.5'))) > 0){specialStandards <- c(6.5, 9.5)
+        } else {specialStandards <- NULL}}
+    } else { parameterLimit <- NULL 
+    specialStandards <- NULL  }
+    
+    dat <- dplyr::select(basicData, StationID, `Collection Date`, Depth, Measure = !! parameter) %>%
+      filter( !is.na(Measure))
+    
+    if(nrow(dat) > 0){
+      dat <- left_join(dat, WQSlookup, by = c('StationID')) %>%
+        mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
+        mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
+        # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
+        left_join(WQSvalues, by = 'CLASS_BASIN') %>%
+        dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
+        rename('CLASS' = 'CLASS.x') %>%
+        # add standards info if available
+        {if(!is.null(parameterLimit))
+          dplyr::select(., StationID, `Collection Date`, Depth, Measure, Standard = !!parameterLimit) 
+          else dplyr::select(., StationID, `Collection Date`, Depth, Measure) } %>%
+        # pH special standards correction
+        {if(!is.null(specialStandards))
+          mutate(., Standard1 = specialStandards[1], Standard2 = specialStandards[2])
+          else . } %>%
+        mutate(units = parameterUnits) 
+      #return(dat)
+      if(addJitter == TRUE){
+        plot_ly(data=dat) %>% 
+          add_boxplot( y = ~Measure, color = ~StationID, type = "box", boxpoints = "all", 
+                       jitter = 0.3, pointpos = -1.8) %>% 
+          {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+            add_markers(., x = ~StationID, y=~Standard, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                        hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+            else .} %>% 
+          {if(parameter %in% c('pH'))
+            add_markers(., x = ~StationID, y=~Standard1, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                        hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>% 
+              add_markers(., x = ~StationID, y=~Standard2, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                          hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+            else .} 
+        
+      } else {
+        plot_ly(data=dat) %>% 
+          add_boxplot(y = ~Measure, color = ~StationID, type = "box") %>% 
+          {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+            add_markers(., x = ~StationID, y=~Standard, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                        hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+            else .} %>% 
+          {if(parameter %in% c('pH'))
+            add_markers(., x = ~StationID, y=~Standard1, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                        hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>% 
+              add_markers(., x = ~StationID, y=~Standard2, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                          hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+            else .}  }
+    }
+  }
+}
+#parameterBoxplotFunction(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addJitter = F)

@@ -781,7 +781,7 @@ shinyServer(function(input, output, session) {
                                buttons=list('copy',list(extend='excel',filename=paste0('CEDSbasicFieldAnalyteData_multistationQuery', Sys.Date())),
                                             'colvis')), selection = 'none')})
 
-    ## Visualization Tools: Parameter Plot Tab
+    ## Visualization Tools: Parameter Scatter Plot Tab
     observe({req(nrow(multistationBasicSummary()) > 0, input$multistationParameterPlotlySelection)
       if(input$multistationParameterPlotlySelection %in% names(multistationBasicSummary())){
         z <- dplyr::select(multistationBasicSummary(), parameterPlot = !! input$multistationParameterPlotlySelection) %>% # rename clutch for nse
@@ -793,6 +793,23 @@ shinyServer(function(input, output, session) {
     output$multistationParameterPlot <- renderPlotly({ req(nrow(filter(multistationBasicSummary(), !is.na(input$multistationParameterPlotlySelection))) > 0, input$multistationParameterPlotlySelection)
      suppressWarnings(suppressMessages(
        parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup) ))   })
+
+    
+    ## Visualization Tools: Parameter Boxplot Tab
+    observe({req(nrow(multistationBasicSummary()) > 0, input$multistationParameterBoxPlotlySelection)
+      if(input$multistationParameterBoxPlotlySelection %in% names(multistationBasicSummary())){
+        z <- dplyr::select(multistationBasicSummary(), parameterPlot = !! input$multistationParameterBoxPlotlySelection) %>% # rename clutch for nse
+          filter(!is.na(parameterPlot))
+        if(nrow(z) == 0){
+          showNotification('No data to plot for selected parameter.',duration = 3 )}
+      } else {showNotification('No data to plot for selected parameter.', duration = 3  )}      })
+    
+    output$multistationParameterBoxplot <- renderPlotly({ req(nrow(filter(multistationBasicSummary(), !is.na(input$multistationParameterBoxPlotlySelection))) > 0, input$multistationParameterBoxPlotlySelection)
+      suppressWarnings(suppressMessages(
+        parameterBoxplotFunction(multistationBasicSummary(), input$multistationParameterBoxPlotlySelection, unitData, WQSlookup, input$addJitter) ))   })
+    
+    
+    
 
 
 

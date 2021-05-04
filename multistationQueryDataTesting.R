@@ -112,6 +112,10 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM
  
 ### end filter options
 
+
+
+
+
 # Pull as many details about station from REST service (if available). Work around provided in case station isn't on REST server
 ## Pull station info from REST service
 WQM_Station_Full_REST <- filter(WQM_Stations_Full, WQM_STA_ID %in% WQM_Stations_Filter$StationID)
@@ -149,59 +153,63 @@ multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data in
   dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
                 EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
                 WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything()) 
-# Empty station user selection to start with
-selectedSites <- NULL 
 
 
-# color palette for assessment polygons
-pal <- colorFactor(
-  palette = topo.colors(7),
-  domain = assessmentRegions$ASSESS_REG)
-pal2 <- colorFactor(
-  palette = rainbow(7),
-  domain = ecoregion$US_L3NAME)
 
-assessmentLayerFilter <- filter(assessmentLayer, VAHU6 %in% WQM_Stations_Filter$VAHU6) 
-
-
-CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
-             options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
-                                     preferCanvas = TRUE)) %>%
-  setView(-79.1, 37.7, zoom=7)  %>%
-  addPolygons(data= ecoregion,  color = 'gray', weight = 1,
-              fillColor= ~pal2(ecoregion$US_L3NAME), fillOpacity = 0.5,stroke=0.1,
-              group="Level III Ecoregions",label = ~US_L3NAME) %>% hideGroup('Level III Ecoregions') %>%
-  addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
-              fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
-              group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
-  
-  
-  addCircleMarkers(data = WQM_Stations_Filter,
-                   color='blue', fillColor='gray', radius = 4,
-                   fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
-                   label = ~StationID, layerId = ~StationID,
-                   popup = leafpop::popupTable(WQM_Stations_Filter, zcol=c('StationID'))) %>%
-  {if(nrow(assessmentLayerFilter) > 0)
-    addPolygons(., data= assessmentLayerFilter,  color = 'black', weight = 1,
-                fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
-                group="VAHU6", label = ~VAHU6) %>% hideGroup('VAHU6')
-    else . } %>%
-    
-  inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
-  addDrawToolbar(
-    targetGroup='Selected',
-    polylineOptions=FALSE,
-    markerOptions = FALSE,
-    polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
-    rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
-    circleOptions = FALSE,
-    circleMarkerOptions = FALSE,
-    editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
-  addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
-                   overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
-                   options=layersControlOptions(collapsed=T),
-                   position='topleft') 
-
+# map stuff
+# # Empty station user selection to start with
+# selectedSites <- NULL 
+# 
+# 
+# # color palette for assessment polygons
+# pal <- colorFactor(
+#   palette = topo.colors(7),
+#   domain = assessmentRegions$ASSESS_REG)
+# pal2 <- colorFactor(
+#   palette = rainbow(7),
+#   domain = ecoregion$US_L3NAME)
+# 
+# assessmentLayerFilter <- filter(assessmentLayer, VAHU6 %in% WQM_Stations_Filter$VAHU6) 
+# 
+# 
+# CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
+#              options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
+#                                      preferCanvas = TRUE)) %>%
+#   setView(-79.1, 37.7, zoom=7)  %>%
+#   addPolygons(data= ecoregion,  color = 'gray', weight = 1,
+#               fillColor= ~pal2(ecoregion$US_L3NAME), fillOpacity = 0.5,stroke=0.1,
+#               group="Level III Ecoregions",label = ~US_L3NAME) %>% hideGroup('Level III Ecoregions') %>%
+#   addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
+#               fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
+#               group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
+#   
+#   
+#   addCircleMarkers(data = WQM_Stations_Filter,
+#                    color='blue', fillColor='gray', radius = 4,
+#                    fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
+#                    label = ~StationID, layerId = ~StationID,
+#                    popup = leafpop::popupTable(WQM_Stations_Filter, zcol=c('StationID'))) %>%
+#   {if(nrow(assessmentLayerFilter) > 0)
+#     addPolygons(., data= assessmentLayerFilter,  color = 'black', weight = 1,
+#                 fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
+#                 group="VAHU6", label = ~VAHU6) %>% hideGroup('VAHU6')
+#     else . } %>%
+#     
+#   inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
+#   addDrawToolbar(
+#     targetGroup='Selected',
+#     polylineOptions=FALSE,
+#     markerOptions = FALSE,
+#     polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+#     rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+#     circleOptions = FALSE,
+#     circleMarkerOptions = FALSE,
+#     editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
+#   addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+#                    overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
+#                    options=layersControlOptions(collapsed=T),
+#                    position='topleft') 
+# 
 
 
 
@@ -238,9 +246,9 @@ multistationAnalyteDataUserFilter <- filter(multistationAnalyteData, between(as.
   filter(Ana_Sam_Mrs_Container_Id_Desc %in% multistationRepFilter) %>% 
   filter(! Ana_Com_Code %in% multistationLabCodesDropped)
 
-reactive_objects$multistationAnalyteDataUserFilter <- filter(reactive_objects$multistationAnalyteData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) )  %>%
-  filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$multistationRepFilter) %>%
-  filter(! Ana_Com_Code %in% input$multistationLabCodesDropped)})
+# reactive_objects$multistationAnalyteDataUserFilter <- filter(reactive_objects$multistationAnalyteData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) )  %>%
+#   filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$multistationRepFilter) %>%
+#   filter(! Ana_Com_Code %in% input$multistationLabCodesDropped)})
 
 
 
@@ -296,3 +304,90 @@ dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for n
 
 
 
+
+# individual parameter boxplot
+parameter <- 'pH'
+addJitter <- T
+
+parameterBoxplotFunction <- function(basicData, parameter, unitData, WQSlookup, addJitter){
+  z <- dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
+    filter(!is.na(parameterPlot)) 
+  if(nrow(z) != 0){
+    parameterUnits <- filter(unitData, AltName %in% !!parameter)$Units
+    if(parameter %in% c('Temperature', 'Dissolved Oxygen', "pH")){
+      if(parameter == 'Temperature'){parameterLimit <- 'Max Temperature (C)'; specialStandards <- NULL}
+      if(parameter == 'Dissolved Oxygen'){parameterLimit <- 'Dissolved Oxygen Min (mg/L)'; specialStandards <- NULL}
+      if(parameter == 'pH'){
+        parameterLimit <- c('pH Min', 'pH Max')
+        if(nrow(filter(WQSlookup, StationID %in% unique(basicData$StationID)) %>% 
+                filter(str_detect(as.character(SPSTDS), '6.5-9.5'))) > 0){specialStandards <- c(6.5, 9.5)
+        } else {specialStandards <- NULL}}
+    } else { parameterLimit <- NULL 
+    specialStandards <- NULL  }
+    
+    dat <- dplyr::select(basicData, StationID, `Collection Date`, Depth, Measure = !! parameter) %>%
+      filter( !is.na(Measure))
+    
+    if(nrow(dat) > 0){
+      dat <- left_join(dat, WQSlookup, by = c('StationID')) %>%
+        mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
+        mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
+        # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
+        left_join(WQSvalues, by = 'CLASS_BASIN') %>%
+        dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
+        rename('CLASS' = 'CLASS.x') %>%
+        # add standards info if available
+        {if(!is.null(parameterLimit))
+          dplyr::select(., StationID, `Collection Date`, Depth, Measure, Standard = !!parameterLimit) 
+          else dplyr::select(., StationID, `Collection Date`, Depth, Measure) } %>%
+        # pH special standards correction
+        {if(!is.null(specialStandards))
+          mutate(., Standard1 = specialStandards[1], Standard2 = specialStandards[2])
+          else . } %>%
+        mutate(units = parameterUnits) 
+      #return(dat)
+      if(addJitter == TRUE){
+        plot_ly(data=dat) %>% 
+          add_boxplot( y = ~Measure, color = ~StationID, type = "box", boxpoints = "all", 
+                jitter = 0.3, pointpos = -1.8) %>% 
+          {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+            add_markers(., x = ~StationID, y=~Standard, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                        hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+            else .} %>% 
+          {if(parameter %in% c('pH'))
+            add_markers(., x = ~StationID, y=~Standard1, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                        hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>% 
+              add_markers(., x = ~StationID, y=~Standard2, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                          hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+            else .} 
+          
+        } else {
+          plot_ly(data=dat) %>% 
+            add_boxplot(y = ~Measure, color = ~StationID, type = "box") %>% 
+            {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+              add_markers(., x = ~StationID, y=~Standard, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                          hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+              else .} %>% 
+            {if(parameter %in% c('pH'))
+              add_markers(., x = ~StationID, y=~Standard1, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                          hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>% 
+                add_markers(., x = ~StationID, y=~Standard2, mode='scatter', symbols = 'square', marker = list(color = 'black'),
+                            hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard"))
+              else .}  }
+    }
+  }
+}
+parameterBoxplotFunction(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addJitter = F)
+     
+
+
+{if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+  add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
+            hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+  else . } %>%
+  {if(parameter %in% c('pH'))
+    add_lines(.,  x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
+              hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
+      add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
+                hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+    else . } %>%
