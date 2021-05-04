@@ -263,7 +263,7 @@ shinyServer(function(input, output, session) {
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSbasicFieldAnalyteData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none')})
 
-  ## Visualization Tools: Parameter Plot Tab
+  ## Visualization Tools: Parameter Scatter Plot Tab
   observe({req(nrow(basicStationSummary()) > 0, input$parameterPlotlySelection)
     if(input$parameterPlotlySelection %in% names(basicStationSummary())){
       z <- dplyr::select(basicStationSummary(), parameterPlot = !! input$parameterPlotlySelection) %>% # rename clutch for nse
@@ -276,9 +276,21 @@ shinyServer(function(input, output, session) {
    suppressWarnings(suppressMessages(
      parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup, input$addBSAcolors) ))   })
 
-  # observe(
-  #      })
-  #
+  ## Visualization Tools: Parameter Boxplot Tab
+  observe({req(nrow(basicStationSummary()) > 0, input$parameterBoxPlotlySelection)
+    if(input$parameterBoxPlotlySelection %in% names(basicStationSummary())){
+      z <- dplyr::select(basicStationSummary(), parameterPlot = !! input$parameterBoxPlotlySelection) %>% # rename clutch for nse
+        filter(!is.na(parameterPlot))
+      if(nrow(z) == 0){
+        showNotification('No data to plot for selected parameter.',duration = 3 )}
+    } else {showNotification('No data to plot for selected parameter.', duration = 3  )}      })
+  
+  output$parameterBoxplot <- renderPlotly({ req(nrow(filter(basicStationSummary(), !is.na(input$parameterBoxPlotlySelection))) > 0, input$parameterBoxPlotlySelection)
+    suppressWarnings(suppressMessages(
+      parameterBoxplotFunction(basicStationSummary(), input$parameterBoxPlotlySelection, unitData, WQSlookup, input$addJitter) ))   })
+  
+  
+
 
   ## Visualization Tools: Probabilistic Estimates Tab
   centralTendencies <- reactive({ req(basicStationSummary())

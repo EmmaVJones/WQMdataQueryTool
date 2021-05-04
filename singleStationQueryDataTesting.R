@@ -160,7 +160,7 @@ uniqueComments(stationFieldAnalyte1)
 basicData <- basicSummary(stationFieldAnalyte1)
 
 # parameter graph
-parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup) #unique(filter(unitData, !is.na(AltName))$AltName)
+parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addBSAcolors = T) #unique(filter(unitData, !is.na(AltName))$AltName)
 parameterPlotly(basicData, "Secci Depth", unitData, WQSlookup) 
 
 names(basicData)[names(basicData) %in% unitData$AltName]
@@ -175,6 +175,10 @@ dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for n
 # Find central tendency of each parameter based on filtered window
 probComparison <- centralTendenciesCalculation(basicData)  
   
+
+# Single station boxplot
+parameterBoxplotFunction(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addJitter = T)
+
 
 
 # User chooses an indicator

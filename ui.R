@@ -99,9 +99,15 @@ shinyUI(fluidPage(tags$head(
                                                                          fluidRow(column(3, selectInput('parameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
                                                                                   column(3, checkboxInput('addBSAcolors', 'Display Benthic Stressor Analysis Colors on Plot'))),
                                                                          plotlyOutput('parameterPlot'), br(), br(), br()),
-                                                              
-                                                                
-                                                                
+                                                                tabPanel('Parameter Boxplot',
+                                                                         h4('Interactive Parameter Boxplot'),
+                                                                         helpText('Based on the Simplified Field and Chemistry Dataset, users may plot
+                                                                                                     all available parameters in the selected data window to visualize individual station parameter ranges and statistics.',
+                                                                                  span(strong('Where the information is available, the appropriate Water Quality Standard is
+                                                                                                                 plotted with the station data'))),
+                                                                         fluidRow(column(3, selectInput('parameterBoxPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
+                                                                                  column(3, checkboxInput('addJitter', 'Add jittered raw data'))),
+                                                                         plotlyOutput('parameterBoxplot'), br(), br(), br()),
                                                                 tabPanel('Probabilistic Estimates',
                                                                          h4('Comparison to Freshwater Probabilistic Estimates'),
                                                                          helpText(span('By comparing the average and median parameter measures from the Simplified Field and
