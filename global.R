@@ -491,8 +491,45 @@ parameterScatterPlotlyBSA <- function(dat, parameter){
     box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(8, 10, 10, 8))
     box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(7, 8, 8, 7))
     box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 7, 7, 0))}
+  if(parameter == 'Total Nitrate Nitrogen'){
+    maxheight <- ifelse(max(dat$Measure, na.rm=T) < 50, 55, max(dat$Measure, na.rm=T)* 1.2)
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(50, maxheight, maxheight, 50))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(25, 50, 50, 25))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(10, 25, 25, 10))
+    box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 10, 10, 0))}
+  if(parameter == 'pH'){
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(9, 14, 14, 9))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(6, 9, 9, 6))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 6, 6, 0))}
+  if(parameter == 'Specific Conductance'){
+    maxheight <- ifelse(max(dat$Measure, na.rm=T) < 500, 600, max(dat$Measure, na.rm=T)* 1.2)
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(500, maxheight, maxheight, 500))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(350, 500, 500, 350))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(250, 350, 350, 250))
+    box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 250, 250, 0)) }
+  if(parameter == 'Sulfate'){
+    maxheight <- ifelse(max(dat$Measure, na.rm=T) < 75, 100, max(dat$Measure, na.rm=T)* 1.2)
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(75, maxheight, maxheight, 75))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(25, 75, 75, 25))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(10, 25, 25, 10))
+    box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 10, 10, 0)) }
+  if(parameter == "Total Nitrogen"){
+    maxheight <- ifelse(max(dat$Measure, na.rm=T) < 2, 2.5, max(dat$Measure, na.rm=T)* 1.2)
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(2, maxheight, maxheight, 2))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(1, 2, 2, 1))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0.5, 1, 1, 0.5))
+    box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 0.5, 0.5, 0)) }
   
   plot_ly(data=dat) %>%
+    # pH special case
+    {if(parameter == 'pH')
+      add_polygons(., data = box1, x = ~x, y = ~y, fillcolor = "#F0E442",opacity=0.6, line = list(width = 0),
+                   hoverinfo="text", name =paste('Medium Probability of Stress to Aquatic Life')) %>%
+        add_polygons(data = box2, x = ~x, y = ~y, fillcolor = "#009E73",opacity=0.6, line = list(width = 0),
+                     hoverinfo="text", name =paste('Low Probability of Stress to Aquatic Life')) %>%
+        add_polygons(data = box3, x = ~x, y = ~y, fillcolor = "#F0E442",opacity=0.6, line = list(width = 0),
+                     hoverinfo="text", name =paste('Medium Probability of Stress to Aquatic Life'))
+      else . } %>%
     #boxes go low to high stress
     {if(parameter %in% c("Dissolved Oxygen"))
       add_polygons(., data = box1, x = ~x, y = ~y, fillcolor = "#0072B2",opacity=0.6, line = list(width = 0),
@@ -505,7 +542,7 @@ parameterScatterPlotlyBSA <- function(dat, parameter){
                    hoverinfo="text", name =paste('High Probability of Stress to Aquatic Life')) 
       else . } %>% 
     # boxes go high to low stress
-    {if(parameter %in% c('Chloride'))
+    {if(parameter %in% c('Chloride', 'Total Nitrate Nitrogen', 'Specific Conductance', 'Sulfate', "Total Nitrogen"))
       add_polygons(., data = box1, x = ~x, y = ~y,  fillcolor = "firebrick",opacity=0.6, line = list(width = 0),
                    hoverinfo="text", name =paste('High Probability of Stress to Aquatic Life')) %>%
         add_polygons(data = box2, x = ~x, y = ~y, fillcolor = "#F0E442",opacity=0.6, line = list(width = 0),
