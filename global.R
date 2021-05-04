@@ -641,10 +641,7 @@ parameterPlotly <- function(basicData,
         parameterScatterPlotly(dat, parameter)
       } else {
         parameterScatterPlotlyBSA(dat, parameter)     }
-      
     } } 
-  
-  
 }
 
 

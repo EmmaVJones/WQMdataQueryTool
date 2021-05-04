@@ -241,8 +241,12 @@ shinyUI(fluidPage(tags$head(
                                                                                                      all available parameters in the selected data window to visualize temporal changes.',
                                                                                  span(strong('Where the information is available, the appropriate Water Quality Standard is
                                                                                                                  plotted with the station data'))),
-                                                                        # fluidRow(column(3,
-                                                                        selectInput('multistationParameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName)),#)
+                                                                        helpText('The plot below can display the Benthic Stressor Analysis color palette to offer additional context for the
+                                                                                 selected water quality data. For more information on the Benthic Stressor Analysis parameter thresholds and data assumptions',
+                                                                                 span(strong(a('click here.', href='https://www.deq.virginia.gov/home/showpublisheddocument/4313/637461491358800000',
+                                                                                               target='_blank')))),
+                                                                        fluidRow(column(3, selectInput('multistationParameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
+                                                                                 column(3, checkboxInput('addBSAcolors', 'Display Benthic Stressor Analysis Colors on Plot'))),
                                                                         plotlyOutput('multistationParameterPlot'), br(), br(), br()),
                                                                tabPanel('Parameter Boxplot',
                                                                         h4('Interactive Parameter Boxplot'),

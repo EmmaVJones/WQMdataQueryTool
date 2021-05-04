@@ -792,7 +792,7 @@ shinyServer(function(input, output, session) {
 
     output$multistationParameterPlot <- renderPlotly({ req(nrow(filter(multistationBasicSummary(), !is.na(input$multistationParameterPlotlySelection))) > 0, input$multistationParameterPlotlySelection)
      suppressWarnings(suppressMessages(
-       parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup) ))   })
+       parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup, input$addBSAcolors) ))   })
 
     
     ## Visualization Tools: Parameter Boxplot Tab
