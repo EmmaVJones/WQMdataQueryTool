@@ -519,6 +519,13 @@ parameterScatterPlotlyBSA <- function(dat, parameter){
     box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(1, 2, 2, 1))
     box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0.5, 1, 1, 0.5))
     box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 0.5, 0.5, 0)) }
+  if(parameter == "Total Phosphorus"){
+    maxheight <- ifelse(max(dat$Measure, na.rm=T) < 0.1, 0.12, max(dat$Measure, na.rm=T)* 1.2)
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0.1, maxheight, maxheight, 0.1))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0.05, 0.1, 0.1, 0.05))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0.02, 0.05, 0.05, 0.02))
+    box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 0.02, 0.02, 0)) }
+  
   
   plot_ly(data=dat) %>%
     # pH special case
@@ -542,7 +549,8 @@ parameterScatterPlotlyBSA <- function(dat, parameter){
                    hoverinfo="text", name =paste('High Probability of Stress to Aquatic Life')) 
       else . } %>% 
     # boxes go high to low stress
-    {if(parameter %in% c('Chloride', 'Total Nitrate Nitrogen', 'Specific Conductance', 'Sulfate', "Total Nitrogen"))
+    {if(parameter %in% c('Chloride', 'Total Nitrate Nitrogen', 'Specific Conductance', 'Sulfate', "Total Nitrogen",
+                         "Total Phosphorus"))
       add_polygons(., data = box1, x = ~x, y = ~y,  fillcolor = "firebrick",opacity=0.6, line = list(width = 0),
                    hoverinfo="text", name =paste('High Probability of Stress to Aquatic Life')) %>%
         add_polygons(data = box2, x = ~x, y = ~y, fillcolor = "#F0E442",opacity=0.6, line = list(width = 0),
