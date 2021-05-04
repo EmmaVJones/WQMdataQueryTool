@@ -490,22 +490,22 @@ parameterPlotly <- function(basicData,
                       hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
           else . } %>%
         {if(length(unique(dat$StationID)) > 1)
-          add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
-                      color=~StationID,#marker = list(color= '#535559'), 
+          add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
+                      color=~StationID,  #marker = list(color= '#535559'), 
                       hoverinfo="text",
                       text=~paste(sep="<br>",
                                   paste("StationID: ",StationID),
                                   paste("Sample Date: ",`Collection Date`),
                                   paste("Depth: ",Depth, "m"),
                                   paste(parameter, ": ",Measure," (mg/L)")))
-          else add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= paste(parameter, unique(dat$units)), 
+          else add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
                            marker = list(color= '#535559'), hoverinfo="text",
                            text=~paste(sep="<br>",
                                        paste("StationID: ",StationID),
                                        paste("Sample Date: ",`Collection Date`),
                                        paste("Depth: ",Depth, "m"),
                                        paste(parameter, ": ",Measure," (mg/L)"))) } %>%
-        layout(showlegend=FALSE,
+        layout(showlegend=TRUE,
                yaxis=list(title=paste(parameter, unique(dat$units))),
                xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
     } } 
