@@ -86,16 +86,22 @@ shinyUI(fluidPage(tags$head(
                                                                          results to one measure per sample event (using a median statistic where more than
                                                                                   one measure per sampel event is available).'),
                                                                          DT::dataTableOutput('basicSummary'), br(), br(), br()),
-                                                                tabPanel('Parameter Plot',
-                                                                         h4('Interactive Parameter Plot'),
+                                                                tabPanel('Parameter Scatter Plot',
+                                                                         h4('Interactive Parameter Scatter Plot'),
                                                                          helpText('Based on the Simplified Field and Chemistry Dataset, users may plot
                                                                                   all available parameters in the selected data window to visualize temporal changes.',
                                                                                   span(strong('Where the information is available, the appropriate Water Quality Standard is
                                                                                               plotted with the station data'))),
-                                                                        # fluidRow(column(3,
-                                                                        selectInput('parameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName)),#)
-                                                                        #          column(3, uiOutput('noParameterDataWarning')),
+                                                                         helpText('The plot below can display the Benthic Stressor Analysis color palette to offer additional context for the
+                                                                                 selected water quality data. For more information on the Benthic Stressor Analysis parameter thresholds and data assumptions',
+                                                                                  span(strong(a('click here.', href='https://www.deq.virginia.gov/home/showpublisheddocument/4313/637461491358800000',
+                                                                                                target='_blank')))),
+                                                                         fluidRow(column(3, selectInput('parameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
+                                                                                  column(3, checkboxInput('addBSAcolors', 'Display Benthic Stressor Analysis Colors on Plot'))),
                                                                          plotlyOutput('parameterPlot'), br(), br(), br()),
+                                                              
+                                                                
+                                                                
                                                                 tabPanel('Probabilistic Estimates',
                                                                          h4('Comparison to Freshwater Probabilistic Estimates'),
                                                                          helpText(span('By comparing the average and median parameter measures from the Simplified Field and
@@ -246,7 +252,7 @@ shinyUI(fluidPage(tags$head(
                                                                                  span(strong(a('click here.', href='https://www.deq.virginia.gov/home/showpublisheddocument/4313/637461491358800000',
                                                                                                target='_blank')))),
                                                                         fluidRow(column(3, selectInput('multistationParameterPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
-                                                                                 column(3, checkboxInput('addBSAcolors', 'Display Benthic Stressor Analysis Colors on Plot'))),
+                                                                                 column(3, checkboxInput('multistationAddBSAcolors', 'Display Benthic Stressor Analysis Colors on Plot'))),
                                                                         plotlyOutput('multistationParameterPlot'), br(), br(), br()),
                                                                tabPanel('Parameter Boxplot',
                                                                         h4('Interactive Parameter Boxplot'),
@@ -255,7 +261,7 @@ shinyUI(fluidPage(tags$head(
                                                                                  span(strong('Where the information is available, the appropriate Water Quality Standard is
                                                                                                                  plotted with the station data'))),
                                                                         fluidRow(column(3, selectInput('multistationParameterBoxPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
-                                                                                 column(3, checkboxInput('addJitter', 'Add jittered raw data'))),
+                                                                                 column(3, checkboxInput('multistationAddJitter', 'Add jittered raw data'))),
                                                                         plotlyOutput('multistationParameterBoxplot'), br(), br(), br()))),
                                                     tabPanel('Raw Data',
                                                              h4('Field Data'),

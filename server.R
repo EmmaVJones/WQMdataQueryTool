@@ -274,7 +274,7 @@ shinyServer(function(input, output, session) {
 
   output$parameterPlot <- renderPlotly({ req(nrow(filter(basicStationSummary(), !is.na(input$parameterPlotlySelection))) > 0, input$parameterPlotlySelection)
    suppressWarnings(suppressMessages(
-     parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup) ))   })
+     parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup, input$addBSAcolors) ))   })
 
   # observe(
   #      })
@@ -792,7 +792,7 @@ shinyServer(function(input, output, session) {
 
     output$multistationParameterPlot <- renderPlotly({ req(nrow(filter(multistationBasicSummary(), !is.na(input$multistationParameterPlotlySelection))) > 0, input$multistationParameterPlotlySelection)
      suppressWarnings(suppressMessages(
-       parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup, input$addBSAcolors) ))   })
+       parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup, input$multistationAddBSAcolors) ))   })
 
     
     ## Visualization Tools: Parameter Boxplot Tab
@@ -806,7 +806,7 @@ shinyServer(function(input, output, session) {
     
     output$multistationParameterBoxplot <- renderPlotly({ req(nrow(filter(multistationBasicSummary(), !is.na(input$multistationParameterBoxPlotlySelection))) > 0, input$multistationParameterBoxPlotlySelection)
       suppressWarnings(suppressMessages(
-        parameterBoxplotFunction(multistationBasicSummary(), input$multistationParameterBoxPlotlySelection, unitData, WQSlookup, input$addJitter) ))   })
+        parameterBoxplotFunction(multistationBasicSummary(), input$multistationParameterBoxPlotlySelection, unitData, WQSlookup, input$multistationAddJitter) ))   })
     
     
     
