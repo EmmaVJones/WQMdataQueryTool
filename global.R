@@ -36,32 +36,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -438,10 +438,123 @@ basicSummary <- function(stationFieldAnalyte){
 }
 
 
+# Actual scatterplot function
+parameterScatterPlotly <- function(dat, parameter){
+  plot_ly(data=dat) %>%
+    {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+      add_lines(., data = dat, x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
+                hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+      else . } %>%
+    {if(parameter %in% c('pH'))
+      add_lines(., data = dat, x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
+                hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
+        add_lines(data = dat, x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
+                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+      else . } %>%
+    {if(length(unique(dat$StationID)) > 1)
+      add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
+                  color=~StationID,  #marker = list(color= '#535559'), 
+                  hoverinfo="text",
+                  text=~paste(sep="<br>",
+                              paste("StationID: ",StationID),
+                              paste("Sample Date: ",`Collection Date`),
+                              paste("Depth: ",Depth, "m"),
+                              paste(parameter, ": ",Measure," (mg/L)")))
+      else add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
+                       marker = list(color= '#535559'), hoverinfo="text",
+                       text=~paste(sep="<br>",
+                                   paste("StationID: ",StationID),
+                                   paste("Sample Date: ",`Collection Date`),
+                                   paste("Depth: ",Depth, "m"),
+                                   paste(parameter, ": ",Measure," (mg/L)"))) } %>%
+    layout(showlegend=TRUE,
+           yaxis=list(title=paste(parameter, unique(dat$units))),
+           xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
+}
+
+
+# Scatterplot with BSA colors
+parameterScatterPlotlyBSA <- function(dat, parameter){
+  if(nrow(dat) == 1){
+    dat <- bind_rows(dat,
+                     tibble(`Collection Date` = c(dat$`Collection Date`- days(5), dat$`Collection Date` + days(5))))
+  }
+  if(parameter == 'Chloride'){
+    maxheight <- ifelse(max(dat$Measure, na.rm=T) < 50, 55, max(dat$Measure, na.rm=T)* 1.2)
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(50, maxheight, maxheight, 50))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(25, 50, 50, 25))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(10, 25, 25, 10))
+    box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 10, 10, 0))  }
+  if(parameter == "Dissolved Oxygen"){
+    maxheight <- ifelse(max(dat$Measure, na.rm=T) < 10, 12, max(dat$Measure, na.rm=T)* 1.2)
+    box1 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(10, maxheight, maxheight, 10))
+    box2 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(8, 10, 10, 8))
+    box3 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(7, 8, 8, 7))
+    box4 <- data.frame(x = c(min(dat$`Collection Date`), min(dat$`Collection Date`), max(dat$`Collection Date`),max(dat$`Collection Date`)), y = c(0, 7, 7, 0))}
+  
+  plot_ly(data=dat) %>%
+    #boxes go low to high stress
+    {if(parameter %in% c("Dissolved Oxygen"))
+      add_polygons(., data = box1, x = ~x, y = ~y, fillcolor = "#0072B2",opacity=0.6, line = list(width = 0),
+                   hoverinfo="text", name =paste('No Probability of Stress to Aquatic Life')) %>%
+      add_polygons(data = box2, x = ~x, y = ~y, fillcolor = "#009E73",opacity=0.6, line = list(width = 0),
+                   hoverinfo="text", name =paste('Low Probability of Stress to Aquatic Life')) %>%
+      add_polygons(data = box3, x = ~x, y = ~y, fillcolor = "#F0E442",opacity=0.6, line = list(width = 0),
+                   hoverinfo="text", name =paste('Medium Probability of Stress to Aquatic Life')) %>%
+      add_polygons(data = box4, x = ~x, y = ~y, fillcolor = "firebrick",opacity=0.6, line = list(width = 0),
+                   hoverinfo="text", name =paste('High Probability of Stress to Aquatic Life')) 
+      else . } %>% 
+    # boxes go high to low stress
+    {if(parameter %in% c('Chloride'))
+      add_polygons(., data = box1, x = ~x, y = ~y,  fillcolor = "firebrick",opacity=0.6, line = list(width = 0),
+                   hoverinfo="text", name =paste('High Probability of Stress to Aquatic Life')) %>%
+        add_polygons(data = box2, x = ~x, y = ~y, fillcolor = "#F0E442",opacity=0.6, line = list(width = 0),
+                     hoverinfo="text", name =paste('Medium Probability of Stress to Aquatic Life')) %>%
+        add_polygons(data = box3, x = ~x, y = ~y, fillcolor = "#009E73",opacity=0.6, line = list(width = 0),
+                     hoverinfo="text", name =paste('Low Probability of Stress to Aquatic Life')) %>%
+        add_polygons(data = box4, x = ~x, y = ~y, fillcolor = "#0072B2",opacity=0.6, line = list(width = 0),
+                     hoverinfo="text", name =paste('No Probability of Stress to Aquatic Life'))
+      else . } %>% 
+    
+    {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
+      add_lines(., data = dat, x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
+                hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+      else . } %>%
+    {if(parameter %in% c('pH'))
+      add_lines(., data = dat, x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
+                hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
+        add_lines(data = dat, x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
+                  hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
+      else . } %>%
+    {if(length(unique(filter(dat, !is.na(StationID))$StationID)) > 1)
+      add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
+                  color=~StationID,  #marker = list(color= '#535559'), 
+                  hoverinfo="text",
+                  text=~paste(sep="<br>",
+                              paste("StationID: ",StationID),
+                              paste("Sample Date: ",`Collection Date`),
+                              paste("Depth: ",Depth, "m"),
+                              paste(parameter, ": ",Measure," (mg/L)")))
+      else add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
+                       marker = list(color= '#535559'), hoverinfo="text",
+                       text=~paste(sep="<br>",
+                                   paste("StationID: ",StationID),
+                                   paste("Sample Date: ",`Collection Date`),
+                                   paste("Depth: ",Depth, "m"),
+                                   paste(parameter, ": ",Measure," (mg/L)"))) } %>%
+    layout(showlegend=TRUE,
+           yaxis=list(title=paste(parameter, unique(dat$units))),
+           xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
+}
+
+
+
+
 parameterPlotly <- function(basicData,
                             parameter,
                             unitData,
-                            WQSlookup){
+                            WQSlookup,
+                            addBSAcolors){
   z <- dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
     filter(!is.na(parameterPlot)) 
   if(nrow(z) != 0){
@@ -478,41 +591,16 @@ parameterPlotly <- function(basicData,
           else . } %>%
         mutate(units = parameterUnits) 
       #return(dat)
-      plot_ly(data=dat) %>%
-        {if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
-          add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
-                    hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-          else . } %>%
-        {if(parameter %in% c('pH'))
-          add_lines(.,  x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
-                    hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
-            add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
-                      hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-          else . } %>%
-        {if(length(unique(dat$StationID)) > 1)
-          add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
-                      color=~StationID,  #marker = list(color= '#535559'), 
-                      hoverinfo="text",
-                      text=~paste(sep="<br>",
-                                  paste("StationID: ",StationID),
-                                  paste("Sample Date: ",`Collection Date`),
-                                  paste("Depth: ",Depth, "m"),
-                                  paste(parameter, ": ",Measure," (mg/L)")))
-          else add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
-                           marker = list(color= '#535559'), hoverinfo="text",
-                           text=~paste(sep="<br>",
-                                       paste("StationID: ",StationID),
-                                       paste("Sample Date: ",`Collection Date`),
-                                       paste("Depth: ",Depth, "m"),
-                                       paste(parameter, ": ",Measure," (mg/L)"))) } %>%
-        layout(showlegend=TRUE,
-               yaxis=list(title=paste(parameter, unique(dat$units))),
-               xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
+     
+      if(addBSAcolors == FALSE){
+        parameterScatterPlotly(dat, parameter)
+      } else {
+        parameterScatterPlotlyBSA(dat, parameter)     }
+      
     } } 
   
   
 }
-
 
 
 

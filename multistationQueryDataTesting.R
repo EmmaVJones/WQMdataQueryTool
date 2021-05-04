@@ -295,8 +295,8 @@ uniqueComments(multistationFieldAnalyte1)
 basicData <- basicSummary(multistationFieldAnalyte1)
 
 # parameter graph
-parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup) #unique(filter(unitData, !is.na(AltName))$AltName)
-parameterPlotly(basicData, "Secci Depth", unitData, WQSlookup) 
+parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addBSAcolors = T) #unique(filter(unitData, !is.na(AltName))$AltName)
+parameterPlotly(basicData, "Chloride", unitData, WQSlookup, addBSAcolors = T) 
 
 names(basicData)[names(basicData) %in% unitData$AltName]
 dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
