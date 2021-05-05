@@ -280,7 +280,8 @@ metalsCriteriaFunction <- function(Hardness){
     `Chromium VI Acute Freshwater` = 16, `Chromium VI Chromium Freshwater` = 11, `Chromium VI Acute Saltwater` = 1100, `Chromium VI Chronic Saltwater` = 50, 
     # Copper assessment Dropped per Tish email 5/3/21
     `Lead Acute Freshwater` = signif( (exp(1.273 * log(criteriaHardness) - 1.084)) * (1.46203 - (log(criteriaHardness) * 0.145712)), digits = 2),
-    `Lead Chronic Freshwater` = 
+    `Lead Chronic Freshwater` = signif( (exp(1.273 * log(criteriaHardness) - 3.259)) * (1.46203 - (log(criteriaHardness) * 0.145712)), digits = 2),
+    `Lead Acute Saltwater` = 230, `Lead Chronic Saltwater` = 8.8, `Lead PWS` = 15,
     
 
     
