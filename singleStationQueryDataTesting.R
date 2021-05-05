@@ -263,7 +263,6 @@ BSAtoolMetalsFunction(station, stationInfo_sf, stationAnalyteDataUserFilter)
   
                               
 # Metals criteria analysis
-Hardness <- basicData$Hardness[20]
 metalsCriteriaFunction <- function(Hardness, WER){
   # Remember: ln is really log() in R; exp() is natural antilog in R
   # Per 9VAC25-260-140, criteria to 2 sig figs #https://law.lis.virginia.gov/admincode/title9/agency25/chapter260/section140/
@@ -273,61 +272,47 @@ metalsCriteriaFunction <- function(Hardness, WER){
   # Establish Hardness Criteria
   criteriaHardness <- ifelse(Hardness < 25, 25, ifelse(Hardness > 400, 400, Hardness))
   
-  metalsCriteria <- tibble(`Antimony PWS` = 5.6, `Antimony All Other Surface Waters` = 640,
+  metalsCriteria <- suppressWarnings(tibble(empty= 'Column', `Antimony PWS` = 5.6, `Antimony All Other Surface Waters` = 640,
                            `Arsenic Acute Freshwater` = 340, `Arsenic Chronic Freshwater` = 150, `Arsenic PWS` = 10,
                            `Arsenic Acute Saltwater` = 69, `Arsenic Chronic Saltwater` = 36,
                            `Barium PWS` = 2000,
                            `Cadmium Acute Freshwater` =  signif(WER * exp(0.9789 * (log(criteriaHardness))-3.866) * (1.136672 - (log(criteriaHardness) * 0.041838)), digits = 2),
                            `Cadmium Chronic Freshwater` = signif(WER * exp(0.7977 * log(criteriaHardness) - 3.909) * (1.101672 - (log(criteriaHardness) * (0.041838))), digits = 2),
-                           `Cadmium Acute Saltwater` = 33 * WER, `Cadmium Chronic Saltwater` = 7.9 * WER, `Cadmium PWS` = 5,
-                           `Chromium III Acute Freshwater` = signif(WER *  (exp(0.8190 * (log(criteriaHardness)) + 3.7256)) * 0.316, digits = 2), 
-                           `Chromium III Chronic Freshwater` = signif(WER *  (exp(0.8190 * (log(criteriaHardness))+0.6848)) * 0.860, digits = 2), `Chromium III PWS` = 100,
-                           `Chromium VI Acute Freshwater` = 16, `Chromium VI Chromium Freshwater` = 11, `Chromium VI Acute Saltwater` = 1100, `Chromium VI Chronic Saltwater` = 50, 
+                           `Cadmium Acute Saltwater` = signif(33 * WER, digits = 2), `Cadmium Chronic Saltwater` = signif(7.9 * WER, digits = 2), `Cadmium PWS` = 5,
+                           `ChromiumIII Acute Freshwater` = signif(WER *  (exp(0.8190 * (log(criteriaHardness)) + 3.7256)) * 0.316, digits = 2), 
+                           `ChromiumIII Chronic Freshwater` = signif(WER *  (exp(0.8190 * (log(criteriaHardness))+0.6848)) * 0.860, digits = 2), `ChromiumIII PWS` = 100,
+                           `ChromiumVI Acute Freshwater` = 16, `ChromiumVI Chromium Freshwater` = 11, `ChromiumVI Acute Saltwater` = 1100, `ChromiumVI Chronic Saltwater` = 50, 
                            # Copper assessment Dropped per Tish email 5/3/21
                            `Lead Acute Freshwater` = signif(WER * (exp(1.273 * log(criteriaHardness) - 1.084)) * (1.46203 - (log(criteriaHardness) * 0.145712)), digits = 2),
                            `Lead Chronic Freshwater` = signif(WER * (exp(1.273 * log(criteriaHardness) - 3.259)) * (1.46203 - (log(criteriaHardness) * 0.145712)), digits = 2),
-                           `Lead Acute Saltwater` = 230 * WER, `Lead Chronic Saltwater` = 8.8 * WER, `Lead PWS` = 15,
+                           `Lead Acute Saltwater` = signif(230 * WER, digits = 2), `Lead Chronic Saltwater` = signif(8.8 * WER, digits = 2), `Lead PWS` = 15,
                            `Mercury Acute Freshwater` = 1.4, `Mercury Chronic Freshwater` = 0.77, `Mercury Acute Saltwater` = 1.8, `Mercury Chronic Saltwater` = 0.94,
                            `Nickel Acute Freshwater` = signif(WER * (exp (0.8460 * log(criteriaHardness) + 1.312)) * 0.998, digits = 2), 
                            `Nickel Chronic Freshwater` = signif(WER * (exp(0.8460 * log(criteriaHardness) - 0.8840)) * 0.997, digits = 2),
-                           `Nickel Acute Saltwater` = 74 * WER, `Nickel Chronic Saltwater` = 8.2 * WER, `Nickel PWS` = 610,  `Nickel All Other Surface Waters` = 4600,
+                           `Nickel Acute Saltwater` = signif(74 * WER, digits = 2), `Nickel Chronic Saltwater` = signif(8.2 * WER, digits = 2), `Nickel PWS` = 610,  `Nickel All Other Surface Waters` = 4600,
                            `Uranium PWS` = 30,
-                           `Selenium Acute Freshwater` = 20, `Selenium Chronic Freshwater` = 5.0, `Selenium Acute Saltwater` = 290 * WER, `Selenium Chronic Saltwater` = 71 * WER,
+                           `Selenium Acute Freshwater` = 20, `Selenium Chronic Freshwater` = 5.0, 
+                           `Selenium Acute Saltwater` = signif(290 * WER, digits = 2), `Selenium Chronic Saltwater` = signif(71 * WER, digits = 2),
                            `Selenium PWS` = 170, `Selenium All Other Surface Waters` = 4200,
-                           `Silver Acute Freshwater` = signif(WER * (exp(1.72 * log(criteriaHardness) - 6.52)) * 0.85, digits = 2),
-                           `Silver Acute Saltwater` = 1.9 * WER,
-                           
-                           
-              
-              
-    
-    
-    
-    Calcium_Chronic=NA,Calcium_Acute=NA,Calcium_PWS=NA,
-                  Magnesium_Chronic=NA, Magnesium_Acute=NA, Magnesium_PWS=NA,
-                  Arsenic_Chronic=150,Arsenic_Acute=340,Arsenic_PWS=10,
-                  Barium_Chronic=NA,Barium_Acute=NA,Barium_PWS=2000,
-                  Beryllium_Chronic=NA,Beryllium_Acute=NA,Beryllium_PWS=NA,
-                  Cadmium_Chronic=format((exp(0.7852*(log(criteriaHardness))-3.49)),digits=3), 
-                  Cadmium_Acute= format((exp(1.128*(log(criteriaHardness))-3.828)),digits=3), Cadmium_PWS=5,
-                  Chromium_Chronic=format(((exp(0.819*(log(criteriaHardness))+0.6848))*0.86),digits=3),
-                  Chromium_Acute=format(((exp(0.819*(log(criteriaHardness))+3.7256))*0.316),digits=3), Chromium_PWS=100,
-                  Copper_Chronic=format(((exp(0.8545*(log(criteriaHardness))-1.702))*0.96),digits=3),
-                  Copper_Acute=format(((exp(0.9422*(log(criteriaHardness))-1.70))*0.96),digits=3), Copper_PWS=1300,
-                  Iron_Chronic=NA, Iron_Acute=NA, Iron_PWS= 300,
-                  Lead_Chronic=format(((exp(1.273*(log(criteriaHardness))-3.259))*(1.46203-(log(criteriaHardness)*(0.145712)))),digits=3),
-                  Lead_Acute=format(((exp(1.273*(log(criteriaHardness))-1.084))*(1.46203-(log(criteriaHardness)*(0.145712)))),digits=3), Lead_PWS=15,
-                  Manganese_Chronic=NA, Manganese_Acute=NA, Manganese_PWS=50,
-                  Thallium_Chronic=NA, Thallium_Acute=NA, Thallium_PWS=0.24,
-                  Nickel_Chronic=format(((exp(0.846*(log(criteriaHardness))-0.884))*0.997),digits=3),
-                  Nickel_Acute=format(((exp(0.846*(log(criteriaHardness))+1.312))*0.998),digits=3),Nickel_PWS=610,
-                  Silver_Chronic=NA, Silver_Acute=format(((exp(1.72*(log(criteriaHardness))-6.52))*0.85),digits=3), Silver_PWS=NA,
-                  Zinc_Chronic=format(((exp(0.8473*(log(criteriaHardness))+0.884))*0.986),digits=3),
-                  Zinc_Acute=format(((exp(0.8473*(log(criteriaHardness))+0.884))*0.978),digits=3), Zinc_PWS=7400,
-                  Antimony_Chronic=NA, Antimony_Acute=NA, Antimony_PWS=5.6,
-                  Aluminum_Chronic=NA,Aluminum_Acute=NA,Aluminum_PWS=NA,
-                  Selenium_Chronic=5, Selenium_Acute= 20, Selenium_PWS=170,
-                  Hardness_Chronic=NA,Hardness_Acute=NA,Hardness_PWS=NA)
-  
+                           `Silver Acute Freshwater` = signif(WER * (exp(1.72 * log(criteriaHardness) - 6.52)) * 0.85, digits = 2), `Silver Acute Saltwater` = signif(1.9 * WER, digits = 2),
+                           `Thallium PWS` = 0.24, `Thallium All Other Surface Waters` = 0.47,
+                           `Zinc Acute Freshwater` = signif(WER * (exp(0.8473 * log(criteriaHardness) + 0.884)) * 0.978, digits = 2),
+                           `Zinc Chronic Freshwater` = signif(WER * (exp(0.8473 * log(criteriaHardness) + 0.884)) * 0.986, digits = 2),
+                           `Zinc Acute Saltwater` = signif(90 * WER, digits = 2), `Zinc Chronic Saltwater` = signif(81 * WER, digits = 2), 
+                           `Zinc PWS` = 7400, `Zinc All Other Surface Waters` = 26000) %>% 
+    pivot_longer(!empty, names_to = 'Criteria', values_to = 'Measure') %>% 
+    mutate(Criteria2 = Criteria) %>%  #duplicate column to split
+    separate(Criteria2, c("Metal", "Criteria Type", "Waterbody"), sep = " ") %>% 
+    mutate(`Criteria Type` = ifelse(`Criteria Type` == 'All', 'All Other Waters', `Criteria Type`),
+           Waterbody = ifelse(Waterbody == 'Other', NA, Waterbody)) %>% 
+    dplyr::select(Metal, Criteria, `Criteria Type`, Waterbody, Measure))
+  return(metalsCriteria)
 }
+z <- metalsCriteriaFunction(basicData$Hardness[20], WER = NA)
 
+
+                           
+              
+              
+    
+    
