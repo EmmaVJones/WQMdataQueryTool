@@ -644,7 +644,19 @@ parameterPlotly <- function(basicData,
     } } 
 }
 
-
+##  Parameter graph with loess smoother
+basicLoessPlotFunction <- function(basicData, parameter){
+  ggplotly(
+    basicData %>% 
+      dplyr::select(StationID, `Collection Date`, Depth, Measure = !! parameter) %>%
+      filter( !is.na(Measure)) %>% 
+      ggplot()+
+      geom_point(aes(x=`Collection Date`,y= Measure,  colour=StationID, shape = StationID) ) +
+      geom_smooth(aes(x=`Collection Date`,y= Measure ),method='loess') +
+      labs(y = parameter) +
+      theme_minimal()) 
+}
+#basicLoessPlotFunction(basicData, 'pH')
 
 # Find central tendency of each parameter based on filtered window
 median_n <- list(

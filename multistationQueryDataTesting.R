@@ -298,10 +298,50 @@ basicData <- basicSummary(multistationFieldAnalyte1)
 parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addBSAcolors = T) #unique(filter(unitData, !is.na(AltName))$AltName)
 parameterPlotly(basicData, "Specific Conductance", unitData, WQSlookup, addBSAcolors = T) 
 
-names(basicData)[names(basicData) %in% unitData$AltName]
-dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
+
+
+
+
+basicLoessPlotFunction(basicData, 'pH')
+
+z <- dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse
   filter(!is.na(parameterPlot)) 
 
+
+# %>% style(hoverinfo="text",
+#               text=~paste(sep="<br>",
+#                           paste("StationID: ",StationID),
+#                           paste("Sample Date: ",`Collection Date`),
+#                           paste("Depth: ",Depth, "m"),
+#                           paste(parameter, ": ",Measure," (mg/L)")) )
+# 
+
+fig <- plotly_build(fig)
+
+
+
+# Parameter graph with loess smoother
+loessTest <- dplyr::select(basicData, DO = `Dissolved Oxygen`, CD=  `Collection Date`) %>% 
+  mutate(CD1 = as.Date(CD))
+m <- loess(DO ~ CD1, data = as.data.frame(loessTest))
+
+
+plot_ly(mtcars, x = ~disp, color = I("black"))
+fig <- fig %>% add_markers(y = ~mpg, text = rownames(mtcars), showlegend = FALSE)
+fig <- fig %>% add_lines(y = ~fitted(loess(mpg ~ disp)),
+                         line = list(color = 'rgba(7, 164, 181, 1)'),
+                         name = "Loess Smoother")
+fig <- fig %>% add_ribbons(data = augment(m),
+                           ymin = ~.fitted - 1.96 * .se.fit,
+                           ymax = ~.fitted + 1.96 * .se.fit,
+                           line = list(color = 'rgba(7, 164, 181, 0.05)'),
+                           fillcolor = 'rgba(7, 164, 181, 0.2)',
+                           name = "Standard Error")
+fig <- fig %>% layout(xaxis = list(title = 'Displacement (cu.in.)'),
+                      yaxis = list(title = 'Miles/(US) gallon'),
+                      legend = list(x = 0.80, y = 0.90))
+
+fig
 
 
 
@@ -379,15 +419,3 @@ parameterBoxplotFunction <- function(basicData, parameter, unitData, WQSlookup, 
 }
 parameterBoxplotFunction(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addJitter = F)
      
-
-
-{if(parameter %in% c('Temperature', 'Dissolved Oxygen'))
-  add_lines(.,  x=~`Collection Date`,y=~Standard, mode='line', line = list(color = 'black'),
-            hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-  else . } %>%
-  {if(parameter %in% c('pH'))
-    add_lines(.,  x=~`Collection Date`,y=~Standard1, mode='line', line = list(color = 'black'),
-              hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) %>%
-      add_lines(x=~`Collection Date`,y=~Standard2, mode='line', line = list(color = 'black'),
-                hoverinfo = "text", text= paste(parameter, "Standard"), name= paste(parameter, "Standard")) 
-    else . } %>%

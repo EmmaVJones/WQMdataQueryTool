@@ -283,6 +283,17 @@ shinyServer(function(input, output, session) {
    suppressWarnings(suppressMessages(
      parameterPlotly(basicStationSummary(), input$parameterPlotlySelection, unitData, WQSlookup, input$addBSAcolors) ))   })
 
+  #### Loess Smoothing Modal
+  observeEvent(input$smoothModal,{
+    showModal(modalDialog(
+      title="Parameter Plot with Loess (Locally Estimated Scatterplot Smoother) Function",
+      plotlyOutput('loessSmoothPlot'),
+      easyClose = TRUE))  })
+  
+  output$loessSmoothPlot <- renderPlotly({req(input$smoothModal, nrow(basicStationSummary()) > 0)
+    basicLoessPlotFunction(basicStationSummary(), input$parameterPlotlySelection)      })
+  
+  
   ## Visualization Tools: Parameter Boxplot Tab
   observe({req(nrow(basicStationSummary()) > 0, input$parameterBoxPlotlySelection)
     if(input$parameterBoxPlotlySelection %in% names(basicStationSummary())){
@@ -753,10 +764,12 @@ shinyServer(function(input, output, session) {
     ### Filter by user input
     multistationFieldAnalyteDateRange <- reactive({req(reactive_objects$multistationFieldDataUserFilter, input$multistationDateRangeFilter, reactive_objects$multistationAnalyteDataUserFilter, input$multistationRepFilter, input$multistationAverageParameters)
       stationFieldAnalyteDataPretty(reactive_objects$multistationAnalyteDataUserFilter, reactive_objects$multistationFieldDataUserFilter,
-                                    averageResults = ifelse(input$multistationAverageParameters == 'Average parameters by sample date time.', TRUE, FALSE) ) })
+                                    averageResults = ifelse(input$multistationAverageParameters == 'Average parameters by sample date time.', TRUE, FALSE) )  })
 
     ## Data Summary
     output$multistationFieldAnalyte <-  renderDataTable({ req(multistationFieldAnalyteDateRange())
+     # show_modal_spinner(spin = 'flower')
+      
       z <- multistationFieldAnalyteDateRange() %>% # drop all empty columns ( this method longer but handles dttm issues)
         map(~.x) %>%
         discard(~all(is.na(.x))) %>%
@@ -775,7 +788,10 @@ shinyServer(function(input, output, session) {
                   options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
                                  pageLength = nrow(z),
                                  buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData_multistationQuery', Sys.Date())),
-                                              'colvis')), selection = 'none')    } })
+                                              'colvis')), selection = 'none')    }
+      
+    #  remove_modal_spinner()
+      })
 
     ## Collector Summary
     output$multistationCollectorSummary <- renderDataTable({ req(multistationFieldAnalyteDateRange())
@@ -823,6 +839,19 @@ shinyServer(function(input, output, session) {
      suppressWarnings(suppressMessages(
        parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup, input$multistationAddBSAcolors) ))   })
 
+    
+    #### Loess Smoothing Modal Multistation
+    observeEvent(input$multistationSmoothModal,{
+      showModal(modalDialog(
+        title="Parameter Plot with Loess (Locally Estimated Scatterplot Smoother) Function",
+        plotlyOutput('multistationLoessSmoothPlot'),
+        easyClose = TRUE))  })
+    
+    output$multistationLoessSmoothPlot <- renderPlotly({req(input$multistationSmoothModal, nrow(multistationBasicSummary()) > 0)
+      basicLoessPlotFunction(multistationBasicSummary(), input$multistationParameterPlotlySelection)      })
+    
+    
+    
     
     ## Visualization Tools: Parameter Boxplot Tab
     observe({req(nrow(multistationBasicSummary()) > 0, input$multistationParameterBoxPlotlySelection)
