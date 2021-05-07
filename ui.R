@@ -2,7 +2,7 @@ shinyUI(fluidPage(tags$head(
   tags$style(
     HTML(".shiny-notification {position:fixed; top: calc(60%); left: calc(10%); }"))),
   theme= "yeti.css",
-                  navbarPage("CEDS Water Quality Monitoring Data Query Tool",
+                  navbarPage("CEDS Water Quality Monitoring Data Query Tool", id = 'someID',  # key for passing URL to specific Tab
                              
                              tabPanel('How To',
                                       h2(strong('This project is still in beta testing phase.')),
@@ -17,7 +17,7 @@ shinyUI(fluidPage(tags$head(
                                                 morning in this query tool.'))), 
                             #          htmlOutput("BenthicQueryToolHowTo") ),
                              
-                             tabPanel("Single Station Query (Live CEDS Connection)",
+                             tabPanel("Single Station Query (Live CEDS Connection)", value = 'SingleStation', # key for passing URL to specific Tab
                                       tabsetPanel(
                                         tabPanel("Station Data",
                                                  sidebarPanel(
