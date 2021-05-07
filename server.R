@@ -1,50 +1,50 @@
-source('global.R')
-
-assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
-ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
-assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
-  st_transform( st_crs(4326))
-subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
-  rename('SUBBASIN' = 'SUBBASIN_1') %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
-  mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
-                               SUBBASIN == 'Chowan River' ~ 'Chowan',
-                               SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
-                               SUBBASIN == 'New River' ~ 'New',
-                               SUBBASIN == 'Potomac River' ~ 'Potomac',
-                               SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
-                               SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
-                               SUBBASIN == 'Roanoke River' ~ 'Roanoke',
-                               SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
-                               SUBBASIN == 'Holston River' ~ 'Holston',
-                               SUBBASIN == 'York River' ~ 'York',
-                               TRUE ~ as.character(NA)),
-         ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
-                                    SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
-                                    SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
-                                    TRUE ~ as.character(NA)))
-
-subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
-  filter(!is.na(SubbasinVAHU6code)) %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
-#dplyr::select(SUBBASIN, SubbasinVAHU6code)
-
-# labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
-#   as_tibble()
-# pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
-labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
-
-WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
-WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
-  rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
-WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
-
-
-
-# analyte options
-Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>%
-  filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
-  distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
+# source('global.R')
+# 
+# assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
+# ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+# assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
+#   st_transform( st_crs(4326))
+# subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
+#   rename('SUBBASIN' = 'SUBBASIN_1') %>%
+#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
+#   mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
+#                                SUBBASIN == 'Chowan River' ~ 'Chowan',
+#                                SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
+#                                SUBBASIN == 'New River' ~ 'New',
+#                                SUBBASIN == 'Potomac River' ~ 'Potomac',
+#                                SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
+#                                SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
+#                                SUBBASIN == 'Roanoke River' ~ 'Roanoke',
+#                                SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
+#                                SUBBASIN == 'Holston River' ~ 'Holston',
+#                                SUBBASIN == 'York River' ~ 'York',
+#                                TRUE ~ as.character(NA)),
+#          ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
+#                                     SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
+#                                     SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
+#                                     TRUE ~ as.character(NA)))
+# 
+# subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
+#   filter(!is.na(SubbasinVAHU6code)) %>%
+#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
+# #dplyr::select(SUBBASIN, SubbasinVAHU6code)
+# 
+# # labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
+# #   as_tibble()
+# # pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
+# labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
+# 
+# WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
+# WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
+#   rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
+# WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
+# 
+# 
+# 
+# # analyte options
+# Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>%
+#   filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
+#   distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
 
 
 
@@ -75,12 +75,17 @@ shinyServer(function(input, output, session) {
 
   ## Pull Station Information
   observeEvent(nrow(reactive_objects$stationInfo) > 0, {
+    
     ## update Station Information after ensuring station valid
     reactive_objects$stationInfoFin <- stationInfoConsolidated(pool, input$station, WQM_Station_Full_REST())
+    
+    show_modal_spinner(spin = 'flower')
+    
 
+    
     ## Station Geospatial Information
     reactive_objects$stationInfo_sf <- WQM_Station_Full_REST()#filter(WQM_STATIONS_FINAL, STATION_ID %in% toupper(input$station) )
-
+    
     ## Station Sampling Information
     reactive_objects$stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST(), 'single')
 
@@ -102,7 +107,10 @@ shinyServer(function(input, output, session) {
                  Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
         as_tibble() %>%
         left_join(dplyr::select(reactive_objects$stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time),
-                  by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))  }     })
+                  by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))  }     
+    
+    remove_modal_spinner() 
+    })
 
   ## Display Station Information
   output$stationInfoTable <- DT::renderDataTable({req(reactive_objects$stationInfoFin)
@@ -120,8 +128,7 @@ shinyServer(function(input, output, session) {
                              pageLength = nrow(reactive_objects$stationInfoSampleMetrics),
                              buttons=list('copy','colvis')) ) })
   ## Map Station Information
-  output$stationMap <- renderLeaflet({
-    req(reactive_objects$stationInfo)
+  output$stationMap <- renderLeaflet({    #req(reactive_objects$stationInfo)
     # color palette for assessment polygons
     pal <- colorFactor(
       palette = topo.colors(7),
@@ -150,9 +157,9 @@ shinyServer(function(input, output, session) {
   map_proxy <- leafletProxy("stationMap")
 
   # Add layers to map as requested
-  observe({
-    req(nrow(reactive_objects$stationInfo) > 0)
+  observe({    req(nrow(reactive_objects$stationInfo) > 0)
     map_proxy %>%
+      clearMarkers() %>% 
       addCircleMarkers(data = reactive_objects$stationInfo_sf,
                        color='blue', fillColor='yellow', radius = 6,
                        fillOpacity = 0.5,opacity=0.8,weight = 4,stroke=T, group="Selected Station(s)",
@@ -452,9 +459,12 @@ shinyServer(function(input, output, session) {
 
   # Query by spatial filter selection
   observeEvent(input$begin_multistation_spatial,{
+    show_modal_spinner(spin = 'flower')
+    
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
                                                           input$assessmentRegionFilter, input$ecoregionFilter, input$dateRange_multistation, input$analyte_Filter,
-                                                          manualSelection = NULL, wildcardSelection = NULL) })
+                                                          manualSelection = NULL, wildcardSelection = NULL)
+    remove_modal_spinner()     })
   
   # Query by wildcard selection
   output$wildcardSelection <- renderUI({req(input$queryType == 'Wildcard Selection')
@@ -463,11 +473,14 @@ shinyServer(function(input, output, session) {
       textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )     })
   
   observeEvent(input$begin_multistation_wildcard,{
+    show_modal_spinner(spin = 'flower')
+    
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, manualSelection = NULL, 
-                                                                         wildcardSelection = as.character(toupper(input$wildcardText))) })
+                                                                         wildcardSelection = as.character(toupper(input$wildcardText))) 
+    remove_modal_spinner()  })
                                                   
   
   #output$test <- renderPrint({input$wildcardText})
@@ -481,11 +494,14 @@ shinyServer(function(input, output, session) {
          selectInput('manualSelection','Station ID', choices = sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)) })
   
   observeEvent(input$begin_multistation_manual, {
+    show_modal_spinner(spin = 'flower')
+    
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, manualSelection = as.character(input$manualSelection),
-                                                                         wildcardSelection = NULL) })
+                                                                         wildcardSelection = NULL) 
+    remove_modal_spinner() })
 
   
   
@@ -519,7 +535,7 @@ shinyServer(function(input, output, session) {
     # Empty station user selection to start with
     reactive_objects$selectedSites <- NULL  })
 
-  output$multistationMap <- renderLeaflet({req(reactive_objects$WQM_Stations_Filter)
+  output$multistationMap <- renderLeaflet({#req(reactive_objects$WQM_Stations_Filter)
     # color palette for assessment polygons
     pal <- colorFactor(
       palette = topo.colors(7),
@@ -561,6 +577,7 @@ shinyServer(function(input, output, session) {
 
   observe({req(nrow(reactive_objects$WQM_Stations_Filter) > 0)
     map_proxy_multi %>%
+      clearMarkers() %>% 
       addCircleMarkers(data = reactive_objects$WQM_Stations_Filter,
                        color='blue', fillColor='gray', radius = 4,
                        fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",

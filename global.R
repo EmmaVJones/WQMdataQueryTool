@@ -2,6 +2,7 @@ httr::set_config(httr::config(ssl_verifypeer = FALSE, ssl_verifyhost = FALSE))
 
 library(tidyverse)
 library(shiny)
+library(shinybusy)
 library(leaflet)
 library(leaflet.extras)
 library(inlmisc)
@@ -453,7 +454,7 @@ parameterScatterPlotly <- function(dat, parameter){
       else . } %>%
     {if(length(unique(dat$StationID)) > 1)
       add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
-                  color=~StationID,  #marker = list(color= '#535559'), 
+                  color=~StationID,  symbol = ~StationID, #symbols = c('circle','x','o'), #marker = list(color= '#535559'), 
                   hoverinfo="text",
                   text=~paste(sep="<br>",
                               paste("StationID: ",StationID),
@@ -573,7 +574,7 @@ parameterScatterPlotlyBSA <- function(dat, parameter){
       else . } %>%
     {if(length(unique(filter(dat, !is.na(StationID))$StationID)) > 1)
       add_markers(., data=dat, x= ~`Collection Date`, y= ~Measure,mode = 'scatter', name= ~StationID, 
-                  color=~StationID,  #marker = list(color= '#535559'), 
+                  color=~StationID,  symbol = ~StationID,  #marker = list(color= '#535559'), 
                   hoverinfo="text",
                   text=~paste(sep="<br>",
                               paste("StationID: ",StationID),
@@ -591,7 +592,6 @@ parameterScatterPlotlyBSA <- function(dat, parameter){
            yaxis=list(title=paste(parameter, unique(dat$units))),
            xaxis=list(title="Sample Date",tickfont = list(size = 10))) 
 }
-
 
 
 
