@@ -149,6 +149,11 @@ shinyUI(fluidPage(tags$head(
                                                                          helpText('This table displays analyte data for the selected station and filters exactly how the data are
                                                                        stored in CEDS.'),
                                                                          DT::dataTableOutput('analyteDataRaw'),br(),br(),br()), # a little breathing room
+                                                                tabPanel('LRBS Results',
+                                                                         #h4('Analyte Data'),
+                                                                         helpText('This table displays Log Relative Stability (LRBS) results and key sediment metrics
+                                                                         for the selected station and filters.'),
+                                                                         DT::dataTableOutput('LRBSdataRaw'),br(),br(),br()), # a little breathing room
                                                                 tabPanel('Benthic Stressor Analysis Data Formats',
                                                                          helpText('This table displays field, analyte, habitat, and metals data for the selected station and filters 
                                                                                   as required for upload into the Benthic Stressor Analysis Tool.'),
@@ -274,15 +279,22 @@ shinyUI(fluidPage(tags$head(
                                                                         fluidRow(column(3, selectInput('multistationParameterBoxPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
                                                                                  column(3, checkboxInput('multistationAddJitter', 'Add jittered raw data'))),
                                                                         plotlyOutput('multistationParameterBoxplot'), br(), br(), br()))),
-                                                    tabPanel('Raw Data',
-                                                             h4('Field Data'),
-                                                             helpText('This table displays field data for the selected stations and filters exactly how the data are
+                                                    tabPanel('Data Download Formats',
+                                                             tabsetPanel(
+                                                               tabPanel('Raw Field Data',
+                                                                        helpText('This table displays field data for the selected stations and filters exactly how the data are
                                                                        stored in CEDS.'),
-                                                             DT::dataTableOutput('multistationFieldDataRaw'), br(),
-                                                             h4('Analyte Data'),
-                                                             helpText('This table displays analyte data for the selected stations and filters exactly how the data are
+                                                                        DT::dataTableOutput('multistationFieldDataRaw'), br(),br(),br()), # a little breathing room
+                                                               tabPanel('Raw Analyte Data',
+                                                                        helpText('This table displays analyte data for the selected stations and filters exactly how the data are
                                                                        stored in CEDS.'),
-                                                             DT::dataTableOutput('multistationAnalyteDataRaw'),br(),br(),br()) # a little breathing room
+                                                                        DT::dataTableOutput('multistationAnalyteDataRaw'),br(),br(),br()), # a little breathing room
+                                                               tabPanel('LRBS Results',
+                                                                        #h4('Analyte Data'),
+                                                                        helpText('This table displays Log Relative Stability (LRBS) results and key sediment metrics
+                                                                         for the selected stations and filters.'),
+                                                                        DT::dataTableOutput('multistationLRBSdataRaw'),br(),br(),br()))) # a little breathing room
+                                                             
                                                   
                                                     
                                                     

@@ -1,51 +1,51 @@
-# source('global.R')
-# 
-# assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
-# ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
-# county <- st_read('data/GIS/VACountyBoundaries.shp')
-# assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
-#   st_transform( st_crs(4326))
-# subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
-#   rename('SUBBASIN' = 'SUBBASIN_1') %>%
-#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
-#   mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
-#                                SUBBASIN == 'Chowan River' ~ 'Chowan',
-#                                SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
-#                                SUBBASIN == 'New River' ~ 'New',
-#                                SUBBASIN == 'Potomac River' ~ 'Potomac',
-#                                SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
-#                                SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
-#                                SUBBASIN == 'Roanoke River' ~ 'Roanoke',
-#                                SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
-#                                SUBBASIN == 'Holston River' ~ 'Holston',
-#                                SUBBASIN == 'York River' ~ 'York',
-#                                TRUE ~ as.character(NA)),
-#          ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
-#                                     SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
-#                                     SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
-#                                     TRUE ~ as.character(NA)))
-# 
-# subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
-#   filter(!is.na(SubbasinVAHU6code)) %>%
-#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
-# #dplyr::select(SUBBASIN, SubbasinVAHU6code)
-# 
-# # labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
-# #   as_tibble()
-# # pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
-# labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
-# 
-# WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
-# WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
-#   rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
-# WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
-# 
-# 
-# 
-# # analyte options
-# Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>%
-#   filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
-#   distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
+source('global.R')
+
+assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
+ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+county <- st_read('data/GIS/VACountyBoundaries.shp')
+assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
+  st_transform( st_crs(4326))
+subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
+  rename('SUBBASIN' = 'SUBBASIN_1') %>%
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
+  mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
+                               SUBBASIN == 'Chowan River' ~ 'Chowan',
+                               SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
+                               SUBBASIN == 'New River' ~ 'New',
+                               SUBBASIN == 'Potomac River' ~ 'Potomac',
+                               SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
+                               SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
+                               SUBBASIN == 'Roanoke River' ~ 'Roanoke',
+                               SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
+                               SUBBASIN == 'Holston River' ~ 'Holston',
+                               SUBBASIN == 'York River' ~ 'York',
+                               TRUE ~ as.character(NA)),
+         ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
+                                    SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
+                                    SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
+                                    TRUE ~ as.character(NA)))
+
+subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
+  filter(!is.na(SubbasinVAHU6code)) %>%
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
+#dplyr::select(SUBBASIN, SubbasinVAHU6code)
+
+# labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
+#   as_tibble()
+# pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
+labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
+
+WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
+WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
+  rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
+WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
+
+
+
+# analyte options
+Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>%
+  filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
+  distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
 
 
 
@@ -405,12 +405,22 @@ shinyServer(function(input, output, session) {
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(reactive_objects$stationFieldDataUserFilter),
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawFieldData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
-
+  # Raw Analyte Data
   output$analyteDataRaw <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
     datatable(reactive_objects$stationAnalyteDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(reactive_objects$stationAnalyteDataUserFilter),
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawAnalyteData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
+  # LRBS Data
+  output$LRBSdataRaw <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
+    z <- filter(LRBS, StationID %in% input$station & between(as.Date(Date), as.Date(input$dateRangeFilter[1]), as.Date(input$dateRangeFilter[2]) ) ) %>% 
+      mutate(Date = as.Date(Date))
+
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
+                             buttons=list('copy',list(extend='excel',filename=paste0('LRBSdata',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none') })
+  
   
   output$BSAtemplateData <- renderDataTable({ req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
     z <-  BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf, 
@@ -926,10 +936,21 @@ shinyServer(function(input, output, session) {
                                buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawFieldData_MultistationQuery', Sys.Date())),
                                             'colvis')), selection = 'none') })
     
+    # Raw Analyte Data
     output$multistationAnalyteDataRaw <- renderDataTable({ req(reactive_objects$multistationAnalyteDataUserFilter)
       datatable(reactive_objects$multistationAnalyteDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
                 options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$multistationAnalyteDataUserFilter),
                                buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawAnalyteData_MultistationQuery', Sys.Date())),
+                                            'colvis')), selection = 'none') })
+    # LRBS Data
+    output$multistationLRBSdataRaw <- renderDataTable({  req(reactive_objects$multistationAnalyteDataUserFilter)
+      z <- filter(LRBS, StationID %in% reactive_objects$multistationFieldDataUserFilter$Fdt_Sta_Id & 
+                    between(as.Date(Date), as.Date(input$multistationDateRangeFilter[1]), as.Date(input$multistationDateRangeFilter[2]) ) ) %>% 
+        mutate(Date = as.Date(Date))
+      
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
+                               buttons=list('copy',list(extend='excel',filename=paste0('LRBSdata_MultistationQuery', Sys.Date())),
                                             'colvis')), selection = 'none') })
     
     
