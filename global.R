@@ -37,32 +37,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -788,7 +788,7 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
 
 # # Pull WQM stations based on spatial and analyte info
 WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, dateRange_multistation, analyte_Filter, manualSelection, wildcardSelection){
+                                         ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, manualSelection, wildcardSelection){
   # preliminary stations before daterange filter
   if(queryType == 'Spatial Filters' ){
     preliminaryStations <- WQM_Stations_Spatial %>%
@@ -808,12 +808,29 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
       {if(!is.null(ecoregionFilter))
         filter(., US_L3NAME %in% ecoregionFilter)
         #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
-        else .}  }
+        else .} %>% 
+      {if(!is.null(countyFilter))
+        filter(., CountyCityName %in% countyFilter)
+        else .}}
   if(str_detect(queryType, 'Manually Specify')){
-    preliminaryStations <-  filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection))  }
+    preliminaryStations <-  filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection)) %>% 
+      {if(!is.null(ecoregionFilter))
+        filter(., US_L3NAME %in% ecoregionFilter)
+        #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
+        else .} %>% 
+      {if(!is.null(countyFilter))
+        filter(., CountyCityName %in% countyFilter)
+        else .} }
   if(queryType == 'Wildcard Selection' ){
     preliminaryStations <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
-                                        wildcardSelection, '"'))  }
+                                        wildcardSelection, '"')) %>% 
+      {if(!is.null(ecoregionFilter))
+        filter(., US_L3NAME %in% ecoregionFilter)
+        #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
+        else .} %>% 
+      {if(!is.null(countyFilter))
+        filter(., CountyCityName %in% countyFilter)
+        else .} }
   
 
   # add daterange filter based on preliminary station results

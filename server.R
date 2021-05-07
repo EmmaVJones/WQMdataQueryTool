@@ -1,50 +1,51 @@
-source('global.R')
-
-assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
-ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
-assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
-  st_transform( st_crs(4326))
-subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
-  rename('SUBBASIN' = 'SUBBASIN_1') %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
-  mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
-                               SUBBASIN == 'Chowan River' ~ 'Chowan',
-                               SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
-                               SUBBASIN == 'New River' ~ 'New',
-                               SUBBASIN == 'Potomac River' ~ 'Potomac',
-                               SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
-                               SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
-                               SUBBASIN == 'Roanoke River' ~ 'Roanoke',
-                               SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
-                               SUBBASIN == 'Holston River' ~ 'Holston',
-                               SUBBASIN == 'York River' ~ 'York',
-                               TRUE ~ as.character(NA)),
-         ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
-                                    SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
-                                    SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
-                                    TRUE ~ as.character(NA)))
-
-subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
-  filter(!is.na(SubbasinVAHU6code)) %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
-#dplyr::select(SUBBASIN, SubbasinVAHU6code)
-
-# labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
-#   as_tibble()
-# pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
-labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
-
-WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
-WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
-  rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
-WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
-
-
-
-# analyte options
-Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>%
-  filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
-  distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
+# source('global.R')
+# 
+# assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
+# ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+# county <- st_read('data/GIS/VACountyBoundaries.shp')
+# assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
+#   st_transform( st_crs(4326))
+# subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
+#   rename('SUBBASIN' = 'SUBBASIN_1') %>%
+#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
+#   mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
+#                                SUBBASIN == 'Chowan River' ~ 'Chowan',
+#                                SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
+#                                SUBBASIN == 'New River' ~ 'New',
+#                                SUBBASIN == 'Potomac River' ~ 'Potomac',
+#                                SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
+#                                SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
+#                                SUBBASIN == 'Roanoke River' ~ 'Roanoke',
+#                                SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
+#                                SUBBASIN == 'Holston River' ~ 'Holston',
+#                                SUBBASIN == 'York River' ~ 'York',
+#                                TRUE ~ as.character(NA)),
+#          ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
+#                                     SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
+#                                     SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
+#                                     TRUE ~ as.character(NA)))
+# 
+# subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
+#   filter(!is.na(SubbasinVAHU6code)) %>%
+#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
+# #dplyr::select(SUBBASIN, SubbasinVAHU6code)
+# 
+# # labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
+# #   as_tibble()
+# # pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
+# labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
+# 
+# WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
+# WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
+#   rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
+# WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
+# 
+# 
+# 
+# # analyte options
+# Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>%
+#   filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
+#   distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
 
 
 
@@ -59,8 +60,8 @@ shinyServer(function(input, output, session) {
 
   ## Pass URL to app to autofill input$station from other DEQ applications
   observe({
+    # this was crucial to figuring load on certain tab: https://stackoverflow.com/questions/33021757/externally-link-to-specific-tabpanel-in-shiny-app
     query <- parseQueryString(session$clientData$url_search)
-    print(query)
     if (!is.null(query[['StationID']])) {
       updateTabsetPanel(session,  inputId = "someID", 'SingleStation')  # key for passing URL to specific Tab
       updateTextInput(session, "station", value = query[['StationID']])
@@ -139,6 +140,7 @@ shinyServer(function(input, output, session) {
                              buttons=list('copy','colvis')) ) })
   ## Map Station Information
   output$stationMap <- renderLeaflet({    #req(reactive_objects$stationInfo)
+  
     # color palette for assessment polygons
     pal <- colorFactor(
       palette = topo.colors(7),
@@ -157,12 +159,15 @@ shinyServer(function(input, output, session) {
       addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
                   fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
                   group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
+      # addPolygons(data= county,  color = 'black', weight = 1,
+      #             fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
+      #             group="County", label = ~NAME) %>% hideGroup("County") %>%
       inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
                        overlayGroups = c("Level III Ecoregions", 'Assessment Regions'),
+                       #overlayGroups = c("Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
-                       position='topleft')
-  })
+                       position='topleft')  })
 
   map_proxy <- leafletProxy("stationMap")
 
@@ -174,8 +179,9 @@ shinyServer(function(input, output, session) {
                        color='blue', fillColor='yellow', radius = 6,
                        fillOpacity = 0.5,opacity=0.8,weight = 4,stroke=T, group="Selected Station(s)",
                        label = ~STATION_ID, layerId = ~STATION_ID) %>%
-      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),                       
                        overlayGroups = c("Selected Station(s)", "Level III Ecoregions", 'Assessment Regions'),
+                       #overlayGroups = c("Selected Station(s)", "Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
 
@@ -196,6 +202,10 @@ shinyServer(function(input, output, session) {
          checkboxGroupInput('labCodesDropped', 'Lab Codes Revoved From Futher Analyses',
                             choices = codeOptions, inline = TRUE, selected = c('QF'))   ) })
 
+  ## Depth filter 
+  output$depthFilter_ <- renderUI({  req(nrow(reactive_objects$stationAnalyteData) > 0)
+    checkboxInput('depthFilter', 'Only Analyze Surface Measurements (Depth <= 0.3 m)') })
+  
   ## Lab Code Module
   observeEvent(input$reviewLabCodes,{
     showModal(modalDialog(
@@ -213,7 +223,10 @@ shinyServer(function(input, output, session) {
 
   ## Drop any unwanted Analyte codes
   observe({req(nrow(reactive_objects$stationFieldData) > 0, input$dateRangeFilter, reactive_objects$stationAnalyteData)
-    reactive_objects$stationFieldDataUserFilter <- filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) )
+    reactive_objects$stationFieldDataUserFilter <- filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ) %>% 
+      {if(input$depthFilter == TRUE)
+        filter(., Fdt_Depth <= 0.3)
+        else . }
     reactive_objects$stationAnalyteDataUserFilter <- filter(reactive_objects$stationAnalyteData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) )  %>%
       filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$repFilter) %>%
       filter(! Ana_Com_Code %in% input$labCodesDropped)})
@@ -297,7 +310,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$smoothModal,{
     showModal(modalDialog(
       title="Parameter Plot with Loess (Locally Estimated Scatterplot Smoother) Function",
-      helpText('This plot is meant for visualizing general patterns in the data and does not server as a 
+      helpText('This plot is meant for exploratory data analysis to visualize general patterns in the data and and does not serve as a 
                  robust trend analysis.'),
       plotlyOutput('loessSmoothPlot'),
       easyClose = TRUE))  })
@@ -469,6 +482,9 @@ shinyServer(function(input, output, session) {
 
   output$spatialFilters_Ecoregion <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('ecoregionFilter','Level 3 Ecoregion', choices = unique(ecoregion$US_L3NAME), multiple = T) })
+  
+  output$spatialFilters_County <- renderUI({#req(input$queryType == 'Spatial Filters')
+    selectInput('countyFilter','County/City', choices = unique(county$NAME), multiple = T) })
 
   output$dateRange_multistationUI <- renderUI({#req(input$queryType == 'Spatial Filters')
     dateRangeInput('dateRange_multistation',
@@ -485,8 +501,8 @@ shinyServer(function(input, output, session) {
     show_modal_spinner(spin = 'flower')
     
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
-                                                          input$assessmentRegionFilter, input$ecoregionFilter, input$dateRange_multistation, input$analyte_Filter,
-                                                          manualSelection = NULL, wildcardSelection = NULL)
+                                                          input$assessmentRegionFilter, input$ecoregionFilter, input$countyFilter, input$dateRange_multistation, 
+                                                          input$analyte_Filter, manualSelection = NULL, wildcardSelection = NULL)
     remove_modal_spinner()     })
   
   # Query by wildcard selection
@@ -500,7 +516,8 @@ shinyServer(function(input, output, session) {
     
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, dateRange_multistation = input$dateRange_multistation,
+                                                                         ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
+                                                                         dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, manualSelection = NULL, 
                                                                          wildcardSelection = as.character(toupper(input$wildcardText))) 
     remove_modal_spinner()  })
@@ -521,7 +538,8 @@ shinyServer(function(input, output, session) {
     
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, dateRange_multistation = input$dateRange_multistation,
+                                                                         ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
+                                                                         dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, manualSelection = as.character(input$manualSelection),
                                                                          wildcardSelection = NULL) 
     remove_modal_spinner() })
@@ -531,7 +549,7 @@ shinyServer(function(input, output, session) {
   
   
   
-  observe({ req(reactive_objects$WQM_Stations_Filter)
+  observe({ req(nrow(reactive_objects$WQM_Stations_Filter) >0)
     ## Basic Station Info
     reactive_objects$multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data instead of calling stationInfo bc app crashes
                                                         filter(Sta_Id %in% reactive_objects$WQM_Stations_Filter$StationID) %>%
@@ -577,6 +595,9 @@ shinyServer(function(input, output, session) {
       addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
                   fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
                   group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
+      # addPolygons(data= county,  color = 'black', weight = 1,
+      #             fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
+      #             group="County", label = ~NAME) %>% hideGroup("County") %>%
       inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
       addDrawToolbar(
         targetGroup='Selected',
@@ -587,8 +608,9 @@ shinyServer(function(input, output, session) {
         circleOptions = FALSE,
         circleMarkerOptions = FALSE,
         editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
-      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),                       
                        overlayGroups = c("Level III Ecoregions", 'Assessment Regions'),
+                       #overlayGroups = c("Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')        })
 
@@ -613,6 +635,7 @@ shinyServer(function(input, output, session) {
         else . } %>%
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
                        overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
+                       #overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
   
@@ -660,6 +683,7 @@ shinyServer(function(input, output, session) {
                        popup = leafpop::popupTable(reactive_objects$selectedSites, zcol=c('StationID'))) %>%
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
                        overlayGroups = c("User Selected Station(s)","Spatial Filter Station(s)","VAHU6", "Level III Ecoregions", 'Assessment Regions'),
+                       #overlayGroups = c("User Selected Station(s)","Spatial Filter Station(s)","VAHU6", "Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
   
@@ -675,7 +699,8 @@ shinyServer(function(input, output, session) {
                        label = ~StationID, layerId = ~StationID,
                        popup = leafpop::popupTable(reactive_objects$selectedSites, zcol=c('StationID'))) %>%
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
-                       overlayGroups = c("Spatial Filter Station(s)","VAHU6","Level III Ecoregions", 'Assessment Regions'),
+                       overlayGroups = c("Spatial Filter Station(s)","VAHU6","Level III Ecoregions",'Assessment Regions'),
+                       #overlayGroups = c("Spatial Filter Station(s)","VAHU6","Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')    })
   
@@ -748,6 +773,10 @@ shinyServer(function(input, output, session) {
            checkboxGroupInput('multistationLabCodesDropped', 'Lab Codes Revoved From Futher Analyses',
                               choices = codeOptions, inline = TRUE, selected = c('QF'))   ) })
 
+    ## Depth filter 
+    output$multistationDepthFilter_ <- renderUI({ req(nrow(reactive_objects$multistationAnalyteData) > 0)
+      checkboxInput('multistationDepthFilter', 'Only Analyze Surface Measurements (Depth <= 0.3 m)') })
+    
     ## Lab Code Module
     observeEvent(input$multistationReviewLabCodes,{
       showModal(modalDialog(
@@ -764,7 +793,10 @@ shinyServer(function(input, output, session) {
     
     # Drop any unwanted Analyte codes
     observe({req(nrow(reactive_objects$multistationFieldData) > 0, input$multistationDateRangeFilter, nrow(reactive_objects$multistationAnalyteData)>0)
-      reactive_objects$multistationFieldDataUserFilter <- filter(reactive_objects$multistationFieldData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) )
+      reactive_objects$multistationFieldDataUserFilter <- filter(reactive_objects$multistationFieldData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) ) %>% 
+        {if(input$multistationDepthFilter == TRUE)
+          filter(., Fdt_Depth <= 0.3)
+          else . }
       reactive_objects$multistationAnalyteDataUserFilter <- filter(reactive_objects$multistationAnalyteData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) ) %>%
         filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$multistationRepFilter) %>%
         filter(! Ana_Com_Code %in% input$multistationLabCodesDropped)
@@ -856,7 +888,7 @@ shinyServer(function(input, output, session) {
     observeEvent(input$multistationSmoothModal,{
       showModal(modalDialog(
         title="Parameter Plot with Loess (Locally Estimated Scatterplot Smoother) Function",
-        helpText('This plot is meant for visualizing general patterns in the data and does not server as a 
+        helpText('This plot is meant for exploratory data analysis to visualize general patterns in the data and and does not serve as a 
                  robust trend analysis.'),
         plotlyOutput('multistationLoessSmoothPlot'),
         easyClose = TRUE))  })
