@@ -720,8 +720,11 @@ shinyServer(function(input, output, session) {
     reactive_objects$multistationSelection <- reactive_objects$multistationInfoFin %>%
       {if(!is.null(reactive_objects$selectedSites))
         filter(., Sta_Id %in% reactive_objects$selectedSites$StationID)
-        else . }
-    
+        else . } })
+  
+
+  # Update "final" site selection after user input
+  observe({req(reactive_objects$multistationSelection)
     ## Station Sampling Information
     reactive_objects$multistationInfoSampleMetrics <- reactive_objects$multistationSelection %>%
       group_by(Sta_Id) %>%
@@ -732,7 +735,7 @@ shinyServer(function(input, output, session) {
     
     ## Field Data Information
     reactive_objects$multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
-      filter(Fdt_Sta_Id %in% !! reactive_objects$WQM_Stations_Filter$StationID &
+      filter(Fdt_Sta_Id %in% !! reactive_objects$multistationSelection$Sta_Id &  #reactive_objects$WQM_Stations_Filter$StationID &
                between(as.Date(Fdt_Date_Time), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
                Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% 
       as_tibble()
