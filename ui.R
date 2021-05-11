@@ -4,18 +4,24 @@ shinyUI(fluidPage(tags$head(
   theme= "yeti.css",
                   navbarPage("CEDS Water Quality Monitoring Data Query Tool", id = 'someID',  # key for passing URL to specific Tab
                              
-                             tabPanel('How To',
-                                      h2(strong('This project is still in beta testing phase.')),
-                                      h5('Please report any data or application issues to Emma Jones emma.jones@deq.virginia.gov. See the 
-                                         CEDS Benthic Data Query App for more detailed instructions on how to use the query features of this application.'),
-                                      h6('the Single Station Query tab allows you to query stations in CEDS for field and analyte data and presents various
-                                         data visualization tools to bring more context to data retrieved.'),
-                                      h6('The multiple station query tab queries the same dataset as the Single Station Query Tab but offers spatial, temporal, 
-                                         and specific analyte querying methods not offered in other query tools. The spatial data is rebuilt on the R server weekly, so
-                                         new stations entered in CEDS are available the following Monday morning for use in this tool.'),
-                                      h4(strong('All data is retrieved from CEDS ODS, which is refreshed nightly. Any data entered in CEDS is available the next
-                                                morning in this query tool.'))), 
-                            #          htmlOutput("BenthicQueryToolHowTo") ),
+                            #  tabPanel('How To',
+                            #           h2(strong('This project is still in beta testing phase.')),
+                            #           h5('Please report any data or application issues to Emma Jones emma.jones@deq.virginia.gov. See the 
+                            #              CEDS Benthic Data Query App for more detailed instructions on how to use the query features of this application.'),
+                            #           h6('the Single Station Query tab allows you to query stations in CEDS for field and analyte data and presents various
+                            #              data visualization tools to bring more context to data retrieved.'),
+                            #           h6('The multiple station query tab queries the same dataset as the Single Station Query Tab but offers spatial, temporal, 
+                            #              and specific analyte querying methods not offered in other query tools. The spatial data is rebuilt on the R server weekly, so
+                            #              new stations entered in CEDS are available the following Monday morning for use in this tool.'),
+                            #           h4(strong('All data is retrieved from CEDS ODS, which is refreshed nightly. Any data entered in CEDS is available the next
+                            #                     morning in this query tool.'))), 
+                            # #          htmlOutput("BenthicQueryToolHowTo") ),
+                            
+                            
+                            tabPanel('How To',
+                                     includeMarkdown("CEDS WQM Query Tool How To.md")),
+                            #includeHTML("BenthicQueryToolHowTo.html")),#htmlOutput("BenthicQueryToolHowTo") ), # this was a hot mess. when trying to update the BenthicQueryHowTo rmd and rendering to html, the app would not take any user inputs. so weird and wasted hours on this problem. ultimately had to go with rendering the .md in the app to have any semblance of a solution
+                            
                              
                              tabPanel("Single Station Query (Live CEDS Connection)", value = 'SingleStation', # key for passing URL to specific Tab
                                       tabsetPanel(
@@ -171,10 +177,11 @@ shinyUI(fluidPage(tags$head(
                                      tabsetPanel(
                                        tabPanel("Station Query",
                                                 sidebarPanel(
-                                                  helpText("Query uses spatial data stored on R server. Spatial data is refreshed weekly."),
+                                                  helpText("Query pulls data directly from CEDS (data is refreshed nightly). All spatial data 
+                                                           used to assist spatial querying methods are stored on R server (spatial data is refreshed weekly)."),
                                                   radioButtons('queryType', "How would you like to query stations?",
                                                                choices = c('Spatial Filters', 'Wildcard Selection', 
-                                                                           'Manually Specify Stations (takes a few seconds for the station text box to appear)')),
+                                                                           'Manually Specify Stations (requires a few seconds for the station text box to appear)')),
                                                 
                                                   # Spatial filters
                                                   conditionalPanel(condition = "input.queryType == 'Spatial Filters'",

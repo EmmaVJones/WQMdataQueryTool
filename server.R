@@ -494,7 +494,7 @@ shinyServer(function(input, output, session) {
     selectInput('ecoregionFilter','Level 3 Ecoregion', choices = unique(ecoregion$US_L3NAME), multiple = T) })
   
   output$spatialFilters_County <- renderUI({#req(input$queryType == 'Spatial Filters')
-    selectInput('countyFilter','County/City', choices = unique(county$NAME), multiple = T) })
+    selectInput('countyFilter','County/City', choices = sort(unique(county$NAME)), multiple = T) })
 
   output$dateRange_multistationUI <- renderUI({#req(input$queryType == 'Spatial Filters')
     dateRangeInput('dateRange_multistation',
@@ -539,14 +539,14 @@ shinyServer(function(input, output, session) {
   
   
   # Query by manual selection
-  output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)')
+  output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)')
     list(helpText('Begin typing station names and the app will filter available data by input text. Multiple stations are allowed.'),
          selectInput('manualSelection','Station ID', choices = sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)) })
   
   observeEvent(input$begin_multistation_manual, {
     show_modal_spinner(spin = 'flower')
     
-    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
+    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (requires a few seconds for the station text box to appear)', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
                                                                          dateRange_multistation = input$dateRange_multistation,

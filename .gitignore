@@ -42,3 +42,4 @@ vignettes/*.pdf
 *.yml
 data/
 rsconnect/
+*.html
