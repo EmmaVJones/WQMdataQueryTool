@@ -103,9 +103,10 @@ shinyServer(function(input, output, session) {
     ## Field Data Information
     reactive_objects$stationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
       filter(Fdt_Sta_Id %in% !! input$station &
-               between(as.Date(Fdt_Date_Time), !! input$dateRange[1], !! input$dateRange[2]) & # x >= left & x <= right
-               Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%
-      as_tibble()
+               between(as.Date(Fdt_Date_Time), !! input$dateRange[1], !! input$dateRange[2]) ) %>% #& # x >= left & x <= right
+               #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
+      as_tibble() %>% 
+      filter(! Ssc_Description %in% "INVALID DATA SET QUALITY ASSURANCE FAILURE")
 
 
     ### Analyte information
@@ -736,9 +737,10 @@ shinyServer(function(input, output, session) {
     ## Field Data Information
     reactive_objects$multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
       filter(Fdt_Sta_Id %in% !! reactive_objects$multistationSelection$Sta_Id &  #reactive_objects$WQM_Stations_Filter$StationID &
-               between(as.Date(Fdt_Date_Time), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
-               Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% 
-      as_tibble()
+               between(as.Date(Fdt_Date_Time), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) ) %>% #& # x >= left & x <= right
+               #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%  # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
+      as_tibble() %>% 
+      filter(Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE")
     
     ### Analyte information
     if(nrow(reactive_objects$multistationFieldData) == 0){

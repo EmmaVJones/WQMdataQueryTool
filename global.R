@@ -37,32 +37,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -109,7 +109,14 @@ WQSvalues <- tibble(CLASS_BASIN = c('I',"II","II_7","III","IV","V","VI","VII"),
                     `Max Temperature (C)` = c(NA, NA, NA, 32, 31, 21, 20, NA)) %>%
   mutate(CLASS_DESCRIPTION = paste0(CLASS, " | ", `Description Of Waters`))
 
-
+# Water Column Metals with static criteria (helpful for metals module)
+staticLimit <- c("Antimony PWS", "Antimony All Other Surface Waters", "Arsenic Acute Freshwater", "Arsenic Chronic Freshwater", "Arsenic PWS",
+                 "Arsenic Acute Saltwater", "Arsenic Chronic Saltwater", "Barium PWS","Cadmium PWS","ChromiumIII PWS",
+                 "ChromiumVI Acute Freshwater", "ChromiumVI Chronic Freshwater", "ChromiumVI Acute Saltwater", "ChromiumVI Chronic Saltwater", 
+                 "Lead PWS", "Mercury Acute Freshwater", "Mercury Chronic Freshwater", "Mercury Acute Saltwater", "Mercury Chronic Saltwater",
+                 "Nickel PWS",  "Nickel All Other Surface Waters", "Uranium PWS","Selenium Acute Freshwater", "Selenium Chronic Freshwater", 
+                 "Selenium PWS", "Selenium All Other Surface Waters","Thallium PWS", "Thallium All Other Surface Waters","Zinc PWS", 
+                 "Zinc All Other Surface Waters")
 
 
 
@@ -324,7 +331,8 @@ uniqueComments <- function(stationFieldAnalyte){
 
 # Concatenate multiple columns to one
 concatenateCols <- function(df, containString){
-  x <- dplyr::select(df, contains(containString)) 
+  x <- dplyr::select(df, contains(containString))  %>% 
+    dplyr::select(-contains('RMK'))
   if(length(x) > 0){
     mutate_if(x, is.numeric, as.character) %>%
     na_if('NA') %>%
@@ -334,7 +342,7 @@ concatenateCols <- function(df, containString){
 }
 
 concatenateCols2 <- function(df, containString){
-  x <- dplyr::select(df, contains(containString)) 
+  x <- dplyr::select(df, contains(containString))
   if(length(x) == 0){as.numeric(rep(NA, nrow(x)))}
   if(length(x) == 1){as.numeric(x %>% pull()) }
   if(length(x) > 1){

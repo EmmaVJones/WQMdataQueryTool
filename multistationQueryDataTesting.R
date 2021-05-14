@@ -63,7 +63,7 @@ Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Code
 # user inputs
 #queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
 
-countyFilter <- "Roanoke City"#NULL
+countyFilter <- NULL#"Roanoke City"#
 ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
 dateRange_multistation <- c(as.Date('2015-01-01'), as.Date(Sys.Date()- 7))
 ## pull based on parameter
@@ -77,7 +77,7 @@ analyte_Filter <- NULL#
 
 
 # manually specify troubleshooting
-manualSelection1 <- '4AROA000.00'#c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
+manualSelection1 <- c('2-JKS028.69', '2-JKS023.61')#4AROA000.00'#c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
 #WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection1))  
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
@@ -221,9 +221,10 @@ multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data in
 
 multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
   filter(Fdt_Sta_Id %in% !! WQM_Stations_Filter$StationID &
-           between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2]) & # x >= left & x <= right
-           Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% 
-  as_tibble()
+           between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2])) %>% # & # x >= left & x <= right
+           #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%  # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
+  as_tibble() %>% 
+  filter(Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE")
 
 
 ### Analyte information

@@ -143,7 +143,10 @@ shinyUI(fluidPage(tags$head(
                                                                                   column(6, plotOutput('SuperBasin'))),
                                                                          fluidRow(column(6, plotOutput('Basin')),
                                                                                   column(6, plotOutput('Ecoregion'))),
-                                                                         br(),br(), br()) )), # a little breathing room
+                                                                         br(),br(), br()),# a little breathing room
+                                                                tabPanel('Dissolved Metals Criteria',
+                                                                         dissolvedMetalsCriteriaUI('metals'))
+                                                                )), 
                                                      tabPanel('Data Download Formats',
                                                               tabsetPanel(
                                                                 tabPanel('Raw Field Data',
