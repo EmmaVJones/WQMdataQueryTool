@@ -145,8 +145,7 @@ shinyUI(fluidPage(tags$head(
                                                                                   column(6, plotOutput('Ecoregion'))),
                                                                          br(),br(), br()),# a little breathing room
                                                                 tabPanel('Dissolved Metals Criteria',
-                                                                         dissolvedMetalsCriteriaUI('metals'))
-                                                                )), 
+                                                                         dissolvedMetalsCriteriaUI('metals')))), 
                                                      tabPanel('Data Download Formats',
                                                               tabsetPanel(
                                                                 tabPanel('Raw Field Data',
@@ -288,7 +287,9 @@ shinyUI(fluidPage(tags$head(
                                                                                                                  plotted with the station data'))),
                                                                         fluidRow(column(3, selectInput('multistationParameterBoxPlotlySelection', 'Select a Parameter to Visualize', choices = unique(filter(unitData, !is.na(AltName))$AltName))),
                                                                                  column(3, checkboxInput('multistationAddJitter', 'Add jittered raw data'))),
-                                                                        plotlyOutput('multistationParameterBoxplot'), br(), br(), br()))),
+                                                                        plotlyOutput('multistationParameterBoxplot'), br(), br(), br()),
+                                                               tabPanel('Dissolved Metals Criteria',
+                                                                        dissolvedMetalsCriteriaUI('multistationMetals')))),
                                                     tabPanel('Data Download Formats',
                                                              tabsetPanel(
                                                                tabPanel('Raw Field Data',

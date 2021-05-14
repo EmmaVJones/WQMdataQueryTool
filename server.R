@@ -396,9 +396,12 @@ shinyServer(function(input, output, session) {
     parameterSwitch <- as.character(filter(probIndicators, AltName %in% input$parameterSelect)$Parameter)
     cdfplot(probEst, as.character(input$parameterSelect), parameterSwitch,
             as.character(unique(WQM_Station_Full_REST()$EPA_ECO_US_L3NAME)), reactive_objects$percentiles, CDFsettingsList[[parameterSwitch]] )  })
-
-
-
+  
+  
+  # Dissolved Metals Analysis
+  callModule(dissolvedMetalsCriteria,'metals', stationFieldAnalyteDateRange(), WQSlookup, staticLimit)
+  
+  
 
   # Raw Field Data
   output$fieldDataRaw <- renderDataTable({ req(reactive_objects$stationFieldDataUserFilter)
@@ -928,6 +931,8 @@ shinyServer(function(input, output, session) {
         parameterBoxplotFunction(multistationBasicSummary(), input$multistationParameterBoxPlotlySelection, unitData, WQSlookup, input$multistationAddJitter) ))   })
     
     
+    ## Visualization Tools: Dissolved Metals Analysis
+    callModule(dissolvedMetalsCriteria,'multistationMetals', multistationFieldAnalyteDateRange(), WQSlookup, staticLimit)
     
 
 

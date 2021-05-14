@@ -19,6 +19,7 @@ library(sqldf)
 #Bring in VLOOKUP-like function written in R
 source('vlookup.R')
 source('cdfRiskTable.R')
+source('dissolvedMetalsModule.R') #also contains dissolved metals functions that are more flexible than from assessment apps
 
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
@@ -37,32 +38,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-pool <- dbPool(
- drv = odbc::odbc(),
- Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
- Server= "DEQ-SQLODS-PROD,50000",
- dbname = "ODS",
- trusted_connection = "yes"
-)
+# pool <- dbPool(
+#  drv = odbc::odbc(),
+#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+#  Server= "DEQ-SQLODS-PROD,50000",
+#  dbname = "ODS",
+#  trusted_connection = "yes"
+# )
 
 # For deployment on the R server: Set up pool connection to production environment
-# pool <- dbPool(
-#   drv = odbc::odbc(),
-#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-#   # Production Environment
-#   Server= "DEQ-SQLODS-PROD,50000",
-#   dbname = "ODS",
-#   UID = conn$UID_prod,
-#   PWD = conn$PWD_prod,
-#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-#   # Test environment
-#   #Server= "WSQ04151,50000",
-#   #dbname = "ODS_test",
-#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-#   trusted_connection = "yes"
-# )
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+  # Production Environment
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  UID = conn$UID_prod,
+  PWD = conn$PWD_prod,
+  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+  # Test environment
+  #Server= "WSQ04151,50000",
+  #dbname = "ODS_test",
+  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+  trusted_connection = "yes"
+)
 
 onStop(function() {
   poolClose(pool)
