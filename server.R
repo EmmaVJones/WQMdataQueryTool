@@ -695,6 +695,13 @@ shinyServer(function(input, output, session) {
   observe({req(nrow(reactive_objects$WQM_Stations_Filter) > 0)
     map_proxy_multi %>%
       clearMarkers() %>% 
+      # flyTo(lng= mean(reactive_objects$WQM_Stations_Filter$Longitude, na.rm=T), 
+      #       lat = mean(reactive_objects$WQM_Stations_Filter$Latitude, na.rm=T),
+      #       zoom = 8) %>% 
+      flyToBounds(lng1 = min(reactive_objects$WQM_Stations_Filter$Longitude)+0.01,
+                  lat1 = min(reactive_objects$WQM_Stations_Filter$Latitude)+0.01,
+                  lng2 = max(reactive_objects$WQM_Stations_Filter$Longitude)+0.01,
+                  lat2 = max(reactive_objects$WQM_Stations_Filter$Latitude)+0.01) %>%
       addCircleMarkers(data = reactive_objects$WQM_Stations_Filter,
                        color='blue', fillColor='gray', radius = 4,
                        fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
