@@ -51,7 +51,7 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+station <- '2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
 dateRange <- c(as.Date('2010-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
@@ -97,18 +97,20 @@ stationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
   filter(! Ssc_Description %in% "INVALID DATA SET QUALITY ASSURANCE FAILURE")
 
 ### Analyte information
+labMediaCodes <-  pool %>% tbl("Wqm_Lab_Catalogs_View") %>% as_tibble()
+programCodes <- pool %>% tbl("Wqm_Survey_Pgm_Cds_Codes_Wqm_View") %>% as_tibble()
 
 stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
   filter(Ana_Sam_Fdt_Id %in% !! stationFieldData$Fdt_Id  &
            between(as.Date(Ana_Received_Date), !! dateRange[1], !! dateRange[2]) & # x >= left & x <= right
            Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
   as_tibble() %>%
-  left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) 
-
+  left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))# %>% 
+  #left_join(dplyr::select(labMediaCodes, Lc_Parm_Group_Code, Lc_Description, Act_Media_Desc), by = c('Pg_Parm_Group_Code' = 'Lc_Parm_Group_Code'))
 
 
 # User filters
-dateRangeFilter <-  c(as.Date('2015-01-01'),as.Date('2022-01-01'))#c(as.Date('2015-01-01'), as.Date('2020-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+dateRangeFilter <-  c(as.Date('2010-01-01'),as.Date('2022-01-01'))#c(as.Date('2015-01-01'), as.Date('2020-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
 labCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
 repFilter <- c('R')
 
@@ -192,7 +194,7 @@ statsAndPercentiles <- percentileList(probEst, probComparison, probIndicators, u
                     
 # Plot mean and median
 #cdfdata <- probEst
-prettyParameterName <- 'Silver' #'Potassium'#probIndicators$AltName[1]
+prettyParameterName <- "Total Nitrogen"#'Dissolved Oxygen'#'Silver' #'Potassium'#probIndicators$AltName[1]
 
 parameterSwitch <- filter(probIndicators, AltName %in% prettyParameterName)$Parameter
 
@@ -204,9 +206,9 @@ dataset <- statsAndPercentiles#statsAndPercentiles[[parameter]]
 cdfplot(probEst, prettyParameterName , parameterSwitch,  
         as.character(unique(WQM_Station_Full_REST$EPA_ECO_US_L3NAME)), statsAndPercentiles, CDFsettingsList[[parameterSwitch]] )
 
-ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
-  labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
-  ggtitle(paste(subpopulation,'\n', prettyParameterName,"\n Percentile Graph ( n = ",m,")",sep=" "))
+# ggplot(cdfsubset, aes(x=Value,y=Estimate.P)) + 
+#   labs(x=paste(prettyParameterName,unique(cdfsubset$Units),sep=" "),y="Percentile") +
+#   ggtitle(paste(subpopulation,'\n', prettyParameterName,"\n Percentile Graph ( n = ",m,")",sep=" "))
 
 
 

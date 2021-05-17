@@ -186,6 +186,10 @@ shinyServer(function(input, output, session) {
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
 
+  ## Display stationID queried always in single station
+  output$stationQueried <- renderText({req(reactive_objects$stationInfoFin)
+   paste('<b>Station Selected:', unique(reactive_objects$stationInfoFin$Sta_Id), '</b>')})
+  
   ## Field and Analyte Data Date Range
   output$dateRangeFilter_ <- renderUI({ req(nrow(reactive_objects$stationFieldData) > 0)
     dateRangeInput('dateRangeFilter',
@@ -505,10 +509,57 @@ shinyServer(function(input, output, session) {
                    label = 'Filter Stations By Sample Date Range (YYYY-MM-DD)',
                    start = as.Date("1970-01-01"),
                    end = as.Date(Sys.Date()- 7))   })
-
-  output$analyte_FilterUI <- renderUI({#req(input$queryType == 'Spatial Filters')
+  # Program Code Filter
+  output$programCode_FilterUI <- renderUI({#req(input$queryType == 'Spatial Filters')
+    selectInput('programCode_Filter', 'Filter Stations By Program Code',
+                choices = sort(unique(programCodes$Spg_Code)), multiple = TRUE)})
+  
+  # Program Code table
+  observeEvent(input$showProgramCodeTable,{
+    showModal(modalDialog(
+      title="Program Code Descriptions",
+      DT::dataTableOutput('programCodeTable'),
+      easyClose = TRUE))  })
+  
+  output$programCodeTable <- renderDataTable({req(input$showProgramCodeTable)
+    datatable(programCodes %>% arrange(Spg_Code), rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                             pageLength = nrow(programCodes),
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSprogramCodes')),
+                                          'colvis')), selection = 'none')   })
+  # Lab Media Code
+  output$labMediaCodeUI <- renderUI({
+    selectInput('labMediaCode', 'Filter Stations By Lab Media Codes', choices = sort(unique(labMediaCodes$Act_Media_Desc)), multiple = TRUE) })
+  
+  # Sample Group Code filter
+  output$sampleGroupCode_FilterUI <- renderUI({
+    choices <- labMediaCodes %>% 
+      {if(!is.null(input$labMediaCode))
+        filter(., Act_Media_Desc %in% input$labMediaCode)
+        else .} %>% 
+      pull(Lc_Parm_Group_Code)
+    selectInput('sampleGroupCode_Filter', 'Filter Stations By Sample Group Codes (Based on Selected Lab Media Codes)',
+                choices = sort(choices), multiple = TRUE)})
+  
+  # Sample Group Code table
+  observeEvent(input$showSampleGroupCodeTable,{
+    showModal(modalDialog(size = "l",
+      title="Sample Group Code Descriptions",
+      DT::dataTableOutput('sampleGroupCodeTable'),
+      easyClose = TRUE))  })
+  
+  output$sampleGroupCodeTable <- renderDataTable({req(input$showSampleGroupCodeTable)
+    datatable(labMediaCodes %>% arrange(Lc_Parm_Group_Code), rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px',
+                             pageLength = nrow(labMediaCodes),
+                             buttons=list('copy',list(extend='excel',filename=paste0('CEDSlabGroupCodes')),
+                                          'colvis')), selection = 'none')   })
+  
+  
+  output$analyte_FilterUI <- renderUI({
     selectInput('analyte_Filter', 'Filter Stations By Analytes Collected',
                 choices = Wqm_Parameter_Grp_Cds_Codes_Wqm_View, multiple = TRUE) })
+  
 
   # Query by spatial filter selection
   observeEvent(input$begin_multistation_spatial,{
@@ -516,7 +567,8 @@ shinyServer(function(input, output, session) {
     
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
                                                           input$assessmentRegionFilter, input$ecoregionFilter, input$countyFilter, input$dateRange_multistation, 
-                                                          input$analyte_Filter, manualSelection = NULL, wildcardSelection = NULL)
+                                                          input$analyte_Filter, programCodeFilter = input$programCode_Filter, labGroupCodeFilter = input$sampleGroupCode_Filter,
+                                                          manualSelection = NULL, wildcardSelection = NULL)
     remove_modal_spinner()     })
   
   # Query by wildcard selection
@@ -532,7 +584,10 @@ shinyServer(function(input, output, session) {
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
                                                                          dateRange_multistation = input$dateRange_multistation,
-                                                                         analyte_Filter = input$analyte_Filter, manualSelection = NULL, 
+                                                                         analyte_Filter = input$analyte_Filter, 
+                                                                         programCodeFilter = input$programCode_Filter, 
+                                                                         labGroupCodeFilter =  input$sampleGroupCode_Filter,
+                                                                         manualSelection = NULL, 
                                                                          wildcardSelection = as.character(toupper(input$wildcardText))) 
     remove_modal_spinner()  })
                                                   
@@ -554,7 +609,10 @@ shinyServer(function(input, output, session) {
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
                                                                          dateRange_multistation = input$dateRange_multistation,
-                                                                         analyte_Filter = input$analyte_Filter, manualSelection = as.character(input$manualSelection),
+                                                                         analyte_Filter = input$analyte_Filter, 
+                                                                         programCodeFilter = input$programCode_Filter, 
+                                                                         labGroupCodeFilter =  input$sampleGroupCode_Filter,
+                                                                         manualSelection = as.character(input$manualSelection),
                                                                          wildcardSelection = NULL) 
     remove_modal_spinner() })
 

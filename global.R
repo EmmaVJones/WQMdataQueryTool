@@ -38,39 +38,40 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
 })
 
 stationOptions <- pin_get('ejones/WQM-Sta-GIS-View-Stations', board= 'rsconnect')
-
+programCodes <- pool %>% tbl("Wqm_Survey_Pgm_Cds_Codes_Wqm_View") %>% as_tibble()
+labMediaCodes <- pool %>% tbl("Wqm_Lab_Catalogs_View") %>% as_tibble()
 
 unitData <- read_csv('data/probParameterUnits.csv')
 # Temporary list that we can compare data to. Maybe we increase to benthic metrics, MCCU, + more in time
@@ -797,7 +798,8 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
 
 # # Pull WQM stations based on spatial and analyte info
 WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, manualSelection, wildcardSelection){
+                                         ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, programCodeFilter, 
+                                         labGroupCodeFilter, manualSelection, wildcardSelection){
   # preliminary stations before daterange filter
   if(queryType == 'Spatial Filters' ){
     preliminaryStations <- WQM_Stations_Spatial %>%
@@ -850,7 +852,18 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
                between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2]) ) %>% # & # x >= left & x <= right
                #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%
      # dplyr::select(Fdt_Sta_Id, Fdt_Id) %>% # save time by only bringing back station names
-      as_tibble()
+      as_tibble() %>% 
+      {if(!is.null(programCodeFilter))
+        filter(., Fdt_Spg_Code %in% programCodeFilter)
+        else .}
+    
+    # filter by lab group code before bringing in analyte data
+    if(nrow(stationField) > 0 & !is.null(labGroupCodeFilter) ){
+      sampleView <- pool %>% tbl("Wqm_Samples_View") %>%
+        filter(Sam_Fdt_Id %in% !! stationField$Fdt_Id &
+                 Sam_Mrs_Lcc_Parm_Group_Cd %in% !! labGroupCodeFilter) %>% 
+        as_tibble()   
+      stationField <- filter(stationField, Fdt_Id %in% sampleView$Sam_Fdt_Id)  } # update stationField to just stations that have lab codes needed
 
     preliminaryStations <- filter(preliminaryStations, StationID %in% stationField$Fdt_Sta_Id)  }
   } else {

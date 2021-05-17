@@ -52,6 +52,8 @@ shinyUI(fluidPage(tags$head(
                                                  )),
                                         tabPanel("Water Quality Data",
                                                  sidebarPanel(
+                                                   htmlOutput('stationQueried'),
+                                                   br(), # a little breathing room
                                                    uiOutput('dateRangeFilter_'),
                                                    uiOutput('labCodesDropped_'),
                                                    uiOutput('depthFilter_'),
@@ -197,11 +199,19 @@ shinyUI(fluidPage(tags$head(
                                                   conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
                                                     uiOutput('manualSelectionUI')),
                                                   hr(), # keep these at the top level to allow reuse of same filter parameters
-                                                  helpText("Additional filter(s) applied on 'Pull Stations' request. "),
+                                                  helpText("Additional filter(s) applied on 'Pull Stations' request. These filters are not interactively cross validated."),
                                                   uiOutput('spatialFilters_Ecoregion'),
                                                   uiOutput('spatialFilters_County'),
                                                   uiOutput('dateRange_multistationUI'),
+                                                  fluidRow(column(6, uiOutput('programCode_FilterUI')),
+                                                           column(6,actionButton('showProgramCodeTable', 'Sample Program Codes'))),
+                                                  wellPanel(
+                                                    helpText('Interactive Cross Validation Active In this Box'),
+                                                    uiOutput('labMediaCodeUI'),
+                                                           fluidRow(column(6, uiOutput('sampleGroupCode_FilterUI')),
+                                                           column(6,actionButton('showSampleGroupCodeTable', 'Sample Group Codes')))),
                                                   uiOutput('analyte_FilterUI'),
+                                                  
                                                   # add in appropriate pull data button based on query type
                                                   conditionalPanel(condition = "input.queryType == 'Spatial Filters'",
                                                                    actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),

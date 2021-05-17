@@ -57,15 +57,19 @@ pool <- dbPool(
 Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>% 
   filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
   distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
+labMediaCodes <-  pool %>% tbl("Wqm_Lab_Catalogs_View") %>% as_tibble()
+programCodes <- pool %>% tbl("Wqm_Survey_Pgm_Cds_Codes_Wqm_View") %>% as_tibble()
 
 
 
 # user inputs
 #queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
 
+labGroupCodeFilter <- 'TNUTL'
+programCodeFilter <- 'HF'#NULL#c('AW','TR')
 countyFilter <- NULL#"Roanoke City"#
 ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
-dateRange_multistation <- c(as.Date('2015-01-01'), as.Date(Sys.Date()- 7))
+dateRange_multistation <- c(as.Date('2019-01-01'), as.Date('2019-12-31'))#as.Date(Sys.Date()- 7))
 ## pull based on parameter
 analyte_Filter <- NULL#
   c('SODIUM (NA), ATM DEP, WET, DISS, MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)', 'SODIUM, TOTAL (MG/L AS NA)', 'SODIUM-TOTAL  UG/L (AS NA)')
@@ -75,13 +79,17 @@ analyte_Filter <- NULL#
 # 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3)', 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED', 
 # 'HARDNESS, CARBONATE (MG/L AS CACO3)', 'HARDNESS, TOTAL (MG/L AS CACO3)')
 
-
+  %>% 
+    left_join(dplyr::select(labMediaCodes, Lc_Parm_Group_Code, Lc_Description, Act_Media_Desc), by = c('Pg_Parm_Group_Code' = 'Lc_Parm_Group_Code'))
+  
+  
 # manually specify troubleshooting
 manualSelection1 <- c('2-JKS028.69', '2-JKS023.61')#4AROA000.00'#c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
 #WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection1))  
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                     ecoregionFilter = ecoregionFilter, countyFilter = countyFilter, dateRange_multistation, analyte_Filter, 
+                                                    programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
 # wildcard troubleshooting
@@ -91,14 +99,15 @@ wildcardText1 <- '4aroa%'#'2-JKS02%'#'3-RPP10%'
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                     ecoregionFilter = "Ridge and Valley", countyFilter, dateRange_multistation, analyte_Filter= NULL, 
+                                                    programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,
                                                     manualSelection = NULL, wildcardSelection = wildcardText1)
 
 
 
 # Spatial filters troubleshooting
 ### begin
-assessmentRegionFilter <- c("PRO")#c("BRRO")#NULL#c("PRO")#unique(subbasins$ASSESS_REG)
-subbasinFilter <- "Appomattox"#"James-Upper"# c("James-Middle",'Potomac-Lower')#NULL# c("James River - Middle",'Potomac River')#NULL#"James River - Lower"
+assessmentRegionFilter <- c("BRRO")#c("BRRO")#NULL#c("PRO")#unique(subbasins$ASSESS_REG)
+subbasinFilter <- NULL#"Appomattox"#"James-Upper"# c("James-Middle",'Potomac-Lower')#NULL# c("James River - Middle",'Potomac River')#NULL#"James River - Lower"
 # filter(WQM_Stations_Spatial, ASSESS_REG %in% assessmentRegionFilter) %>%
 #   distinct(Basin_Name) %>%  pull()
 VAHU6Filter <- NULL#'JU11'#NULL 
@@ -109,7 +118,9 @@ VAHU6Filter <- NULL#'JU11'#NULL
 
 
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, manualSelection = NULL, wildcardSelection = NULL)
+                                         ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, 
+                                         programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,
+                                         manualSelection = NULL, wildcardSelection = NULL)
 
  
 ### end filter options
@@ -234,7 +245,7 @@ multistationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
            between(as.Date(Ana_Received_Date), !! dateRange_multistation[1], !! dateRange_multistation[2]) & # x >= left & x <= right
            Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
   as_tibble() %>%
-  left_join(dplyr::select(multistationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) 
+  left_join(dplyr::select(multistationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))
 
 
 
