@@ -196,7 +196,7 @@ shinyUI(fluidPage(tags$head(
                                                   conditionalPanel(condition = "input.queryType == 'Wildcard Selection'",
                                                     uiOutput('wildcardSelection')),
                                                   # Manually Specify Stations Selection
-                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
+                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)'",
                                                     uiOutput('manualSelectionUI')),
                                                   hr(), # keep these at the top level to allow reuse of same filter parameters
                                                   helpText("Additional filter(s) applied on 'Pull Stations' request. These filters are not interactively cross validated."),
@@ -210,6 +210,8 @@ shinyUI(fluidPage(tags$head(
                                                     uiOutput('labMediaCodeUI'),
                                                            fluidRow(column(6, uiOutput('sampleGroupCode_FilterUI')),
                                                            column(6,actionButton('showSampleGroupCodeTable', 'Sample Group Codes')))),
+                                                  helpText('Remember, use % as your wildcard, not *'),
+                                                  textInput('wildcardRunIDText', 'Filter Stations by Run ID Wildcard Selection', value = NULL, placeholder = 'HF%'), 
                                                   uiOutput('analyte_FilterUI'),
                                                   
                                                   # add in appropriate pull data button based on query type

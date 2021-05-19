@@ -65,11 +65,12 @@ programCodes <- pool %>% tbl("Wqm_Survey_Pgm_Cds_Codes_Wqm_View") %>% as_tibble(
 # user inputs
 #queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
 
-labGroupCodeFilter <- 'TNUTL'
+runIDfilter <- "W19%"#NULL
+labGroupCodeFilter <- NULL#'TNUTL'
 programCodeFilter <- NULL#'HF'#c('AW','TR')
 countyFilter <- NULL#"Roanoke City"#
 ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
-dateRange_multistation <- c(as.Date('2019-01-01'), as.Date('2019-12-31'))#as.Date(Sys.Date()- 7))
+dateRange_multistation <- c(as.Date('2018-01-01'), as.Date('2020-12-31'))#as.Date(Sys.Date()- 7))
 ## pull based on parameter
 analyte_Filter <- NULL#
   c('SODIUM (NA), ATM DEP, WET, DISS, MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)', 'SODIUM, TOTAL (MG/L AS NA)', 'SODIUM-TOTAL  UG/L (AS NA)')
@@ -81,7 +82,7 @@ analyte_Filter <- NULL#
 
   # %>% 
   #   left_join(dplyr::select(labMediaCodes, Lc_Parm_Group_Code, Lc_Description, Act_Media_Desc), by = c('Pg_Parm_Group_Code' = 'Lc_Parm_Group_Code'))
-  
+
   
 # manually specify troubleshooting
 manualSelection1 <- c('2-JKS028.69', '2-JKS023.61')#4AROA000.00'#c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
@@ -89,7 +90,7 @@ manualSelection1 <- c('2-JKS028.69', '2-JKS023.61')#4AROA000.00'#c('1BSMT001.53'
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                     ecoregionFilter = ecoregionFilter, countyFilter = countyFilter, dateRange_multistation, analyte_Filter, 
-                                                    programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,
+                                                    programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter, runIDfilter = runIDfilter,
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
 # wildcard troubleshooting
@@ -99,7 +100,7 @@ wildcardText1 <- '4aroa%'#'2-JKS02%'#'3-RPP10%'
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                     ecoregionFilter = "Ridge and Valley", countyFilter, dateRange_multistation, analyte_Filter= NULL, 
-                                                    programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,
+                                                    programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter, runIDfilter = runIDfilter, 
                                                     manualSelection = NULL, wildcardSelection = wildcardText1)
 
 
@@ -107,7 +108,7 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection',
 # Spatial filters troubleshooting
 ### begin
 assessmentRegionFilter <- c("BRRO")#c("BRRO")#NULL#c("PRO")#unique(subbasins$ASSESS_REG)
-subbasinFilter <- NULL#"Appomattox"#"James-Upper"# c("James-Middle",'Potomac-Lower')#NULL# c("James River - Middle",'Potomac River')#NULL#"James River - Lower"
+subbasinFilter <- "James-Upper"#NULL#"Appomattox"#"James-Upper"# c("James-Middle",'Potomac-Lower')#NULL# c("James River - Middle",'Potomac River')#NULL#"James River - Lower"
 # filter(WQM_Stations_Spatial, ASSESS_REG %in% assessmentRegionFilter) %>%
 #   distinct(Basin_Name) %>%  pull()
 VAHU6Filter <- NULL#'JU11'#NULL 
@@ -119,7 +120,7 @@ VAHU6Filter <- NULL#'JU11'#NULL
 
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
                                          ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, 
-                                         programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,
+                                         programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,runIDfilter= runIDfilter,
                                          manualSelection = NULL, wildcardSelection = NULL)
 
  
@@ -138,9 +139,9 @@ WQM_Station_Full_REST <- filter(WQM_Stations_Full, WQM_STA_ID %in% WQM_Stations_
 stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST, 'multi')
 
 ## Pull CEDS Station Information 
-if(nrow(WQM_Stations_Filter) > 0){
-  stationInfoFin <- stationInfoConsolidated(pool, WQM_Stations_Filter$StationID, WQM_Station_Full_REST)
-}
+# if(nrow(WQM_Stations_Filter) > 0){
+#   stationInfoFin <- stationInfoConsolidated(pool, WQM_Stations_Filter$StationID, WQM_Station_Full_REST, WQM_Stations_Spatial)
+# }
 
 
 
@@ -177,58 +178,58 @@ multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data in
 # 
 # 
 # # color palette for assessment polygons
-pal <- colorFactor(
-  palette = topo.colors(7),
-  domain = assessmentRegions$ASSESS_REG)
-pal2 <- colorFactor(
-  palette = rainbow(7),
-  domain = ecoregion$US_L3NAME)
-
-assessmentLayerFilter <- filter(assessmentLayer, VAHU6 %in% WQM_Stations_Filter$VAHU6)
-
-
-CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
-             options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
-                                     preferCanvas = TRUE)) %>%
-  setView(-79.1, 37.7, zoom=7)  %>%
-  # for when going to points
-  flyToBounds(lng1 = min(WQM_Stations_Filter$Longitude)+0.01,
-            lat1 = min(WQM_Stations_Filter$Latitude)+0.01,
-            lng2 = max(WQM_Stations_Filter$Longitude)+0.01,
-            lat2 = max(WQM_Stations_Filter$Latitude)+0.01) %>%
-  addPolygons(data= ecoregion,  color = 'gray', weight = 1,
-              fillColor= ~pal2(ecoregion$US_L3NAME), fillOpacity = 0.5,stroke=0.1,
-              group="Level III Ecoregions",label = ~US_L3NAME) %>% hideGroup('Level III Ecoregions') %>%
-  addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
-              fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
-              group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
-
-
-  addCircleMarkers(data = WQM_Stations_Filter,
-                   color='blue', fillColor='gray', radius = 4,
-                   fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
-                   label = ~StationID, layerId = ~StationID,
-                   popup = leafpop::popupTable(WQM_Stations_Filter, zcol=c('StationID'))) %>%
-  {if(nrow(assessmentLayerFilter) > 0)
-    addPolygons(., data= assessmentLayerFilter,  color = 'black', weight = 1,
-                fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
-                group="VAHU6", label = ~VAHU6) %>% hideGroup('VAHU6')
-    else . } %>%
-
-  inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
-  addDrawToolbar(
-    targetGroup='Selected',
-    polylineOptions=FALSE,
-    markerOptions = FALSE,
-    polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
-    rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
-    circleOptions = FALSE,
-    circleMarkerOptions = FALSE,
-    editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
-  addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
-                   overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
-                   options=layersControlOptions(collapsed=T),
-                   position='topleft')
+# pal <- colorFactor(
+#   palette = topo.colors(7),
+#   domain = assessmentRegions$ASSESS_REG)
+# pal2 <- colorFactor(
+#   palette = rainbow(7),
+#   domain = ecoregion$US_L3NAME)
+# 
+# assessmentLayerFilter <- filter(assessmentLayer, VAHU6 %in% WQM_Stations_Filter$VAHU6)
+# 
+# 
+# CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
+#              options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
+#                                      preferCanvas = TRUE)) %>%
+#   setView(-79.1, 37.7, zoom=7)  %>%
+#   # for when going to points
+#   flyToBounds(lng1 = min(WQM_Stations_Filter$Longitude)+0.01,
+#             lat1 = min(WQM_Stations_Filter$Latitude)+0.01,
+#             lng2 = max(WQM_Stations_Filter$Longitude)+0.01,
+#             lat2 = max(WQM_Stations_Filter$Latitude)+0.01) %>%
+#   addPolygons(data= ecoregion,  color = 'gray', weight = 1,
+#               fillColor= ~pal2(ecoregion$US_L3NAME), fillOpacity = 0.5,stroke=0.1,
+#               group="Level III Ecoregions",label = ~US_L3NAME) %>% hideGroup('Level III Ecoregions') %>%
+#   addPolygons(data= assessmentRegions,  color = 'black', weight = 1,
+#               fillColor= ~pal(assessmentRegions$ASSESS_REG), fillOpacity = 0.5,stroke=0.1,
+#               group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>%
+# 
+# 
+#   addCircleMarkers(data = WQM_Stations_Filter,
+#                    color='blue', fillColor='gray', radius = 4,
+#                    fillOpacity = 0.5,opacity=0.8,weight = 2,stroke=T, group="Spatial Filter Station(s)",
+#                    label = ~StationID, layerId = ~StationID,
+#                    popup = leafpop::popupTable(WQM_Stations_Filter, zcol=c('StationID'))) %>%
+#   {if(nrow(assessmentLayerFilter) > 0)
+#     addPolygons(., data= assessmentLayerFilter,  color = 'black', weight = 1,
+#                 fillColor= 'gray', fillOpacity = 0.5,stroke=0.1,
+#                 group="VAHU6", label = ~VAHU6) %>% hideGroup('VAHU6')
+#     else . } %>%
+# 
+#   inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
+#   addDrawToolbar(
+#     targetGroup='Selected',
+#     polylineOptions=FALSE,
+#     markerOptions = FALSE,
+#     polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+#     rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0, color = 'white', weight = 3)),
+#     circleOptions = FALSE,
+#     circleMarkerOptions = FALSE,
+#     editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
+#   addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
+#                    overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", 'Assessment Regions'),
+#                    options=layersControlOptions(collapsed=T),
+#                    position='topleft')
 
 
 

@@ -568,14 +568,19 @@ shinyServer(function(input, output, session) {
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
                                                           input$assessmentRegionFilter, input$ecoregionFilter, input$countyFilter, input$dateRange_multistation, 
                                                           input$analyte_Filter, programCodeFilter = input$programCode_Filter, labGroupCodeFilter = input$sampleGroupCode_Filter,
-                                                          manualSelection = NULL, wildcardSelection = NULL)
-    remove_modal_spinner()     })
+                                                          runIDfilter = input$wildcardRunIDText, manualSelection = NULL, wildcardSelection = NULL)
+    remove_modal_spinner()   
+    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
+      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }})
   
   # Query by wildcard selection
   output$wildcardSelection <- renderUI({req(input$queryType == 'Wildcard Selection')
     list(
       helpText('Remember, use % as your wildcard, not *'),
-      textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )     })
+      textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )  
+    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
+      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
+    })
   
   observeEvent(input$begin_multistation_wildcard,{
     show_modal_spinner(spin = 'flower')
@@ -587,9 +592,12 @@ shinyServer(function(input, output, session) {
                                                                          analyte_Filter = input$analyte_Filter, 
                                                                          programCodeFilter = input$programCode_Filter, 
                                                                          labGroupCodeFilter =  input$sampleGroupCode_Filter,
-                                                                         manualSelection = NULL, 
+                                                                         runIDfilter = input$wildcardRunIDText, manualSelection = NULL, 
                                                                          wildcardSelection = as.character(toupper(input$wildcardText))) 
-    remove_modal_spinner()  })
+    remove_modal_spinner()  
+    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
+      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
+    })
                                                   
   
   #output$test <- renderPrint({input$wildcardText})
@@ -612,7 +620,7 @@ shinyServer(function(input, output, session) {
                                                                          analyte_Filter = input$analyte_Filter, 
                                                                          programCodeFilter = input$programCode_Filter, 
                                                                          labGroupCodeFilter =  input$sampleGroupCode_Filter,
-                                                                         manualSelection = as.character(input$manualSelection),
+                                                                         runIDfilter = input$wildcardRunIDText, manualSelection = as.character(input$manualSelection),
                                                                          wildcardSelection = NULL) 
     remove_modal_spinner() })
 
@@ -814,7 +822,7 @@ shinyServer(function(input, output, session) {
     
     ### Analyte information
     if(nrow(reactive_objects$multistationFieldData) == 0){
-      showNotification("No data for selected window.", duration = 30, type = 'error')   
+      showNotification("No data for selected window.", duration = 10, type = 'error')   
       } else {
         reactive_objects$multistationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
           filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$multistationFieldData$Fdt_Id &

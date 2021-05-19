@@ -801,7 +801,7 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
 # # Pull WQM stations based on spatial and analyte info
 WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
                                          ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, programCodeFilter, 
-                                         labGroupCodeFilter, manualSelection, wildcardSelection){
+                                         labGroupCodeFilter, runIDfilter, manualSelection, wildcardSelection){
   # preliminary stations before daterange filter
   if(queryType == 'Spatial Filters' ){
     preliminaryStations <- WQM_Stations_Spatial %>%
@@ -849,16 +849,20 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
   # add daterange filter based on preliminary station results
   if(nrow(preliminaryStations) > 0){
     if(!is.null(dateRange_multistation)){
-    stationField <- pool %>% tbl("Wqm_Field_Data_View") %>%
-      filter(Fdt_Sta_Id %in% !! preliminaryStations$StationID &
-               between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2]) ) %>% # & # x >= left & x <= right
-               #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%
-     # dplyr::select(Fdt_Sta_Id, Fdt_Id) %>% # save time by only bringing back station names
-      as_tibble() %>% 
-      {if(!is.null(programCodeFilter))
-        filter(., Fdt_Spg_Code %in% programCodeFilter)
-        else .}
-    
+      stationField <- pool %>% tbl("Wqm_Field_Data_View") %>%
+        filter(Fdt_Sta_Id %in% !! preliminaryStations$StationID &
+                 between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2]) ) %>% # & # x >= left & x <= right
+        #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%
+        # dplyr::select(Fdt_Sta_Id, Fdt_Id) %>% # save time by only bringing back station names
+        as_tibble() %>% 
+        {if(!is.null(programCodeFilter))
+          filter(., Fdt_Spg_Code %in% programCodeFilter)
+          else .}
+      # wildcard runIDfilter if needed
+      if(!is.null(runIDfilter)){
+        stationField <- sqldf(paste0('SELECT * FROM stationField WHERE Fdt_Run_Id like "',
+                                     runIDfilter, '"'))      }
+      
     # filter by lab group code before bringing in analyte data
     if(nrow(stationField) > 0 & !is.null(labGroupCodeFilter) ){
       sampleView <- pool %>% tbl("Wqm_Samples_View") %>%
