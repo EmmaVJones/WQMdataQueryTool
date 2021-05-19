@@ -37,6 +37,9 @@ labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
 
 
 WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
+WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
+  rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
+
 # while server is down
 #readRDS('C:/HardDriveBackup/R/pins11182020/ejones/WQSlookup-withStandards.RDS')
 
@@ -51,8 +54,8 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
-dateRange <- c(as.Date('2010-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
+station <- '2-SKC001.17'#'2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+dateRange <- c(as.Date('2015-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
 # z <- pool %>% tbl( "Wqm_Field_data_View") %>%
@@ -74,7 +77,7 @@ stationInfo <- pool %>% tbl( "Wqm_Stations_View") %>%
 WQM_Station_Full_REST <- WQM_Station_Full_REST_request(pool, station, subbasinVAHU6crosswalk, subbasins, ecoregion)
 
 ## Pull CEDS Station Information 
-stationInfoFin <- stationInfoConsolidated(pool, station, WQM_Station_Full_REST)
+stationInfoFin <- stationInfoConsolidated(pool, station, WQM_Station_Full_REST,WQM_Stations_Spatial)
 
 #extra step, kinda seems unnecessary
 stationInfo_sf <- WQM_Station_Full_REST
