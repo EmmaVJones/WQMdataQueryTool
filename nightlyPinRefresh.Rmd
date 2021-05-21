@@ -18,6 +18,7 @@ library(pool)
 library(DBI)
 library(pins)
 library(config)
+library(dbplyr)
 
 # get configuration settings
 conn <- config::get("connectionSettings")
@@ -58,7 +59,7 @@ pool <- dbPool(
 WQM_Stations, just name options. Using WQM_Sta_GIS_View because it holds more stations. Also including lat/lng in decimal degrees.
 
 ```{r}
-WQM_Sta_GIS_View_Stations <- pool %>% tbl("Wqm_Sta_GIS_View") %>%
+WQM_Sta_GIS_View_Stations <- pool %>% tbl(in_schema("wqm", "Wqm_Sta_GIS_View")) %>%
   dplyr::select(Station_Id, Latitude, Longitude) %>%
   as_tibble()
 

@@ -43,7 +43,7 @@ WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconn
 
 
 # analyte options
-Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>%
+Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl(in_schema("wqm", 'Wqm_Parameter_Grp_Cds_Codes_Wqm_View')) %>%
   filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
   distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
 
@@ -72,7 +72,7 @@ shinyServer(function(input, output, session) {
   # test station viability in separate object
   observeEvent(input$begin, {
     ## Station Information
-    reactive_objects$stationInfo <- pool %>% tbl( "Wqm_Stations_View") %>%
+    reactive_objects$stationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
       filter(Sta_Id %in% !! toupper(input$station)) %>%
       as_tibble()
 
@@ -101,7 +101,7 @@ shinyServer(function(input, output, session) {
     reactive_objects$stationInfoSampleMetrics <- stationSummarySampingMetrics(WQM_Station_Full_REST(), 'single')
 
     ## Field Data Information
-    reactive_objects$stationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
+    reactive_objects$stationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
       filter(Fdt_Sta_Id %in% !! input$station &
                between(as.Date(Fdt_Date_Time), !! input$dateRange[1], !! input$dateRange[2]) ) %>% #& # x >= left & x <= right
                #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>% # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
@@ -113,7 +113,7 @@ shinyServer(function(input, output, session) {
     if(nrow(reactive_objects$stationFieldData) == 0){
       showNotification("No data for selected window.", duration = 15, type = 'error')
     } else {
-      reactive_objects$stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
+      reactive_objects$stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
         filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$stationFieldData$Fdt_Id &
                  between(as.Date(Ana_Received_Date), !! input$dateRange[1], !! input$dateRange[2])& # x >= left & x <= right
                  Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
@@ -565,22 +565,24 @@ shinyServer(function(input, output, session) {
   observeEvent(input$begin_multistation_spatial,{
     show_modal_spinner(spin = 'flower')
     
+    #print(input$wildcardRunIDText)
+    
+    
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
                                                           input$assessmentRegionFilter, input$ecoregionFilter, input$countyFilter, input$dateRange_multistation, 
                                                           input$analyte_Filter, programCodeFilter = input$programCode_Filter, labGroupCodeFilter = input$sampleGroupCode_Filter,
                                                           runIDfilter = input$wildcardRunIDText, manualSelection = NULL, wildcardSelection = NULL)
-    remove_modal_spinner()   
+    remove_modal_spinner()  
+    #print( reactive_objects$WQM_Stations_Filter)
     if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
-      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }})
+      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
+    })
   
   # Query by wildcard selection
   output$wildcardSelection <- renderUI({req(input$queryType == 'Wildcard Selection')
     list(
       helpText('Remember, use % as your wildcard, not *'),
-      textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )  
-    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
-      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
-    })
+      textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )      })
   
   observeEvent(input$begin_multistation_wildcard,{
     show_modal_spinner(spin = 'flower')
@@ -595,6 +597,7 @@ shinyServer(function(input, output, session) {
                                                                          runIDfilter = input$wildcardRunIDText, manualSelection = NULL, 
                                                                          wildcardSelection = as.character(toupper(input$wildcardText))) 
     remove_modal_spinner()  
+    #print( reactive_objects$WQM_Stations_Filter)
     if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
       showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
     })
@@ -612,7 +615,7 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$begin_multistation_manual, {
     show_modal_spinner(spin = 'flower')
-    
+
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (requires a few seconds for the station text box to appear)', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
@@ -622,7 +625,11 @@ shinyServer(function(input, output, session) {
                                                                          labGroupCodeFilter =  input$sampleGroupCode_Filter,
                                                                          runIDfilter = input$wildcardRunIDText, manualSelection = as.character(input$manualSelection),
                                                                          wildcardSelection = NULL) 
-    remove_modal_spinner() })
+    remove_modal_spinner()
+    #print( reactive_objects$WQM_Stations_Filter)
+    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
+      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
+    })
 
   
   
@@ -813,7 +820,7 @@ shinyServer(function(input, output, session) {
       summarise(`Sample Codes` = paste0(WQM_YRS_SPG_CODE, collapse = ' | '))         
     
     ## Field Data Information
-    reactive_objects$multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
+    reactive_objects$multistationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
       filter(Fdt_Sta_Id %in% !! reactive_objects$multistationSelection$Sta_Id &  #reactive_objects$WQM_Stations_Filter$StationID &
                between(as.Date(Fdt_Date_Time), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) ) %>% #& # x >= left & x <= right
                #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%  # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
@@ -824,7 +831,7 @@ shinyServer(function(input, output, session) {
     if(nrow(reactive_objects$multistationFieldData) == 0){
       showNotification("No data for selected window.", duration = 10, type = 'error')   
       } else {
-        reactive_objects$multistationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
+        reactive_objects$multistationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
           filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$multistationFieldData$Fdt_Id &
                    between(as.Date(Ana_Received_Date), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
                    Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 

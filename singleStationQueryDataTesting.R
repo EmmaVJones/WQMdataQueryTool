@@ -68,7 +68,7 @@ dateRange <- c(as.Date('2015-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date()
 ### Geospatial Information
 
 # Basic station info and make sure station in CEDS
-stationInfo <- pool %>% tbl( "Wqm_Stations_View") %>%
+stationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
   filter(Sta_Id %in% !! toupper(station)) %>%
   as_tibble()
 
@@ -92,7 +92,7 @@ userOrder <- NA
 
 ### Field Data Information
 
-stationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
+stationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
   filter(Fdt_Sta_Id %in% !! station &
            between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ) %>% # & # x >= left & x <= right
            #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%  # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
@@ -100,10 +100,10 @@ stationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
   filter(! Ssc_Description %in% "INVALID DATA SET QUALITY ASSURANCE FAILURE")
 
 ### Analyte information
-labMediaCodes <-  pool %>% tbl("Wqm_Lab_Catalogs_View") %>% as_tibble()
-programCodes <- pool %>% tbl("Wqm_Survey_Pgm_Cds_Codes_Wqm_View") %>% as_tibble()
+labMediaCodes <-  pool %>% tbl(in_schema("wqm", "Wqm_Lab_Catalogs_View")) %>% as_tibble()
+programCodes <- pool %>% tbl(in_schema("wqm", "Wqm_Survey_Pgm_Cds_Codes_Wqm_View")) %>% as_tibble()
 
-stationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
+stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
   filter(Ana_Sam_Fdt_Id %in% !! stationFieldData$Fdt_Id  &
            between(as.Date(Ana_Received_Date), !! dateRange[1], !! dateRange[2]) & # x >= left & x <= right
            Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
@@ -219,7 +219,7 @@ cdfplot(probEst, prettyParameterName , parameterSwitch,
 
 # Habitat Data pull for BSA
 BSAhabitatQuery <- function(pool, station, dateRangeFilter){
-  totalHabitatSample <- pool %>% tbl("Edas_Habitat_Sample_View") %>%
+  totalHabitatSample <- pool %>% tbl(in_schema("wqm", "Edas_Habitat_Sample_View")) %>%
     filter(STA_ID %in% !! toupper(station) &  between(as.Date(FDT_DATE_TIME), !!dateRangeFilter[1], !!dateRangeFilter[2])) %>%
     as_tibble() %>% 
     rename("StationID" = "STA_ID",
@@ -238,7 +238,7 @@ BSAhabitatQuery <- function(pool, station, dateRangeFilter){
                               TRUE ~ as.character("Outside Sample Window"))) %>%
     dplyr::select(HabSampID, StationID, `Collection Date`, `Entered By`, `Entered Date`, `Field Team`, `HabSample Comment`, Gradient, Season)
   if(nrow(totalHabitatSample) > 0){
-    totalHabitat <- pool %>% tbl("Edas_Habitat_Values_View") %>%
+    totalHabitat <- pool %>% tbl(in_schema("wqm", "Edas_Habitat_Values_View")) %>%
       filter(WHS_SAMP_ID %in% !! totalHabitatSample$HabSampID) %>%
       as_tibble() %>%
       rename("HabSampID" = "WHS_SAMP_ID",

@@ -54,18 +54,18 @@ pool <- dbPool(
 )
 
 # analyte options 
-Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl('Wqm_Parameter_Grp_Cds_Codes_Wqm_View') %>% 
+Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl(in_schema("wqm", 'Wqm_Parameter_Grp_Cds_Codes_Wqm_View')) %>% 
   filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
   distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
-labMediaCodes <-  pool %>% tbl("Wqm_Lab_Catalogs_View") %>% as_tibble()
-programCodes <- pool %>% tbl("Wqm_Survey_Pgm_Cds_Codes_Wqm_View") %>% as_tibble()
+labMediaCodes <-  pool %>% tbl(in_schema("wqm", "Wqm_Lab_Catalogs_View")) %>% as_tibble()
+programCodes <- pool %>% tbl(in_schema("wqm", "Wqm_Survey_Pgm_Cds_Codes_Wqm_View")) %>% as_tibble()
 
 
 
 # user inputs
 #queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
 
-runIDfilter <- "W19%"#NULL
+runIDfilter <- NULL# "W19%"#
 labGroupCodeFilter <- NULL#'TNUTL'
 programCodeFilter <- NULL#'HF'#c('AW','TR')
 countyFilter <- NULL#"Roanoke City"#
@@ -99,7 +99,7 @@ wildcardText1 <- '4aroa%'#'2-JKS02%'#'3-RPP10%'
 #                                 wildcardText1, '"'))
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                    ecoregionFilter = "Ridge and Valley", countyFilter, dateRange_multistation, analyte_Filter= NULL, 
+                                                    ecoregionFilter = ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter= NULL, 
                                                     programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter, runIDfilter = runIDfilter, 
                                                     manualSelection = NULL, wildcardSelection = wildcardText1)
 
@@ -238,7 +238,7 @@ multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data in
 
 ### Field Data Information
 
-multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
+multistationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
   filter(Fdt_Sta_Id %in% !! WQM_Stations_Filter$StationID &
            between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2])) %>% # & # x >= left & x <= right
            #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%  # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
@@ -248,7 +248,7 @@ multistationFieldData <- pool %>% tbl("Wqm_Field_Data_View") %>%
 
 ### Analyte information
 
-multistationAnalyteData <- pool %>% tbl("Wqm_Analytes_View") %>%
+multistationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
   filter(Ana_Sam_Fdt_Id %in% !! multistationFieldData$Fdt_Id &
            between(as.Date(Ana_Received_Date), !! dateRange_multistation[1], !! dateRange_multistation[2]) & # x >= left & x <= right
            Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 

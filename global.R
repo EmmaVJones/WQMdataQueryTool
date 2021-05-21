@@ -15,6 +15,7 @@ library(pool)
 library(geojsonsf)
 library(pins)
 library(sqldf)
+library(dbplyr)
 
 #Bring in VLOOKUP-like function written in R
 source('vlookup.R')
@@ -70,8 +71,8 @@ onStop(function() {
 })
 
 stationOptions <- pin_get('ejones/WQM-Sta-GIS-View-Stations', board= 'rsconnect')
-programCodes <- pool %>% tbl("Wqm_Survey_Pgm_Cds_Codes_Wqm_View") %>% as_tibble()
-labMediaCodes <- pool %>% tbl("Wqm_Lab_Catalogs_View") %>% as_tibble()
+programCodes <- pool %>% tbl(in_schema("wqm", "Wqm_Survey_Pgm_Cds_Codes_Wqm_View")) %>% as_tibble()
+labMediaCodes <- pool %>% tbl(in_schema("wqm", "Wqm_Lab_Catalogs_View")) %>% as_tibble()
 
 unitData <- read_csv('data/probParameterUnits.csv')
 # Temporary list that we can compare data to. Maybe we increase to benthic metrics, MCCU, + more in time
@@ -148,7 +149,7 @@ WQM_Station_Full_REST_request <- function(pool, station, subbasinVAHU6crosswalk,
     
   } else { # station doesn't yet exist in WQM full dataset
     # get what we can from CEDS
-    stationGISInfo <- pool %>% tbl( "WQM_Sta_GIS_View") %>%
+    stationGISInfo <- pool %>% tbl(in_schema("wqm",  "WQM_Sta_GIS_View")) %>%
       filter(Station_Id %in% !! toupper(station)) %>%
       as_tibble() 
     # pull a known station to steal data structure
@@ -178,7 +179,7 @@ WQM_Station_Full_REST_request <- function(pool, station, subbasinVAHU6crosswalk,
 
 ## Pull CEDS Station Information 
 stationInfoConsolidated <- function(pool, station, WQM_Station_Full_REST, WQM_Stations_Spatial){
-  left_join(pool %>% tbl("Wqm_Stations_View") %>%  
+  left_join(pool %>% tbl(in_schema("wqm", "Wqm_Stations_View")) %>%  
               # need to repull data instead of calling stationInfo bc app crashes
               filter(Sta_Id %in% !! toupper(station)) %>%
               as_tibble() %>%
@@ -849,7 +850,7 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
   # add daterange filter based on preliminary station results
   if(nrow(preliminaryStations) > 0){
     if(!is.null(dateRange_multistation)){
-      stationField <- pool %>% tbl("Wqm_Field_Data_View") %>%
+      stationField <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
         filter(Fdt_Sta_Id %in% !! preliminaryStations$StationID &
                  between(as.Date(Fdt_Date_Time), !! dateRange_multistation[1], !! dateRange_multistation[2]) ) %>% # & # x >= left & x <= right
         #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%
@@ -859,13 +860,13 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
           filter(., Fdt_Spg_Code %in% programCodeFilter)
           else .}
       # wildcard runIDfilter if needed
-      if(!is.null(runIDfilter)){
+      if(!is.null(runIDfilter) & runIDfilter != ""){
         stationField <- sqldf(paste0('SELECT * FROM stationField WHERE Fdt_Run_Id like "',
                                      runIDfilter, '"'))      }
       
     # filter by lab group code before bringing in analyte data
     if(nrow(stationField) > 0 & !is.null(labGroupCodeFilter) ){
-      sampleView <- pool %>% tbl("Wqm_Samples_View") %>%
+      sampleView <- pool %>% tbl(in_schema("wqm", "Wqm_Samples_View")) %>%
         filter(Sam_Fdt_Id %in% !! stationField$Fdt_Id &
                  Sam_Mrs_Lcc_Parm_Group_Cd %in% !! labGroupCodeFilter) %>% 
         as_tibble()   
@@ -877,7 +878,7 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
   }
 
   if(!is.null(analyte_Filter)){
-    stationAnalyte <- pool %>% tbl("Wqm_Analytes_View") %>%
+    stationAnalyte <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
       filter(Ana_Sam_Fdt_Id %in% !!  stationField$Fdt_Id &
                between(as.Date(Ana_Received_Date), !! dateRange_multistation[1], !! dateRange_multistation[2]) & # x >= left & x <= right
                Pg_Parm_Name %in% analyte_Filter) %>%
@@ -898,7 +899,7 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
 
 # Habitat Data pull for BSA
 BSAhabitatQuery <- function(pool, station, dateRangeFilter){
-  totalHabitatSample <- pool %>% tbl("Edas_Habitat_Sample_View") %>%
+  totalHabitatSample <- pool %>% tbl(in_schema("wqm", "Edas_Habitat_Sample_View")) %>%
     filter(STA_ID %in% !! toupper(station) &  between(as.Date(FDT_DATE_TIME), !!dateRangeFilter[1], !!dateRangeFilter[2])) %>%
     as_tibble() %>% 
     rename("StationID" = "STA_ID",
@@ -917,7 +918,7 @@ BSAhabitatQuery <- function(pool, station, dateRangeFilter){
                               TRUE ~ as.character("Outside Sample Window"))) %>%
     dplyr::select(HabSampID, StationID, `Collection Date`, `Entered By`, `Entered Date`, `Field Team`, `HabSample Comment`, Gradient, Season)
   if(nrow(totalHabitatSample) > 0){
-    totalHabitat <- pool %>% tbl("Edas_Habitat_Values_View") %>%
+    totalHabitat <- pool %>% tbl(in_schema("wqm", "Edas_Habitat_Values_View")) %>%
       filter(WHS_SAMP_ID %in% !! totalHabitatSample$HabSampID) %>%
       as_tibble() %>%
       rename("HabSampID" = "WHS_SAMP_ID",
