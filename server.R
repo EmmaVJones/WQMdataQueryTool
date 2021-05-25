@@ -2,6 +2,7 @@ source('global.R')
 
 assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
 ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+ecoregionLevel4 <- st_read('data/GIS/vaECOREGIONlevel4__proj84.shp')
 county <- st_read('data/GIS/VACountyBoundaries.shp')
 assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
   st_transform( st_crs(4326))
@@ -499,7 +500,10 @@ shinyServer(function(input, output, session) {
     selectInput('VAHU6Filter','VAHU6', choices = choices, multiple = T) })
 
   output$spatialFilters_Ecoregion <- renderUI({#req(input$queryType == 'Spatial Filters')
-    selectInput('ecoregionFilter','Level 3 Ecoregion', choices = unique(ecoregion$US_L3NAME), multiple = T) })
+    selectInput('ecoregionFilter','Level 3 Ecoregion', choices = sort(unique(ecoregion$US_L3NAME)), multiple = T) })
+  
+  output$spatialFilters_EcoregionLevel4 <- renderUI({#req(input$queryType == 'Spatial Filters')
+    selectInput('ecoregionFilterLevel4','Level 4 Ecoregion', choices = sort(unique(ecoregionLevel4$US_L4NAME)), multiple = T) })
   
   output$spatialFilters_County <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('countyFilter','County/City', choices = sort(unique(county$NAME)), multiple = T) })
@@ -569,7 +573,7 @@ shinyServer(function(input, output, session) {
     
     
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
-                                                          input$assessmentRegionFilter, input$ecoregionFilter, input$countyFilter, input$dateRange_multistation, 
+                                                          input$assessmentRegionFilter, input$ecoregionFilter, input$ecoregionFilterLevel4, input$countyFilter, input$dateRange_multistation, 
                                                           input$analyte_Filter, programCodeFilter = input$programCode_Filter, labGroupCodeFilter = input$sampleGroupCode_Filter,
                                                           runIDfilter = input$wildcardRunIDText, manualSelection = NULL, wildcardSelection = NULL)
     remove_modal_spinner()  
@@ -589,7 +593,8 @@ shinyServer(function(input, output, session) {
     
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
+                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionFilter = input$ecoregionFilterLevel4,
+                                                                         countyFilter = input$countyFilter,
                                                                          dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, 
                                                                          programCodeFilter = input$programCode_Filter, 
@@ -618,7 +623,8 @@ shinyServer(function(input, output, session) {
 
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (requires a few seconds for the station text box to appear)', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, countyFilter = input$countyFilter,
+                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionFilter = input$ecoregionFilterLevel4,
+                                                                         countyFilter = input$countyFilter,
                                                                          dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, 
                                                                          programCodeFilter = input$programCode_Filter, 

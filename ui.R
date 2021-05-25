@@ -201,6 +201,7 @@ shinyUI(fluidPage(tags$head(
                                                   hr(), # keep these at the top level to allow reuse of same filter parameters
                                                   helpText("Additional filter(s) applied on 'Pull Stations' request. These filters are not interactively cross validated."),
                                                   uiOutput('spatialFilters_Ecoregion'),
+                                                  uiOutput('spatialFilters_EcoregionLevel4'),
                                                   uiOutput('spatialFilters_County'),
                                                   uiOutput('dateRange_multistationUI'),
                                                   fluidRow(column(6, uiOutput('programCode_FilterUI')),

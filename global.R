@@ -801,7 +801,7 @@ cdfplot <- function(cdfdata, prettyParameterName,parameter,subpopulation,dataset
 
 # # Pull WQM stations based on spatial and analyte info
 WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, programCodeFilter, 
+                                         ecoregionFilter,  ecoregionLevel4Filter, countyFilter, dateRange_multistation, analyte_Filter, programCodeFilter, 
                                          labGroupCodeFilter, runIDfilter, manualSelection, wildcardSelection){
   # preliminary stations before daterange filter
   if(queryType == 'Spatial Filters' ){
@@ -823,6 +823,9 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
         filter(., US_L3NAME %in% ecoregionFilter)
         #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
         else .} %>% 
+      {if(!is.null(ecoregionLevel4Filter))
+        filter(., US_L4NAME %in% ecoregionLevel4Filter)
+        else .} %>%
       {if(!is.null(countyFilter))
         filter(., CountyCityName %in% countyFilter)
         else .}}
@@ -832,6 +835,9 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
         filter(., US_L3NAME %in% ecoregionFilter)
         #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
         else .} %>% 
+      {if(!is.null(ecoregionLevel4Filter))
+        filter(., US_L4NAME %in% ecoregionLevel4Filter)
+        else .} %>%
       {if(!is.null(countyFilter))
         filter(., CountyCityName %in% countyFilter)
         else .} }
@@ -842,6 +848,9 @@ WQM_Stations_Filter_function <- function(queryType, pool, WQM_Stations_Spatial, 
         filter(., US_L3NAME %in% ecoregionFilter)
         #st_intersection(., filter(ecoregion, US_L3NAME %in% ecoregionFilter))
         else .} %>% 
+      {if(!is.null(ecoregionLevel4Filter))
+        filter(., US_L4NAME %in% ecoregionLevel4Filter)
+        else .} %>%
       {if(!is.null(countyFilter))
         filter(., CountyCityName %in% countyFilter)
         else .} }

@@ -7,6 +7,7 @@ source('global.R')
 
 assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
 ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+ecoregionLevel4 <- st_read('data/GIS/vaECOREGIONlevel4__proj84.shp')
 county <- st_read('data/GIS/VACountyBoundaries.shp')
 assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
   st_transform( st_crs(4326)) 
@@ -65,11 +66,12 @@ programCodes <- pool %>% tbl(in_schema("wqm", "Wqm_Survey_Pgm_Cds_Codes_Wqm_View
 # user inputs
 #queryType <- 'Manually Specify Stations'#'Spatial Filters' #Interactive Selection 
 
-runIDfilter <- NULL# "W19%"#
+runIDfilter <-""# NULL isn't what happens in the app# "W19%"#
 labGroupCodeFilter <- NULL#'TNUTL'
 programCodeFilter <- NULL#'HF'#c('AW','TR')
 countyFilter <- NULL#"Roanoke City"#
 ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
+ecoregionLevel4Filter <- NULL
 dateRange_multistation <- c(as.Date('2018-01-01'), as.Date('2020-12-31'))#as.Date(Sys.Date()- 7))
 ## pull based on parameter
 analyte_Filter <- NULL#
@@ -89,7 +91,7 @@ manualSelection1 <- c('2-JKS028.69', '2-JKS023.61')#4AROA000.00'#c('1BSMT001.53'
 #WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection1))  
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                    ecoregionFilter = ecoregionFilter, countyFilter = countyFilter, dateRange_multistation, analyte_Filter, 
+                                                    ecoregionFilter = ecoregionFilter, ecoregionLevel4Filter = ecoregionLevel4Filter, countyFilter = countyFilter, dateRange_multistation, analyte_Filter, 
                                                     programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter, runIDfilter = runIDfilter,
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
@@ -99,7 +101,7 @@ wildcardText1 <- '4aroa%'#'2-JKS02%'#'3-RPP10%'
 #                                 wildcardText1, '"'))
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                    ecoregionFilter = ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter= NULL, 
+                                                    ecoregionFilter = ecoregionFilter, ecoregionLevel4Filter = ecoregionLevel4Filter, countyFilter, dateRange_multistation, analyte_Filter= NULL, 
                                                     programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter, runIDfilter = runIDfilter, 
                                                     manualSelection = NULL, wildcardSelection = wildcardText1)
 
@@ -119,7 +121,7 @@ VAHU6Filter <- NULL#'JU11'#NULL
 
 
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, VAHU6Filter, subbasinFilter, assessmentRegionFilter,
-                                         ecoregionFilter, countyFilter, dateRange_multistation, analyte_Filter, 
+                                         ecoregionFilter, ecoregionLevel4Filter, countyFilter, dateRange_multistation, analyte_Filter, 
                                          programCodeFilter = programCodeFilter, labGroupCodeFilter = labGroupCodeFilter,runIDfilter= runIDfilter,
                                          manualSelection = NULL, wildcardSelection = NULL)
 
