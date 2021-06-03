@@ -220,7 +220,7 @@ shinyUI(fluidPage(tags$head(
                                                                    actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
                                                   conditionalPanel(condition = "input.queryType == 'Wildcard Selection'",
                                                                    actionButton('begin_multistation_wildcard', 'Pull Stations',class='btn-block')),
-                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (takes a few seconds for the station text box to appear)'",
+                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)'",
                                                                    actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
                                                  mainPanel(
                                                   leafletOutput('multistationMap'),

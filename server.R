@@ -593,7 +593,7 @@ shinyServer(function(input, output, session) {
     
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionFilter = input$ecoregionFilterLevel4,
+                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionLevel4Filter = input$ecoregionFilterLevel4,
                                                                          countyFilter = input$countyFilter,
                                                                          dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, 
@@ -623,7 +623,7 @@ shinyServer(function(input, output, session) {
 
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (requires a few seconds for the station text box to appear)', 
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionFilter = input$ecoregionFilterLevel4,
+                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionLevel4Filter = input$ecoregionFilterLevel4,
                                                                          countyFilter = input$countyFilter,
                                                                          dateRange_multistation = input$dateRange_multistation,
                                                                          analyte_Filter = input$analyte_Filter, 
@@ -659,13 +659,14 @@ shinyServer(function(input, output, session) {
                                                       ########filter(WQM_Station_View, Sta_Id %in% toupper(input$station)), # need to filter instead of calling stationInfo bc app crashes
                                                       dplyr::select(WQM_Station_Full, 
                                                                     STATION_ID, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
-                                                                    EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
+                                                                    EPA_ECO_US_L3NAME, EPA_ECO_US_L4CODE, EPA_ECO_US_L4NAME, BASINS_HUC_8_NAME, 
+                                                                    BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
                                                                     WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, WQM_YRS_YEAR, WQM_YRS_SPG_CODE),
                                                       by = c('Sta_Id' = 'STATION_ID')) %>%
       left_join(dplyr::select(WQM_Stations_Spatial, StationID, ASSESS_REG, CountyCityName), by = c('Sta_Id' = 'StationID')) %>% 
       dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, Latitude, Longitude, WQM_STA_STRAHER_ORDER,
-                    ASSESS_REG, CountyCityName, EPA_ECO_US_L3CODE, 
-                    EPA_ECO_US_L3NAME, BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
+                    ASSESS_REG, CountyCityName, EPA_ECO_US_L3CODE, EPA_ECO_US_L3NAME, EPA_ECO_US_L4CODE, EPA_ECO_US_L4NAME, 
+                    BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
                     WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything()) 
     
     # Empty station user selection to start with
