@@ -452,7 +452,7 @@ basicSummary <- function(stationFieldAnalyte){
 
 
 # Conventionals Summary
-conventionalsSummary <- function(stationFieldDataUserFilter, stationAnalyteDataUserFilter, , stationInfo){
+conventionalsSummary <- function(stationFieldDataUserFilter, stationAnalyteDataUserFilter, stationInfo){
     stationData <- dplyr::select(stationInfo, 
                                  FDT_STA_ID = Sta_Id, 
                                  STA_DESC = Sta_Desc,
