@@ -127,6 +127,8 @@ stationAnalyteDataUserFilter <- filter(stationAnalyteData, between(as.Date(Fdt_D
 ### Organize field and analyte info into prettier table
 
 stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = TRUE)
+#stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = FALSE)
+
 
 #Ana_Sam_Mrs_Lcc_Parm_Group_Cd,
 # report out where results averaged
