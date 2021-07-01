@@ -452,16 +452,19 @@ basicSummary <- function(stationFieldAnalyte){
 
 
 # Conventionals Summary
-conventionalsSummary <- function(stationFieldDataUserFilter, stationAnalyteDataUserFilter, stationInfo){
-    stationData <- dplyr::select(stationInfo, 
-                                 FDT_STA_ID = Sta_Id, 
-                                 STA_DESC = Sta_Desc,
-                                 Deq_Region = Admin_Region, # EVJ change bc Roger has opposite
-                                 STA_REC_CODE = Sta_Rec_Code) %>%  # EVJ change bc Roger has opposite
+#dropCodes <- c('QF')
+conventionalsSummary <- function(stationFieldDataUserFilter, stationAnalyteDataUserFilter, stationInfo, dropCodes){
+    stationData <- stationInfo %>%
       filter(! Sta_Lv1_Code %in% c('LND', 'PIPE', 'UNK', 'WELL')) %>% #drop unwanted Level 1 Codes
       filter(! Sta_Lv2_Code %in% c('INPLNT', 'NONAMB', 'TREATD', 'SEWER')) %>% #drop unwanted Level 2 Codes
-      filter(! Sta_Lv3_Code %in% c('IR', 'IND', 'AGRI'))  #drop unwanted Level 3 Codes
-                  
+      filter(! Sta_Lv3_Code %in% c('IR', 'IND', 'AGRI')) %>%  #drop unwanted Level 3 Codes
+      dplyr::select(FDT_STA_ID = Sta_Id, 
+                    STA_DESC = Sta_Desc,
+                    Deq_Region = Admin_Region, # EVJ change bc Roger has opposite
+                    STA_REC_CODE = Sta_Rec_Code) # EVJ change bc Roger has opposite
+    
+    if(nrow(stationData) > 0){                             
+                        
     # drop certain field data
     stationFieldDataUserFilter <- filter(stationFieldDataUserFilter, ! Fdt_Spg_Code %in% c('IR', 'PC', 'FI')) %>% # exclude targeted incident response and facility data by survey program code
       # drop undesired comment codes
@@ -478,12 +481,30 @@ conventionalsSummary <- function(stationFieldDataUserFilter, stationAnalyteDataU
       filter( ! str_detect(Fdt_Comment, 'DUPLICATE')) %>%
       filter( ! str_detect(Fdt_Comment, 'duplicate')) %>%
       filter( ! str_detect(Fdt_Comment, 'BLANK')) %>%
-      filter( ! str_detect(Fdt_Comment, 'blank'))
+      filter( ! str_detect(Fdt_Comment, 'blank')) %>% 
+      # Change field measurements to NA if Comment field in dropCodes
+      mutate(
+        Fdt_Air_Per_Sat = ifelse(coalesce(Fdt_Air_Per_Sat_Rmk, Air_Per_Sat_Remark) %in% dropCodes, NA, Fdt_Air_Per_Sat),
+        Fdt_Air_Temp = ifelse(coalesce(Fdt_Air_Temp_Rmk, Air_Temp_Remark) %in% dropCodes, NA, Fdt_Air_Temp),
+        Fdt_Baro_Pressure = ifelse(coalesce(Fdt_Baro_Pressure_Rmk, Baro_Pressure_Remark) %in% dropCodes, NA, Fdt_Baro_Pressure),
+        Fdt_Chlorine_Residual = ifelse(coalesce(Fdt_Chlorine_Residual_Rmk, Chlorine_Residual_Remark) %in% dropCodes, NA, Fdt_Chlorine_Residual),
+        Fdt_Conductivity = ifelse(coalesce(Fdt_Conductivity_Rmk, Conductivity_Remark) %in% dropCodes, NA, Fdt_Conductivity),
+        Fdt_Do_Optical = ifelse(coalesce(Fdt_Do_Optical_Rmk, Do_Optical_Remark) %in% dropCodes, NA, Fdt_Do_Optical),
+        Fdt_Do_Probe = ifelse(coalesce(Fdt_Do_Probe_Rmk, Do_Probe_Remark) %in% dropCodes, NA, Fdt_Do_Probe),
+        Fdt_Do_Winkler = ifelse(coalesce(Fdt_Do_Winkler_Rmk, Do_Winkler_Remark) %in% dropCodes, NA, Fdt_Do_Winkler),
+        Fdt_Field_Ph = ifelse(coalesce(Fdt_Field_Ph_Rmk, Field_Ph_Remark) %in% dropCodes, NA, Fdt_Field_Ph),
+        Fdt_Flow_Cfs = ifelse(coalesce(Fdt_Flow_Cfs_Rmk, Flow_Cfs_Remark) %in% dropCodes, NA, Fdt_Flow_Cfs),
+        Fdt_Gauge_Height = ifelse(coalesce(Fdt_Gauge_Height_Rmk, Gauge_Height_Remark) %in% dropCodes, NA, Fdt_Gauge_Height),
+        Fdt_Salinity = ifelse(coalesce(Fdt_Salinity_Rmk, Salinity_Remark) %in% dropCodes, NA, Fdt_Salinity),
+        Fdt_Secchi_Depth = ifelse(coalesce(Fdt_Secchi_Depth_Rmk, Secchi_Depth_Remark) %in% dropCodes, NA, Fdt_Secchi_Depth),
+        Fdt_Specific_Conductance = ifelse(coalesce(Fdt_Specific_Conductance_Rmk, Specific_Conductance_Remark) %in% dropCodes, NA, Fdt_Specific_Conductance),
+        Fdt_Temp_Celcius = ifelse(coalesce(Fdt_Temp_Celcius_Rmk, Temp_Celcius_Remark) %in% dropCodes, NA, Fdt_Temp_Celcius),
+        Fdt_Turbidity = ifelse(coalesce(Fdt_Turbidity_Rmk, Turbidity_Remark) %in% dropCodes, NA, Fdt_Turbidity))
     
     # drop certain lab codes
-    stationAnalyteDataUserFilter1 <- filter(stationAnalyteDataUserFilter, Ana_Lab_Seq_Num == 1) %>% # drop analyte lab sequence number != 1
+    stationAnalyteDataUserFilter <- filter(stationAnalyteDataUserFilter, Ana_Lab_Seq_Num == 1) %>% # drop analyte lab sequence number != 1
       mutate(Ana_Uncensored_Value = case_when(Ana_Com_Code %in% c('IF', 'J', 'O', 'PE', 'Q1', 'QF', 'QFQ', 'V') ~ as.numeric(NA), 
-                                              TRUE ~ Ana_Uncensored_Value)) # drop results from invalid lab codes
+                                              TRUE ~ Ana_Uncensored_Value)) %>% # drop results from invalid lab codes
       filter(Ana_Sam_Mrs_Container_Id_Desc %in% c('', 'C', 'H', 'HV', 'R', 'S1', 'V')) # only keep samples with select container descriptions
 
     stationFieldAnalyte <- stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = TRUE)
@@ -1293,3 +1314,4 @@ parameterBoxplotFunction <- function(basicData, parameter, unitData, WQSlookup, 
   }
 }
 #parameterBoxplotFunction(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addJitter = F)
+
