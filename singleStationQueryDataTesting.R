@@ -113,7 +113,8 @@ stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
 
 
 # User filters
-dateRangeFilter <-  c(as.Date('2010-01-01'),as.Date('2022-01-01'))#c(as.Date('2015-01-01'), as.Date('2020-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+dateRangeFilter <- c(as.Date('2015-01-01'), as.Date('2017-09-01'))# c(as.Date('2010-01-01'),as.Date('2022-01-01'))#c(as.Date('2015-01-01'), as.Date('2020-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+#dateRangeFilter <- c(as.Date('2010-01-01'),as.Date('2022-01-01'))
 labCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
 repFilter <- c('R')
 
