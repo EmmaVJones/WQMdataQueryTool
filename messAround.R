@@ -93,6 +93,8 @@ FDT_STA_ID, GROUP_STA_ID, STA_DESC, Deq_Region, STA_REC_CODE, FDT_DATE_TIME, FDT
 # stationFieldDataUserFilter11 <- stationFieldDataUserFilter
 # stationFieldDataUserFilter11$Fdt_Comment[2] <- 'STORM EVENT'
 
+dropCodes <- c('QF')
+
 # make field data match conventionals format
 stationFieldDataUserFilter1 <- filter(stationFieldDataUserFilter, ! Fdt_Spg_Code %in% c('IR', 'PC', 'FI')) %>% # exclude targeted incident response and facility data by survey program code
   # drop undesired comment codes
@@ -242,20 +244,20 @@ remarkTemplate <- tibble(#Ana_Id = as.character(NA),
                          `RMK_TDPLF` = as.character(NA), `RMK_TSS45` = as.character(NA))
 
 #stationAnalyteDataUserFilter0 <- filter(stationAnalyteDataUserFilter0, Pg_Storet_Code != '00935')
-
-stationAnalyteDataUserFilter1 <- 
-  #bind_rows(parameterTemplate, 
-            stationAnalyteDataUserFilter0 %>% 
-              
-              dplyr::select(#Ana_Id, 
-                Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,  ParameterName, Ana_Uncensored_Value) %>% 
-              mutate(num_name = row_number()) %>%
-  group_by(Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, ParameterName, num_name) %>% 
-  
-              pivot_wider(#id_cols = Ana_Sam_Fdt_Id, 
-                names_from = ParameterName, values_from = Ana_Uncensored_Value) %>% 
-              fill() %>%
-              ungroup()
+# 
+# stationAnalyteDataUserFilter1 <- 
+#   #bind_rows(parameterTemplate, 
+#             stationAnalyteDataUserFilter0 %>% 
+#               
+#               dplyr::select(#Ana_Id, 
+#                 Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,  ParameterName, Ana_Uncensored_Value) %>% 
+#               mutate(num_name = row_number()) %>%
+#   group_by(Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, ParameterName, num_name) %>% 
+#   
+#               pivot_wider(#id_cols = Ana_Sam_Fdt_Id, 
+#                 names_from = ParameterName, values_from = Ana_Uncensored_Value) %>% 
+#               fill() %>%
+#               ungroup()
             
 stationAnalyteDataUserFilter1 <- 
   bind_rows(parameterTemplate, 

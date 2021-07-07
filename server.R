@@ -116,7 +116,7 @@ shinyServer(function(input, output, session) {
     } else {
       reactive_objects$stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
         filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$stationFieldData$Fdt_Id &
-                 between(as.Date(Ana_Received_Date), !! input$dateRange[1], !! input$dateRange[2])& # x >= left & x <= right
+                 #between(as.Date(Ana_Received_Date), !! input$dateRange[1], !! input$dateRange[2])& # x >= left & x <= right
                  Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
         as_tibble() %>%
         left_join(dplyr::select(reactive_objects$stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time),
@@ -840,7 +840,7 @@ shinyServer(function(input, output, session) {
       } else {
         reactive_objects$multistationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
           filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$multistationFieldData$Fdt_Id &
-                   between(as.Date(Ana_Received_Date), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
+                   #between(as.Date(Ana_Received_Date), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
                    Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
           as_tibble() %>%
           left_join(dplyr::select(reactive_objects$multistationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) }    })
