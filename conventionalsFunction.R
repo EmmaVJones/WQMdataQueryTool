@@ -438,6 +438,7 @@ janitor::compare_df_cols(conventionals2, zz, return = "mismatch")
 
 
 library(daff)
+library(tidyselect)
 diff_data(conventionals2, zz)
 render_diff(diff_data(conventionals2, zz))
 
@@ -450,8 +451,10 @@ View(setdiff(zz, conventionals2))
 
 differences <- 
 left_join(
-dplyr::select(zz, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, NITROGEN_mg_L:LEVEL_AMMONIA),
-dplyr::select(conventionals2, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, NITROGEN_mg_L:LEVEL_AMMONIA), by = c('FDT_STA_ID', 'FDT_DATE_TIME', 'FDT_DEPTH')) %>% 
+dplyr::select(zz, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, PHOSPHORUS_mg_L:LEVEL_TDPLF),# NITROGEN_mg_L:LEVEL_AMMONIA),
+dplyr::select(conventionals2, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, PHOSPHORUS_mg_L:LEVEL_TDPLF),#NITROGEN_mg_L:LEVEL_AMMONIA),
+by = c('FDT_STA_ID', 'FDT_DATE_TIME', 'FDT_DEPTH')) %>% 
+  select(sort(peek_vars()))
   rowwise() %>% 
   mutate(nitrogen = sum(NITROGEN_mg_L.x, - NITROGEN_mg_L.y, na.rm = T),
          ammonia = sum(AMMONIA_mg_L.x, - AMMONIA_mg_L.y, na.rm = T)) 
