@@ -96,7 +96,7 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
 # wildcard troubleshooting
-wildcardText1 <- '1BDUR000.1%'#'2-JKS02%'#'4aroa%'#'2-JKS02%'#'3-RPP10%'
+wildcardText1 <- '2-JKS02%'#'4aroa%'#'2-JKS02%'#'3-RPP10%'
 # wildcardResults <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
 #                                 wildcardText1, '"'))
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
