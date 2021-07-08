@@ -72,7 +72,7 @@ programCodeFilter <- NULL#'HF'#c('AW','TR')
 countyFilter <- NULL#"Roanoke City"#
 ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
 ecoregionLevel4Filter <- NULL
-dateRange_multistation <- c(as.Date('2018-01-01'), as.Date('2020-12-31'))#as.Date(Sys.Date()- 7))
+dateRange_multistation <- c(as.Date('2010-01-01'), as.Date('2020-12-31'))#as.Date(Sys.Date()- 7))
 ## pull based on parameter
 analyte_Filter <- NULL#
   c('SODIUM (NA), ATM DEP, WET, DISS, MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)', 'SODIUM, TOTAL (MG/L AS NA)', 'SODIUM-TOTAL  UG/L (AS NA)')
@@ -87,7 +87,7 @@ analyte_Filter <- NULL#
 
   
 # manually specify troubleshooting
-manualSelection1 <- c('2-JKS028.69', '2-JKS023.61')#4AROA000.00'#c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
+manualSelection1 <- '1BDUR000.11'#c('2-JKS028.69', '2-JKS023.61')#4AROA000.00'#c('1BSMT001.53','1BSMT006.62','1BSMT009.08')#1AFOU002.06')
 #WQM_Stations_Filter <- filter(WQM_Stations_Spatial, StationID %in% as.character(manualSelection1))  
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (takes a few seconds for the station text box to appear)', 
                                                     pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
@@ -96,7 +96,7 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
 # wildcard troubleshooting
-wildcardText1 <- '2-JKS02%'#'4aroa%'#'2-JKS02%'#'3-RPP10%'
+wildcardText1 <- '1BDUR000.1%'#'2-JKS02%'#'4aroa%'#'2-JKS02%'#'3-RPP10%'
 # wildcardResults <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
 #                                 wildcardText1, '"'))
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
@@ -261,7 +261,7 @@ multistationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %
 
 
 # User filters
-multistationDateRangeFilter <-  c(as.Date('2015-01-01'), as.Date(Sys.Date()))#as.Date('2011-01-01'), as.Date('2011-12-31'))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+multistationDateRangeFilter <-  c(as.Date('2010-01-01'), as.Date(Sys.Date()))#as.Date('2011-01-01'), as.Date('2011-12-31'))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
 multistationLabCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
 multistationRepFilter <- c('R')
 multistationDepthFilter <- T

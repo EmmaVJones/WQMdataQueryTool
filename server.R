@@ -208,10 +208,10 @@ shinyServer(function(input, output, session) {
          checkboxGroupInput('labCodesDropped', 'Lab Codes Revoved From Futher Analyses',
                             choices = codeOptions, inline = TRUE, selected = c('QF'))   ) })
 
-  ## Depth filter 
-  output$depthFilter_ <- renderUI({  req(nrow(reactive_objects$stationAnalyteData) > 0)
+  ## Depth filter
+  output$depthFilter_ <- renderUI({  req(nrow(reactive_objects$stationFieldData) > 0)
     checkboxInput('depthFilter', 'Only Analyze Surface Measurements (Depth <= 0.3 m)') })
-  
+
   ## Lab Code Module
   observeEvent(input$reviewLabCodes,{
     showModal(modalDialog(
@@ -228,8 +228,8 @@ shinyServer(function(input, output, session) {
 
 
   ## Drop any unwanted Analyte codes
-  observe({req(nrow(reactive_objects$stationFieldData) > 0, input$dateRangeFilter, reactive_objects$stationAnalyteData)
-    reactive_objects$stationFieldDataUserFilter <- filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ) %>% 
+  observe({req(nrow(reactive_objects$stationFieldData) > 0, input$dateRangeFilter)
+    reactive_objects$stationFieldDataUserFilter <- filter(reactive_objects$stationFieldData, between(as.Date(Fdt_Date_Time), input$dateRangeFilter[1], input$dateRangeFilter[2]) ) %>%
       {if(input$depthFilter == TRUE)
         filter(., Fdt_Depth <= 0.3)
         else . }
@@ -316,15 +316,15 @@ shinyServer(function(input, output, session) {
   observeEvent(input$smoothModal,{
     showModal(modalDialog(
       title="Parameter Plot with Loess (Locally Estimated Scatterplot Smoother) Function",
-      helpText('This plot is meant for exploratory data analysis to visualize general patterns in the data and and does not serve as a 
+      helpText('This plot is meant for exploratory data analysis to visualize general patterns in the data and and does not serve as a
                  robust trend analysis.'),
       plotlyOutput('loessSmoothPlot'),
       easyClose = TRUE))  })
-  
+
   output$loessSmoothPlot <- renderPlotly({req(input$smoothModal, nrow(basicStationSummary()) > 0)
     basicLoessPlotFunction(basicStationSummary(), input$parameterPlotlySelection)      })
-  
-  
+
+
   ## Visualization Tools: Parameter Boxplot Tab
   observe({req(nrow(basicStationSummary()) > 0, input$parameterBoxPlotlySelection)
     if(input$parameterBoxPlotlySelection %in% names(basicStationSummary())){
@@ -333,12 +333,12 @@ shinyServer(function(input, output, session) {
       if(nrow(z) == 0){
         showNotification('No data to plot for selected parameter.',duration = 3 )}
     } else {showNotification('No data to plot for selected parameter.', duration = 3  )}      })
-  
+
   output$parameterBoxplot <- renderPlotly({ req(nrow(filter(basicStationSummary(), !is.na(input$parameterBoxPlotlySelection))) > 0, input$parameterBoxPlotlySelection)
     suppressWarnings(suppressMessages(
       parameterBoxplotFunction(basicStationSummary(), input$parameterBoxPlotlySelection, unitData, WQSlookup, input$addJitter) ))   })
-  
-  
+
+
 
 
   ## Visualization Tools: Probabilistic Estimates Tab
@@ -401,12 +401,12 @@ shinyServer(function(input, output, session) {
     parameterSwitch <- as.character(filter(probIndicators, AltName %in% input$parameterSelect)$Parameter)
     cdfplot(probEst, as.character(input$parameterSelect), parameterSwitch,
             as.character(unique(WQM_Station_Full_REST()$EPA_ECO_US_L3NAME)), reactive_objects$percentiles, CDFsettingsList[[parameterSwitch]] )  })
-  
-  
+
+
   # Dissolved Metals Analysis
   callModule(dissolvedMetalsCriteria,'metals', stationFieldAnalyteDateRange(), WQSlookup, staticLimit)
-  
-  
+
+
 
   # Raw Field Data
   output$fieldDataRaw <- renderDataTable({ req(reactive_objects$stationFieldDataUserFilter)
@@ -422,17 +422,17 @@ shinyServer(function(input, output, session) {
                                           'colvis')), selection = 'none') })
   # LRBS Data
   output$LRBSdataRaw <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
-    z <- filter(LRBS, StationID %in% input$station & between(as.Date(Date), as.Date(input$dateRangeFilter[1]), as.Date(input$dateRangeFilter[2]) ) ) %>% 
+    z <- filter(LRBS, StationID %in% input$station & between(as.Date(Date), as.Date(input$dateRangeFilter[1]), as.Date(input$dateRangeFilter[2]) ) ) %>%
       mutate(Date = as.Date(Date))
 
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                              buttons=list('copy',list(extend='excel',filename=paste0('LRBSdata',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
-  
-  
+
+
   output$BSAtemplateData <- renderDataTable({ req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
-    z <-  BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf, 
+    z <-  BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf,
                                 reactive_objects$stationAnalyteDataUserFilter, reactive_objects$stationFieldDataUserFilter)
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
@@ -440,19 +440,19 @@ shinyServer(function(input, output, session) {
                                           list(extend='csv',filename=paste0('BSAtemplateData',input$station, Sys.Date())),
                                           list(extend='excel',filename=paste0('BSAtemplateData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
-  
+
   output$BSAmetalsTemplateData <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
-    z <- BSAtoolMetalsFunction(input$station, reactive_objects$stationInfo_sf, reactive_objects$stationAnalyteDataUserFilter) 
+    z <- BSAtoolMetalsFunction(input$station, reactive_objects$stationInfo_sf, reactive_objects$stationAnalyteDataUserFilter)
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                              buttons=list('copy',
                                           list(extend='csv',filename=paste0('BSAmetalsTemplateData',input$station, Sys.Date())),
                                           list(extend='excel',filename=paste0('BSAmetalsTemplateData',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') })
-  
-  # output$test <- renderPrint({ BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf, 
+
+  # output$test <- renderPrint({ BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf,
   #                                                    reactive_objects$stationAnalyteDataUserFilter, reactive_objects$stationFieldDataUserFilter)})
-  # 
+  #
 
 
 
@@ -467,10 +467,10 @@ shinyServer(function(input, output, session) {
 
 
 
-  
+
   ### -------------------------------Multistation Query-------------------------------------------------------------------------------------------------------
-  
-  
+
+
   # Query by spatial filters
   output$spatialFilters_assessmentRegion <- renderUI({req(input$queryType == 'Spatial Filters')
     list(helpText('Interactive cross validation between filters applies in this section.'),
@@ -501,10 +501,10 @@ shinyServer(function(input, output, session) {
 
   output$spatialFilters_Ecoregion <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('ecoregionFilter','Level 3 Ecoregion', choices = sort(unique(ecoregion$US_L3NAME)), multiple = T) })
-  
+
   output$spatialFilters_EcoregionLevel4 <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('ecoregionFilterLevel4','Level 4 Ecoregion', choices = sort(unique(ecoregionLevel4$US_L4NAME)), multiple = T) })
-  
+
   output$spatialFilters_County <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('countyFilter','County/City', choices = sort(unique(county$NAME)), multiple = T) })
 
@@ -517,14 +517,14 @@ shinyServer(function(input, output, session) {
   output$programCode_FilterUI <- renderUI({#req(input$queryType == 'Spatial Filters')
     selectInput('programCode_Filter', 'Filter Stations By Program Code',
                 choices = sort(unique(programCodes$Spg_Code)), multiple = TRUE)})
-  
+
   # Program Code table
   observeEvent(input$showProgramCodeTable,{
     showModal(modalDialog(
       title="Program Code Descriptions",
       DT::dataTableOutput('programCodeTable'),
       easyClose = TRUE))  })
-  
+
   output$programCodeTable <- renderDataTable({req(input$showProgramCodeTable)
     datatable(programCodes %>% arrange(Spg_Code), rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
@@ -534,141 +534,141 @@ shinyServer(function(input, output, session) {
   # Lab Media Code
   output$labMediaCodeUI <- renderUI({
     selectInput('labMediaCode', 'Filter Stations By Lab Media Codes', choices = sort(unique(labMediaCodes$Act_Media_Desc)), multiple = TRUE) })
-  
+
   # Sample Group Code filter
   output$sampleGroupCode_FilterUI <- renderUI({
-    choices <- labMediaCodes %>% 
+    choices <- labMediaCodes %>%
       {if(!is.null(input$labMediaCode))
         filter(., Act_Media_Desc %in% input$labMediaCode)
-        else .} %>% 
+        else .} %>%
       pull(Lc_Parm_Group_Code)
     selectInput('sampleGroupCode_Filter', 'Filter Stations By Sample Group Codes (Based on Selected Lab Media Codes)',
                 choices = sort(choices), multiple = TRUE)})
-  
+
   # Sample Group Code table
   observeEvent(input$showSampleGroupCodeTable,{
     showModal(modalDialog(size = "l",
       title="Sample Group Code Descriptions",
       DT::dataTableOutput('sampleGroupCodeTable'),
       easyClose = TRUE))  })
-  
+
   output$sampleGroupCodeTable <- renderDataTable({req(input$showSampleGroupCodeTable)
     datatable(labMediaCodes %>% arrange(Lc_Parm_Group_Code), rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px',
                              pageLength = nrow(labMediaCodes),
                              buttons=list('copy',list(extend='excel',filename=paste0('CEDSlabGroupCodes')),
                                           'colvis')), selection = 'none')   })
-  
-  
+
+
   output$analyte_FilterUI <- renderUI({
     selectInput('analyte_Filter', 'Filter Stations By Analytes Collected',
                 choices = Wqm_Parameter_Grp_Cds_Codes_Wqm_View, multiple = TRUE) })
-  
+
 
   # Query by spatial filter selection
   observeEvent(input$begin_multistation_spatial,{
     show_modal_spinner(spin = 'flower')
-    
+
     #print(input$wildcardRunIDText)
-    
-    
+
+
     reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Spatial Filters', pool, WQM_Stations_Spatial, input$VAHU6Filter, input$subbasinFilter,
-                                                          input$assessmentRegionFilter, input$ecoregionFilter, input$ecoregionFilterLevel4, input$countyFilter, input$dateRange_multistation, 
+                                                          input$assessmentRegionFilter, input$ecoregionFilter, input$ecoregionFilterLevel4, input$countyFilter, input$dateRange_multistation,
                                                           input$analyte_Filter, programCodeFilter = input$programCode_Filter, labGroupCodeFilter = input$sampleGroupCode_Filter,
                                                           runIDfilter = input$wildcardRunIDText, manualSelection = NULL, wildcardSelection = NULL)
-    remove_modal_spinner()  
-    #print( reactive_objects$WQM_Stations_Filter)
-    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
-      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
-    })
-  
-  # Query by wildcard selection
-  output$wildcardSelection <- renderUI({req(input$queryType == 'Wildcard Selection')
-    list(
-      helpText('Remember, use % as your wildcard, not *'),
-      textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )      })
-  
-  observeEvent(input$begin_multistation_wildcard,{
-    show_modal_spinner(spin = 'flower')
-    
-    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
-                                                                         pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionLevel4Filter = input$ecoregionFilterLevel4,
-                                                                         countyFilter = input$countyFilter,
-                                                                         dateRange_multistation = input$dateRange_multistation,
-                                                                         analyte_Filter = input$analyte_Filter, 
-                                                                         programCodeFilter = input$programCode_Filter, 
-                                                                         labGroupCodeFilter =  input$sampleGroupCode_Filter,
-                                                                         runIDfilter = input$wildcardRunIDText, manualSelection = NULL, 
-                                                                         wildcardSelection = as.character(toupper(input$wildcardText))) 
-    remove_modal_spinner()  
-    #print( reactive_objects$WQM_Stations_Filter)
-    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
-      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
-    })
-                                                  
-  
-  #output$test <- renderPrint({input$wildcardText})
-  
-  
-  
-  
-  # Query by manual selection
-  output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)')
-    list(helpText('Begin typing station names and the app will filter available data by input text. Multiple stations are allowed.'),
-         selectInput('manualSelection','Station ID', choices = sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)) })
-  
-  observeEvent(input$begin_multistation_manual, {
-    show_modal_spinner(spin = 'flower')
-
-    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (requires a few seconds for the station text box to appear)', 
-                                                                         pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
-                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionLevel4Filter = input$ecoregionFilterLevel4,
-                                                                         countyFilter = input$countyFilter,
-                                                                         dateRange_multistation = input$dateRange_multistation,
-                                                                         analyte_Filter = input$analyte_Filter, 
-                                                                         programCodeFilter = input$programCode_Filter, 
-                                                                         labGroupCodeFilter =  input$sampleGroupCode_Filter,
-                                                                         runIDfilter = input$wildcardRunIDText, manualSelection = as.character(input$manualSelection),
-                                                                         wildcardSelection = NULL) 
     remove_modal_spinner()
     #print( reactive_objects$WQM_Stations_Filter)
     if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
       showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
     })
 
+  # Query by wildcard selection
+  output$wildcardSelection <- renderUI({req(input$queryType == 'Wildcard Selection')
+    list(
+      helpText('Remember, use % as your wildcard, not *'),
+      textInput('wildcardText', 'Filter by StationID LIKE', value = NULL, placeholder = '2A%') )      })
+
+  observeEvent(input$begin_multistation_wildcard,{
+    show_modal_spinner(spin = 'flower')
+
+    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection',
+                                                                         pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
+                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionLevel4Filter = input$ecoregionFilterLevel4,
+                                                                         countyFilter = input$countyFilter,
+                                                                         dateRange_multistation = input$dateRange_multistation,
+                                                                         analyte_Filter = input$analyte_Filter,
+                                                                         programCodeFilter = input$programCode_Filter,
+                                                                         labGroupCodeFilter =  input$sampleGroupCode_Filter,
+                                                                         runIDfilter = input$wildcardRunIDText, manualSelection = NULL,
+                                                                         wildcardSelection = as.character(toupper(input$wildcardText)))
+    remove_modal_spinner()
+    #print( reactive_objects$WQM_Stations_Filter)
+    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
+      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
+    })
+
+
+  #output$test <- renderPrint({input$wildcardText})
+
+
+
+
+  # Query by manual selection
+  output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)')
+    list(helpText('Begin typing station names and the app will filter available data by input text. Multiple stations are allowed.'),
+         selectInput('manualSelection','Station ID', choices = sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)) })
+
+  observeEvent(input$begin_multistation_manual, {
+    show_modal_spinner(spin = 'flower')
+
+    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (requires a few seconds for the station text box to appear)',
+                                                                         pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
+                                                                         ecoregionFilter = input$ecoregionFilter, ecoregionLevel4Filter = input$ecoregionFilterLevel4,
+                                                                         countyFilter = input$countyFilter,
+                                                                         dateRange_multistation = input$dateRange_multistation,
+                                                                         analyte_Filter = input$analyte_Filter,
+                                                                         programCodeFilter = input$programCode_Filter,
+                                                                         labGroupCodeFilter =  input$sampleGroupCode_Filter,
+                                                                         runIDfilter = input$wildcardRunIDText, manualSelection = as.character(input$manualSelection),
+                                                                         wildcardSelection = NULL)
+    remove_modal_spinner()
+    #print( reactive_objects$WQM_Stations_Filter)
+    if(nrow(reactive_objects$WQM_Stations_Filter) == 0){
+      showNotification("No stations returned for selected criteria.", duration = 10, type = 'error') }
+    })
+
+
   
   
-  
-  
-  
-  observe({ req(nrow(reactive_objects$WQM_Stations_Filter) >0)
+
+
+  observe({ req(nrow(reactive_objects$WQM_Stations_Filter) > 0)
     ## Basic Station Info
     reactive_objects$multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data instead of calling stationInfo bc app crashes
                                                         filter(Sta_Id %in% reactive_objects$WQM_Stations_Filter$StationID) %>%
                                                         as_tibble() %>%
                                                         # add link to data and add link to internal GIS web app with WQS layer on there
                                                         mutate(`CEDS Station View Link` = paste0("<b><a href='https://ceds.deq.virginia.gov/ui#wqmStations/",
-                                                                                                 Sta_Id,"'", 
+                                                                                                 Sta_Id,"'",
                                                                                                  " target= '_blank'> View Monitoring Station in CEDS</a></b>"),
                                                                `DEQ GIS Web App Link` =  paste0("<b><a href='https://gis.deq.virginia.gov/GISStaffApplication/?query=WQM%20Stations%20(All%20stations%20with%20full%20attributes),STATION_ID,",
-                                                                                                Sta_Id, 
-                                                                                                "&showLayers=DEQInternalDataViewer_1723;WATER%20LAYERS;WQM%20Stations%20(All%20stations%20with%20full%20attributes);", 
+                                                                                                Sta_Id,
+                                                                                                "&showLayers=DEQInternalDataViewer_1723;WATER%20LAYERS;WQM%20Stations%20(All%20stations%20with%20full%20attributes);",
                                                                                                 ";2020%20Draft%20ADB%20WQA%20Layers;2020%20Rivers%20(Any%20Use)&level=14' target='_blank'>View Monitoring Station in DEQ Staff App</a></b>" )) %>%
-                                                        dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, everything()), 
+                                                        dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, everything()),
                                                       ########filter(WQM_Station_View, Sta_Id %in% toupper(input$station)), # need to filter instead of calling stationInfo bc app crashes
-                                                      dplyr::select(WQM_Station_Full, 
+                                                      dplyr::select(WQM_Station_Full,
                                                                     STATION_ID, Latitude, Longitude, WQM_STA_STRAHER_ORDER, EPA_ECO_US_L3CODE,
-                                                                    EPA_ECO_US_L3NAME, EPA_ECO_US_L4CODE, EPA_ECO_US_L4NAME, BASINS_HUC_8_NAME, 
-                                                                    BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
+                                                                    EPA_ECO_US_L3NAME, EPA_ECO_US_L4CODE, EPA_ECO_US_L4NAME, BASINS_HUC_8_NAME,
+                                                                    BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS,
                                                                     WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, WQM_YRS_YEAR, WQM_YRS_SPG_CODE),
                                                       by = c('Sta_Id' = 'STATION_ID')) %>%
-      left_join(dplyr::select(WQM_Stations_Spatial, StationID, ASSESS_REG, CountyCityName), by = c('Sta_Id' = 'StationID')) %>% 
+      left_join(dplyr::select(WQM_Stations_Spatial, StationID, ASSESS_REG, CountyCityName), by = c('Sta_Id' = 'StationID')) %>%
       dplyr::select(Sta_Id, Sta_Desc, `CEDS Station View Link`, `DEQ GIS Web App Link`, Latitude, Longitude, WQM_STA_STRAHER_ORDER,
-                    ASSESS_REG, CountyCityName, EPA_ECO_US_L3CODE, EPA_ECO_US_L3NAME, EPA_ECO_US_L4CODE, EPA_ECO_US_L4NAME, 
-                    BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
-                    WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything()) 
-    
+                    ASSESS_REG, CountyCityName, EPA_ECO_US_L3CODE, EPA_ECO_US_L3NAME, EPA_ECO_US_L4CODE, EPA_ECO_US_L4NAME,
+                    BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS,
+                    WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything())
+
     # Empty station user selection to start with
     reactive_objects$selectedSites <- NULL  })
 
@@ -704,7 +704,7 @@ shinyServer(function(input, output, session) {
         circleOptions = FALSE,
         circleMarkerOptions = FALSE,
         editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions())) %>%
-      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),                       
+      addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
                        overlayGroups = c("Level III Ecoregions", 'Assessment Regions'),
                        #overlayGroups = c("Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
@@ -718,10 +718,10 @@ shinyServer(function(input, output, session) {
 
   observe({req(nrow(reactive_objects$WQM_Stations_Filter) > 0)
     map_proxy_multi %>%
-      clearMarkers() %>% 
-      # flyTo(lng= mean(reactive_objects$WQM_Stations_Filter$Longitude, na.rm=T), 
+      clearMarkers() %>%
+      # flyTo(lng= mean(reactive_objects$WQM_Stations_Filter$Longitude, na.rm=T),
       #       lat = mean(reactive_objects$WQM_Stations_Filter$Latitude, na.rm=T),
-      #       zoom = 8) %>% 
+      #       zoom = 8) %>%
       flyToBounds(lng1 = min(reactive_objects$WQM_Stations_Filter$Longitude)+0.01,
                   lat1 = min(reactive_objects$WQM_Stations_Filter$Latitude)+0.01,
                   lng2 = max(reactive_objects$WQM_Stations_Filter$Longitude)+0.01,
@@ -741,41 +741,41 @@ shinyServer(function(input, output, session) {
                        #overlayGroups = c("Spatial Filter Station(s)", "VAHU6","Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
-  
-  
-  
+
+
+
   ## User polygon selection feature
   observeEvent(input$multistationMap_draw_new_feature,{
-    
+
     shape = input$multistationMap_draw_new_feature
-    
+
     # derive polygon coordinates and feature_type from shape input
     polygon_coordinates <- shape$geometry$coordinates
     feature_type <- shape$properties$feature_type
-    
+
     if(feature_type %in% c("rectangle","polygon")) {
       # change user coordinates into sf multipolygon
       poly <- st_sf(what = 'user selected polygon',
                     geom = st_sfc(st_cast(st_polygon(list(do.call(rbind,lapply(polygon_coordinates[[1]],function(x){c(x[[1]][1],x[[2]][1])})))), 'MULTIPOLYGON') ))
       st_crs(poly) <- 4326 # set crs (can't do in one step???)
-      
+
       # select sites inside polygon
       if(is.null(reactive_objects$selectedSites)){
-        reactive_objects$selectedSites <- reactive_objects$WQM_Stations_Filter %>% 
+        reactive_objects$selectedSites <- reactive_objects$WQM_Stations_Filter %>%
           st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
                    remove = F, # don't remove these lat/lon cols from df
-                   crs = 4326) %>% 
+                   crs = 4326) %>%
           st_intersection(poly)
       } else {
-        addedSites <- reactive_objects$WQM_Stations_Filter %>% 
+        addedSites <- reactive_objects$WQM_Stations_Filter %>%
           st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
                    remove = F, # don't remove these lat/lon cols from df
-                   crs = 4326) %>% 
+                   crs = 4326) %>%
           st_intersection(poly)
         reactive_objects$selectedSites <- rbind(reactive_objects$selectedSites, addedSites)
       }
     } })
-  
+
   # Highlight selected sites from polygon
   observe({req(nrow(reactive_objects$selectedSites) > 0)
     map_proxy_multi %>%
@@ -789,11 +789,11 @@ shinyServer(function(input, output, session) {
                        #overlayGroups = c("User Selected Station(s)","Spatial Filter Station(s)","VAHU6", "Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
-  
+
   # redraw all sites if user selection deleted
   observeEvent(input$multistationMap_draw_deleted_features,{
     reactive_objects$selectedSites <- NULL
-    
+
     map_proxy_multi %>%
       clearGroup(group="User Selected Station(s)") %>%
       addCircleMarkers(data = reactive_objects$WQM_Stations_Filter,
@@ -806,7 +806,7 @@ shinyServer(function(input, output, session) {
                        #overlayGroups = c("Spatial Filter Station(s)","VAHU6","Level III Ecoregions", "County", 'Assessment Regions'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')    })
-  
+
   # Update "final" site selection after user input
   observe({req(reactive_objects$multistationInfoFin)
     # "final sites"
@@ -814,8 +814,9 @@ shinyServer(function(input, output, session) {
       {if(!is.null(reactive_objects$selectedSites))
         filter(., Sta_Id %in% reactive_objects$selectedSites$StationID)
         else . } })
-  
 
+
+  
   # Update "final" site selection after user input
   observe({req(reactive_objects$multistationSelection)
     ## Station Sampling Information
@@ -824,27 +825,27 @@ shinyServer(function(input, output, session) {
       mutate(`Years Sampled` = paste0(year(WQM_YRS_YEAR))) %>%
       dplyr::select(Sta_Id, WQM_YRS_SPG_CODE,WQM_YRS_YEAR,`Years Sampled`) %>%
       group_by(Sta_Id, `Years Sampled`) %>%
-      summarise(`Sample Codes` = paste0(WQM_YRS_SPG_CODE, collapse = ' | '))         
-    
+      summarise(`Sample Codes` = paste0(WQM_YRS_SPG_CODE, collapse = ' | '))
+
     ## Field Data Information
     reactive_objects$multistationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
       filter(Fdt_Sta_Id %in% !! reactive_objects$multistationSelection$Sta_Id &  #reactive_objects$WQM_Stations_Filter$StationID &
                between(as.Date(Fdt_Date_Time), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) ) %>% #& # x >= left & x <= right
                #Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE") %>%  # don't drop QA failure on SQL part bc also drops any is.na(Ssc_Description)
-      as_tibble() %>% 
+      as_tibble() %>%
       filter(Ssc_Description != "INVALID DATA SET QUALITY ASSURANCE FAILURE")
-    
+
     ### Analyte information
     if(nrow(reactive_objects$multistationFieldData) == 0){
-      showNotification("No data for selected window.", duration = 10, type = 'error')   
+      showNotification("No data for selected window.", duration = 10, type = 'error')
       } else {
         reactive_objects$multistationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
           filter(Ana_Sam_Fdt_Id %in% !! reactive_objects$multistationFieldData$Fdt_Id &
                    #between(as.Date(Ana_Received_Date), !! input$dateRange_multistation[1], !! input$dateRange_multistation[2]) & # x >= left & x <= right
-                   Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
+                   Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
           as_tibble() %>%
           left_join(dplyr::select(reactive_objects$multistationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id")) }    })
-  
+
   ## Display Station Information
   output$multistationInfoTable <- DT::renderDataTable({
     req(reactive_objects$multistationSelection)
@@ -853,17 +854,17 @@ shinyServer(function(input, output, session) {
               options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
                              pageLength = nrow(reactive_objects$multistationSelection %>% distinct(Sta_Id, .keep_all = T)),
                              buttons=list('copy','colvis')))  })
-  
+
   output$multistationInfoSampleMetrics <- DT::renderDataTable({req(reactive_objects$multistationInfoSampleMetrics)
-    datatable(reactive_objects$multistationInfoSampleMetrics, 
+    datatable(reactive_objects$multistationInfoSampleMetrics,
               rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
                              pageLength = nrow(reactive_objects$multistationInfoSampleMetrics),
                              buttons=list('copy','colvis')) ) })
-  
-  
+
+
   ### Water Quality Data Tab----------------------------------------------------------------------------------------------------------------
-  
+
   output$multistationDateRangeFilter_ <- renderUI({ req(nrow(reactive_objects$multistationFieldData) > 0)
       dateRangeInput('multistationDateRangeFilter',
                      label = 'Filter Available Data Further By User Selected Date Range (YYYY-MM-DD)',
@@ -880,10 +881,10 @@ shinyServer(function(input, output, session) {
            checkboxGroupInput('multistationLabCodesDropped', 'Lab Codes Revoved From Futher Analyses',
                               choices = codeOptions, inline = TRUE, selected = c('QF'))   ) })
 
-    ## Depth filter 
-    output$multistationDepthFilter_ <- renderUI({ req(nrow(reactive_objects$multistationAnalyteData) > 0)
+    ## Depth filter
+    output$multistationDepthFilter_ <- renderUI({ req(nrow(reactive_objects$multistationFieldData) > 0)
       checkboxInput('multistationDepthFilter', 'Only Analyze Surface Measurements (Depth <= 0.3 m)') })
-    
+
     ## Lab Code Module
     observeEvent(input$multistationReviewLabCodes,{
       showModal(modalDialog(
@@ -897,10 +898,10 @@ shinyServer(function(input, output, session) {
                                pageLength = nrow(labCommentCodes),
                                buttons=list('copy',list(extend='excel',filename=paste0('CEDSlabCodes')),
                                             'colvis')), selection = 'none')   })
-    
+
     # Drop any unwanted Analyte codes
-    observe({req(nrow(reactive_objects$multistationFieldData) > 0, input$multistationDateRangeFilter, nrow(reactive_objects$multistationAnalyteData)>0)
-      reactive_objects$multistationFieldDataUserFilter <- filter(reactive_objects$multistationFieldData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) ) %>% 
+    observe({req(nrow(reactive_objects$multistationFieldData) > 0, input$multistationDateRangeFilter)
+      reactive_objects$multistationFieldDataUserFilter <- filter(reactive_objects$multistationFieldData, between(as.Date(Fdt_Date_Time), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]) ) %>%
         {if(input$multistationDepthFilter == TRUE)
           filter(., Fdt_Depth <= 0.3)
           else . }
@@ -908,10 +909,10 @@ shinyServer(function(input, output, session) {
         filter(Ana_Sam_Mrs_Container_Id_Desc %in% input$multistationRepFilter) %>%
         filter(! Ana_Com_Code %in% input$multistationLabCodesDropped)
       })
-    
-    
-    
-    
+
+
+
+
     ### Filter by user input
     multistationFieldAnalyteDateRange <- reactive({req(reactive_objects$multistationFieldDataUserFilter, input$multistationDateRangeFilter, reactive_objects$multistationAnalyteDataUserFilter, input$multistationRepFilter, input$multistationAverageParameters)
       stationFieldAnalyteDataPretty(reactive_objects$multistationAnalyteDataUserFilter, reactive_objects$multistationFieldDataUserFilter,
@@ -920,7 +921,7 @@ shinyServer(function(input, output, session) {
     ## Data Summary
     output$multistationFieldAnalyte <-  renderDataTable({ req(multistationFieldAnalyteDateRange())
      # show_modal_spinner(spin = 'flower')
-      
+
       z <- multistationFieldAnalyteDateRange() %>% # drop all empty columns ( this method longer but handles dttm issues)
         map(~.x) %>%
         discard(~all(is.na(.x))) %>%
@@ -940,7 +941,7 @@ shinyServer(function(input, output, session) {
                                  pageLength = nrow(z),
                                  buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData_multistationQuery', Sys.Date())),
                                               'colvis')), selection = 'none')    }
-      
+
     #  remove_modal_spinner()
       })
 
@@ -990,22 +991,22 @@ shinyServer(function(input, output, session) {
      suppressWarnings(suppressMessages(
        parameterPlotly(multistationBasicSummary(), input$multistationParameterPlotlySelection, unitData, WQSlookup, input$multistationAddBSAcolors) ))   })
 
-    
+
     #### Loess Smoothing Modal Multistation
     observeEvent(input$multistationSmoothModal,{
       showModal(modalDialog(
         title="Parameter Plot with Loess (Locally Estimated Scatterplot Smoother) Function",
-        helpText('This plot is meant for exploratory data analysis to visualize general patterns in the data and and does not serve as a 
+        helpText('This plot is meant for exploratory data analysis to visualize general patterns in the data and and does not serve as a
                  robust trend analysis.'),
         plotlyOutput('multistationLoessSmoothPlot'),
         easyClose = TRUE))  })
-    
+
     output$multistationLoessSmoothPlot <- renderPlotly({req(input$multistationSmoothModal, nrow(multistationBasicSummary()) > 0)
       basicLoessPlotFunction(multistationBasicSummary(), input$multistationParameterPlotlySelection)      })
-    
-    
-    
-    
+
+
+
+
     ## Visualization Tools: Parameter Boxplot Tab
     observe({req(nrow(multistationBasicSummary()) > 0, input$multistationParameterBoxPlotlySelection)
       if(input$multistationParameterBoxPlotlySelection %in% names(multistationBasicSummary())){
@@ -1014,27 +1015,27 @@ shinyServer(function(input, output, session) {
         if(nrow(z) == 0){
           showNotification('No data to plot for selected parameter.',duration = 3 )}
       } else {showNotification('No data to plot for selected parameter.', duration = 3  )}      })
-    
+
     output$multistationParameterBoxplot <- renderPlotly({ req(nrow(filter(multistationBasicSummary(), !is.na(input$multistationParameterBoxPlotlySelection))) > 0, input$multistationParameterBoxPlotlySelection)
       suppressWarnings(suppressMessages(
         parameterBoxplotFunction(multistationBasicSummary(), input$multistationParameterBoxPlotlySelection, unitData, WQSlookup, input$multistationAddJitter) ))   })
-    
-    
+
+
     ## Visualization Tools: Dissolved Metals Analysis
     callModule(dissolvedMetalsCriteria,'multistationMetals', multistationFieldAnalyteDateRange(), WQSlookup, staticLimit)
-    
 
 
 
-    
-    
+
+
+
     # Raw Field Data
     output$multistationFieldDataRaw <- renderDataTable({ req(reactive_objects$multistationFieldDataUserFilter)
       datatable(reactive_objects$multistationFieldDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
                 options = list(dom = 'Bift', scrollX = TRUE, scrollY = '300px', pageLength = nrow(reactive_objects$multistationFieldDataUserFilter),
                                buttons=list('copy',list(extend='excel',filename=paste0('CEDSrawFieldData_MultistationQuery', Sys.Date())),
                                             'colvis')), selection = 'none') })
-    
+
     # Raw Analyte Data
     output$multistationAnalyteDataRaw <- renderDataTable({ req(reactive_objects$multistationAnalyteDataUserFilter)
       datatable(reactive_objects$multistationAnalyteDataUserFilter, rownames = F, escape= F, extensions = 'Buttons',
@@ -1043,23 +1044,23 @@ shinyServer(function(input, output, session) {
                                             'colvis')), selection = 'none') })
     # LRBS Data
     output$multistationLRBSdataRaw <- renderDataTable({  req(reactive_objects$multistationAnalyteDataUserFilter)
-      z <- filter(LRBS, StationID %in% reactive_objects$multistationFieldDataUserFilter$Fdt_Sta_Id & 
-                    between(as.Date(Date), as.Date(input$multistationDateRangeFilter[1]), as.Date(input$multistationDateRangeFilter[2]) ) ) %>% 
+      z <- filter(LRBS, StationID %in% reactive_objects$multistationFieldDataUserFilter$Fdt_Sta_Id &
+                    between(as.Date(Date), as.Date(input$multistationDateRangeFilter[1]), as.Date(input$multistationDateRangeFilter[2]) ) ) %>%
         mutate(Date = as.Date(Date))
-      
+
       datatable(z, rownames = F, escape= F, extensions = 'Buttons',
                 options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                                buttons=list('copy',list(extend='excel',filename=paste0('LRBSdata_MultistationQuery', Sys.Date())),
                                             'colvis')), selection = 'none') })
-    
-    
+
+
 
 
     #output$test <- renderPrint({ reactive_objects$multistationAnalyteDataUserFilter}) #multistationFieldAnalyteDateRange() })#reactive_objects$multistationAnalyteData }) #reactive_objects$multistationInfoFin })#WQM_Stations_Filter }) #input$begin_multistation_spatial})#
-    
 
 
-  
+
+
 
 
   

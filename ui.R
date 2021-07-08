@@ -21,7 +21,7 @@ shinyUI(fluidPage(tags$head(
                             tabPanel('How To',
                                      includeMarkdown("CEDS WQM Query Tool How To.md")),
                             #includeHTML("BenthicQueryToolHowTo.html")),#htmlOutput("BenthicQueryToolHowTo") ), # this was a hot mess. when trying to update the BenthicQueryHowTo rmd and rendering to html, the app would not take any user inputs. so weird and wasted hours on this problem. ultimately had to go with rendering the .md in the app to have any semblance of a solution
-                            
+
                              
                              tabPanel("Single Station Query (Live CEDS Connection)", value = 'SingleStation', # key for passing URL to specific Tab
                                       tabsetPanel(
