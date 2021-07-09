@@ -38,7 +38,8 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-
+*.pdf
+*.docx
 *.yml
 data/
 rsconnect/
