@@ -211,8 +211,14 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
              # 
              
              TSS_mg_L = coalesce(TOTAL_SUSPENDED_SOLIDS_00530_mg_L, `SSC-TOTAL_00530_mg_L`, TOTAL_SUSPENDED_SOLIDS_TSS45_mg_L),
-             CHLORIDE_mg_L = ifelse(CHLORIDE_DISSOLVED_00941_mg_L > CHLORIDE_TOTAL_00940_mg_L, CHLORIDE_DISSOLVED_00941_mg_L, CHLORIDE_TOTAL_00940_mg_L),
-             SULFATE_mg_L = ifelse(SULFATE_DISSOLVED_00946_mg_L > SULFATE_TOTAL_00945_mg_L, SULFATE_DISSOLVED_00946_mg_L, SULFATE_TOTAL_00945_mg_L),
+             # Chloride logic not spelled out in Roger's code but how his scripts work
+             CHLORIDE_mg_L = coalesce(CHLORIDE_TOTAL_00940_mg_L, CHLORIDE_DISSOLVED_00941_mg_L), 
+             CHLORIDE_mg_L = ifelse(!is.na(CHLORIDE_DISSOLVED_00941_mg_L) && !is.na(CHLORIDE_TOTAL_00940_mg_L) &&
+                                      CHLORIDE_DISSOLVED_00941_mg_L > CHLORIDE_TOTAL_00940_mg_L, CHLORIDE_DISSOLVED_00941_mg_L, CHLORIDE_mg_L),
+             # Sulfate logic not spelled out in Roger's code but how his scripts work
+             SULFATE_mg_L = coalesce(SULFATE_TOTAL_00945_mg_L, SULFATE_DISSOLVED_00946_mg_L), 
+             SULFATE_mg_L = ifelse(!is.na(SULFATE_DISSOLVED_00946_mg_L) && !is.na(SULFATE_TOTAL_00945_mg_L) &&
+                                      SULFATE_DISSOLVED_00946_mg_L > SULFATE_TOTAL_00945_mg_L, SULFATE_DISSOLVED_00946_mg_L, SULFATE_mg_L),
              
              # EVJ added these even though not called for in this part of conventionals, no idea where comes from otherwise
              SULFATE_TOTAL_mg_L = SULFATE_TOTAL_00945_mg_L,
@@ -268,8 +274,8 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
              RMK_PHOSPHORUS = coalesce(RMK_00665, RMK_70507, RMK_00666, RMK_00671, 
                                        RMK_49567, RMK_49572), # don't love the logic on this one, double check me
              RMK_TSS = coalesce(RMK_00530, RMK_SSC_TOTAL_00530, RMK_TSS45),
-             RMK_CHLORIDE = RMK_00940, # placeholder for now, fixed once combined with parameter data
-             RMK_SULFATE = RMK_00945,  # placeholder for now, fixed once combined with parameter data
+             RMK_CHLORIDE = coalesce(RMK_00940, RMK_00941), # placeholder for now, fixed once combined with parameter data
+             RMK_SULFATE = coalesce(RMK_00945, RMK_00946), # placeholder for now, fixed once combined with parameter data
              
              # EVJ added these even though not called for in this part of conventionals, no idea where comes from otherwise
              RMK_SULFATE_TOTAL = RMK_00945,
@@ -327,8 +333,10 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                NITROGEN_AMMONIA_DISSOLVED_00608_mg_L > NITROGEN_AMMONIA_TOTAL_00610_mg_L && 
                                RMK_00610 %in% c('U','QQ'),
                              RMK_00608, RMK_AMMONIA),
-        RMK_CHLORIDE = ifelse(CHLORIDE_DISSOLVED_00941_mg_L > CHLORIDE_TOTAL_00940_mg_L, RMK_00941, RMK_00940), # fix from above
-        RMK_SULFATE = ifelse(SULFATE_DISS_mg_L > SULFATE_TOTAL_mg_L, RMK_00946, RMK_00945)) %>%  # fix from above; SULFATE_DISS_mg_L = SULFATE_DISSOLVED_00946_mg_L; SULFATE_TOTAL_mg_L = SULFATE_TOTAL_00945_mg_L
+        RMK_CHLORIDE = ifelse(!is.na(CHLORIDE_DISSOLVED_00941_mg_L) && !is.na(CHLORIDE_TOTAL_00940_mg_L) &&
+                                CHLORIDE_DISSOLVED_00941_mg_L > CHLORIDE_TOTAL_00940_mg_L, RMK_00941, RMK_00940), # fix from above
+        RMK_SULFATE =  ifelse(!is.na(SULFATE_DISS_mg_L) && !is.na(SULFATE_TOTAL_mg_L) &&  # conventionals changes these names for some reason: SULFATE_TOTAL_mg_L = SULFATE_TOTAL_00945_mg_L;  SULFATE_DISS_mg_L = SULFATE_DISSOLVED_00946_mg_L,
+                                SULFATE_DISS_mg_L > SULFATE_TOTAL_mg_L, RMK_SULFATE_DISS, RMK_SULFATE_TOTAL)) %>%  # fix from above; # conventionals changes these names for some reason: RMK_SULFATE_DISS = RMK_00946; RMK_SULFATE_TOTAL = RMK_00945
       dplyr::select(#Ana_Id, # maybe don't need?
         Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
         NITROGEN_mg_L, RMK_NITROGEN, LEVEL_NITROGEN, AMMONIA_mg_L, 
@@ -426,183 +434,32 @@ pool <- dbPool(
 
 
 # multistation
-#station <- c('2-JKS000.38' , '2-JKS006.67' , '2-JKS013.29' , '2-JKS044.14' , '2-JKS053.48' , '2-JKS058.60' , '2-JKS042.29' , '2-JKS044.60' , '2-JKS046.40' , '2-JKS048.90' , '2-JKS015.60' , '2-JKS018.68' , '2-JKS021.09' , '2-JKS022.78' , '2-JKS023.61' , '2-JKS026.01' , '2-JKS028.69' , '2-JKS030.65' , '2-JKS036.11' , '2-JKS034.04' , '2-JKS022.15')
-
-station <-# '2-EBE000.40'#'2-PAR000.12'#'2-WBE004.44'#'2-SBE006.26'#'2-SBE001.98'# #'2-WBE004.44'#'2-EBE000.40'#
-  c('2-SBE001.98', '2-SBE006.26', '2-SBE006.27', '2-SBE001.53', '2-WBE002.11', '2-WBE004.44', '2-WBE002.12' , '2-EBE000.40', '2-EBE002.98',
-             '2-LAF003.83', '2-LAF001.15', '2-PAR001.77', '2-PAR000.77', '2-PAR000.12', '2-BRO001.35', '2-IND000.98')
-dateRange <- c(as.Date('2015-01-01'), as.Date('2020-12-31'))
-stationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
-  filter(Fdt_Sta_Id %in% !! station &
-           between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ) %>%
-  as_tibble() %>%
-  filter(! Ssc_Description %in% "INVALID DATA SET QUALITY ASSURANCE FAILURE")
-stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
-  filter(Ana_Sam_Fdt_Id %in% !! stationFieldData$Fdt_Id &
-           #between(as.Date(Ana_Received_Date), !! dateRange[1], !! dateRange[2]) & # x >= left & x <= right
-           Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
-  as_tibble() %>%
-  left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))
-stationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
-  filter(Sta_Id %in% !! toupper(station)) %>%
-  as_tibble()
-stationGIS_View <-  pool %>% tbl(in_schema("wqm",  "Wqm_Sta_GIS_View")) %>%
-  filter(Station_Id %in% !! toupper(station)) %>%
-  as_tibble()
-zz <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
-                           stationFieldDataUserFilter= stationFieldData, stationAnalyteDataUserFilter = stationAnalyteData,
-                           stationInfo,
-                           stationGIS_View,
-                           dropCodes = c('QF'))%>% 
-  arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH) #%>% 
- # mutate(UID = paste0(FDT_DATE_TIME, FDT_DEPTH)) %>% 
-  # group_by(FDT_STA_ID, FDT_DATE_TIME) %>% 
-  # #rowid_to_column()
-  # mutate(UID = n())%>% 
-#   dplyr::select(UID, everything())
-
-
-
-conventionals2 <- pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect") %>% 
-  mutate_at(vars(contains('RMK_')), as.character) %>% 
-  mutate_at(vars(contains('LEVEL_')), as.character) %>% 
-  filter(FDT_STA_ID %in% station) %>% 
-  arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH) #%>% 
-#  mutate(UID = paste0(FDT_DATE_TIME, FDT_DEPTH)) %>% 
-  # group_by(FDT_STA_ID, FDT_DATE_TIME) %>% 
-  # #rowid_to_column()
-  # mutate(UID = n()) %>% 
-#   dplyr::select(UID, everything()) #%>% 
-  # group_by(UID) %>% 
-  # mutate(n = 1:n()) %>% 
-  # filter(n > 1)
-
-View(full_join(conventionals2, zz, by = 'UID'))
-
-#View(filter(zz, ! rowid %in% conventionals2$rowid))
-View(left_join(dplyr::select(zz, FDT_STA_ID, UID),
-               dplyr::select(conventionals2, FDT_STA_ID, UID), by = c('FDT_STA_ID', 'FDT_DATE_TIME')) %>% 
-       mutate(diff = UID.x == UID.y) %>% 
-       filter(diff == FALSE))
-
-View(anti_join(dplyr::select(zz, -c(UID, GROUP_STA_ID:STA_REC_CODE)), 
-               dplyr::select(conventionals2, -c(UID, GROUP_STA_ID:STA_REC_CODE))))
-
-dplyr::all_equal(conventionals2, zz)
-janitor::compare_df_cols(conventionals2, zz)
-janitor::compare_df_cols(conventionals2, zz, return = "mismatch")
-
-
-
-library(daff)
-library(tidyselect)
-diff_data(conventionals2, zz)
-render_diff(diff_data(conventionals2, zz))
-
-View(setdiff(conventionals2, zz))
-
-View(dplyr::select(zz, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, NITROGEN_mg_L:LEVEL_AMMONIA))
-View(dplyr::select(conventionals2, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, NITROGEN_mg_L:LEVEL_AMMONIA))
-
-View(setdiff(zz, conventionals2))
-
-differences <- 
-left_join(
-dplyr::select(zz, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, PHOSPHORUS_mg_L:LEVEL_TDPLF),# NITROGEN_mg_L:LEVEL_AMMONIA),
-dplyr::select(conventionals2, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, PHOSPHORUS_mg_L:LEVEL_TDPLF),#NITROGEN_mg_L:LEVEL_AMMONIA),
-by = c('FDT_STA_ID', 'FDT_DATE_TIME', 'FDT_DEPTH')) %>% 
-  select(sort(peek_vars()))
-  rowwise() %>% 
-  mutate(nitrogen = sum(NITROGEN_mg_L.x, - NITROGEN_mg_L.y, na.rm = T),
-         ammonia = sum(AMMONIA_mg_L.x, - AMMONIA_mg_L.y, na.rm = T)) 
-
-
-
-library(lazyeval)
-oneForOne <- function(df,metricName){
-  z <- mutate_(df, realValue = interp(~v, v= as.name(paste(metricName,'.y',sep='')))) %>%
-    mutate_(newValue = interp(~v, v= as.name(paste(metricName,'.x',sep='')))) %>%
-    rowwise() %>% 
-    mutate(diff = abs(round(sum(realValue, - newValue, na.rm= T),digits = 3))) %>%
-    select(UID,diff)
-  names(z) <- c('UID',paste(metricName,'_diff',sep=''))
-  return(z)
-}
-#oneForOne(finalVSCI,'%Ephem')
-diff2 <- left_join(zz, conventionals2,  c('FDT_STA_ID', 'FDT_DATE_TIME', 'FDT_DEPTH', 'FDT_DEPTH_DESC')) %>% 
-  mutate(UID = row_number()) 
-
-diff3 <- mutate(diff2, FDT_SPG_CODE = ifelse(FDT_SPG_CODE.x == FDT_SPG_CODE.y, T, F)) %>% 
-  left_join(oneForOne(diff2, 'FDT_FIELD_PH')) %>% 
-  left_join(oneForOne(diff2, 'FDT_TEMP_CELCIUS')) %>% 
-  left_join(oneForOne(diff2, 'DO_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'DISSOLVED_OXYGEN_00300_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'DISSOLVED_OXYGEN_DOOPT_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'DISSOLVED_OXYGEN_WINK_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'FDT_SPECIFIC_CONDUCTANCE')) %>% 
-  left_join(oneForOne(diff2, 'FDT_SALINITY')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'AMMONIA_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITRATE_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NOX_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_TOTAL_00600_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_AMMONIA_DISSOLVED_00608_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_AMMONIA_TOTAL_00610_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_NITRITE_DISSOLVED_00613_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_NITRITE_TOTAL_00615_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_NITRATE_DISSOLVED_00618_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_NITRATE_TOTAL_00620_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_KJELDAHL_TOTAL_00625_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITRITE+NITRATE_TOTAL_00630_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITRITE+NITRATE_DISSOLVED_00631_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_PARTICULATE_49570_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_TOTAL_DISSOLVED_49571_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'NITROGEN_TOTAL_DISSOLVED_TDNLF_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_TOTAL_00665_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_DISSOLVED_00666_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_DISSOLVED_ORTHOPHOSPHATE_00671_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHOROUS_PARTICULATE_49567_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHOROUS_TOTAL_DISSOLVED_49572_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'ORTHOPHOSPHATE_DISSOLVED_OPWLF_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_SUSPENDED_INORGANIC_PIPLF_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_PARTICULATE_PPWLF_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'PHOSPHORUS_TOTAL_DISSOLVED_TDPLF_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'HARDNESS_TOTAL_00900_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'CHLORIDE_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'CHLORIDE_TOTAL_00940_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'CHLORIDE_DISSOLVED_00941_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'SULFATE_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'SULFATE_TOTAL_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'SULFATE_DISS_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'ECOLI')) %>% 
-  left_join(oneForOne(diff2, 'ECOLI_31648_NO_100mL')) %>% 
-  left_join(oneForOne(diff2, 'ENTEROCOCCI')) %>% 
-  left_join(oneForOne(diff2, 'FECAL_COLI')) %>% 
-  left_join(oneForOne(diff2, 'CHLOROPHYLL_A_ug_L')) %>% 
-  left_join(oneForOne(diff2, 'TSS_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'TOTAL_SUSPENDED_SOLIDS_00530_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'SSC_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'TOTAL_SUSPENDED_SOLIDS_TSS45_mg_L')) %>% 
-  left_join(oneForOne(diff2, 'SECCHI_DEPTH_M')) %>% 
-  select(UID, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, FDT_DEPTH_DESC, ends_with('_diff')) %>%
-  filter_at(vars(ends_with('_diff')), any_vars(. != 0))
-
-diff4 <- diff3 
-#i = unique(diff4$FDT_STA_ID)[1]
-#for(i in unique(diff4$FDT_STA_ID)){
-  x <- diff4 %>% #filter(diff4, FDT_STA_ID == i) %>% 
-    group_by(UID, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, FDT_DEPTH_DESC) %>% 
-    pivot_longer(cols= -c(UID, FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, FDT_DEPTH_DESC), names_to = 'parameter', values_to = 'value') %>% 
-    filter(value != 0)
-  unique(x$parameter)
-#}
-issues <- filter(x, ! parameter %in% c( #"PHOSPHORUS_mg_L_diff",
-  "SECCHI_DEPTH_M_diff"   )) %>% # secchi depth issues all over the place with where I tacked it on in roger's conventionals vs what line it occurs on in CEDS
-       arrange(parameter, FDT_STA_ID) %>% 
-  # lots of rows identified that are duplicate records and issue is that all data is teh same but on different lines
-  # drop those
-  group_by(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH, FDT_DEPTH_DESC, parameter, value) %>% 
-  mutate(n = n()) %>% 
-  filter(n == 1)
+# station <- pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect") %>% 
+#   filter(STA_REC_CODE == 'BRRO') %>% 
+#   distinct(FDT_STA_ID)
+# station <- station$FDT_STA_ID[1:100]
+# 
+# 
+# dateRange <- c(as.Date('2015-01-01'), as.Date('2020-12-31'))
+# stationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
+#   filter(Fdt_Sta_Id %in% !! station &
+#            between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ) %>%
+#   as_tibble() %>%
+#   filter(! Ssc_Description %in% "INVALID DATA SET QUALITY ASSURANCE FAILURE")
+# stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
+#   filter(Ana_Sam_Fdt_Id %in% !! stationFieldData$Fdt_Id &
+#            #between(as.Date(Ana_Received_Date), !! dateRange[1], !! dateRange[2]) & # x >= left & x <= right
+#            Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
+#   as_tibble() %>%
+#   left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))
+# stationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
+#   filter(Sta_Id %in% !! toupper(station)) %>%
+#   as_tibble()
+# stationGIS_View <-  pool %>% tbl(in_schema("wqm",  "Wqm_Sta_GIS_View")) %>%
+#   filter(Station_Id %in% !! toupper(station)) %>%
+#   as_tibble()
+# zz <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+#                            stationFieldDataUserFilter= stationFieldData, stationAnalyteDataUserFilter = stationAnalyteData,
+#                            stationInfo,
+#                            stationGIS_View,
+#                            dropCodes = c('QF'))
