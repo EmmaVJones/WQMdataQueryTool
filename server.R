@@ -403,9 +403,37 @@ shinyServer(function(input, output, session) {
             as.character(unique(WQM_Station_Full_REST()$EPA_ECO_US_L3NAME)), reactive_objects$percentiles, CDFsettingsList[[parameterSwitch]] )  })
 
 
-  # Dissolved Metals Analysis
+  # Visualization Tools: Dissolved Metals Analysis
   callModule(dissolvedMetalsCriteria,'metals', stationFieldAnalyteDateRange(), WQSlookup, staticLimit)
 
+  
+  # Visualization Tools: Lake Scatter Plots
+  # Need this as a reactive to regenerate below modules when user changes station 
+  stationSelected <- reactive({toupper(input$station)})
+  
+  lakeData <- reactive({req(stationFieldAnalyteDateRange())
+    stationFieldAnalyteDateRange() %>% rename_all(toupper) %>% thermoclineDepth() %>% 
+      left_join(WQSlookup, by = c('FDT_STA_ID' = 'StationID')) %>%
+      mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
+      mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
+      # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
+      left_join(WQSvalues, by = 'CLASS_BASIN') %>%
+      dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
+      rename('CLASS' = 'CLASS.x') })
+  
+  ## Thermocline Sub Tab  ##------------------------------------------------------------------------------------------------------
+  callModule(thermoclinePlotlySingleStation,'thermocline', AUdata = lakeData, stationSelected)
+  
+  ## Temperature Sub Tab ##------------------------------------------------------------------------------------------------------
+  callModule(temperaturePlotlySingleStation,'temperature', AUdata = lakeData, stationSelected)
+  
+  ## Dissolved Oxygen Sub Tab ##------------------------------------------------------------------------------------------------------
+  callModule(DOPlotlySingleStation,'DO', AUdata = lakeData, stationSelected)
+  
+  ## pH Sub Tab ##------------------------------------------------------------------------------------------------------
+  callModule(pHPlotlySingleStation,'pH', AUdata = lakeData, stationSelected)
+  
+  
 
 
   # Raw Field Data
@@ -1026,7 +1054,35 @@ shinyServer(function(input, output, session) {
 
 
 
-
+    
+    # Visualization Tools: Lake Scatter Plots
+    # Need this as a reactive to regenerate below modules when user changes station 
+    stationSelected <- reactive({ unique(multistationBasicSummary()$StationID) })
+    
+    multistationlakeData <- reactive({req(multistationFieldAnalyteDateRange())
+      multistationFieldAnalyteDateRange() %>% rename_all(toupper) %>% thermoclineDepth() %>% 
+        left_join(WQSlookup, by = c('FDT_STA_ID' = 'StationID')) %>%
+        mutate(CLASS_BASIN = paste(CLASS,substr(BASIN, 1,1), sep="_")) %>%
+        mutate(CLASS_BASIN = ifelse(CLASS_BASIN == 'II_7', "II_7", as.character(CLASS))) %>%
+        # Fix for Class II Tidal Waters in Chesapeake (bc complicated DO/temp/etc standard)
+        left_join(WQSvalues, by = 'CLASS_BASIN') %>%
+        dplyr::select(-c(CLASS.y,CLASS_BASIN)) %>%
+        rename('CLASS' = 'CLASS.x') })
+    
+    ## Thermocline Sub Tab  ##------------------------------------------------------------------------------------------------------
+    callModule(thermoclinePlotlySingleStation,'multistationThermocline', AUdata =  multistationlakeData , stationSelected)
+    
+    ## Temperature Sub Tab ##------------------------------------------------------------------------------------------------------
+    callModule(temperaturePlotlySingleStation,'multistationTemperature', AUdata =  multistationlakeData , stationSelected)
+    
+    ## Dissolved Oxygen Sub Tab ##------------------------------------------------------------------------------------------------------
+    callModule(DOPlotlySingleStation,'multistationDO', AUdata =  multistationlakeData , stationSelected)
+    
+    ## pH Sub Tab ##------------------------------------------------------------------------------------------------------
+    callModule(pHPlotlySingleStation,'multistationpH', AUdata =  multistationlakeData , stationSelected)
+    
+    
+    
 
 
     # Raw Field Data

@@ -147,7 +147,21 @@ shinyUI(fluidPage(tags$head(
                                                                                   column(6, plotOutput('Ecoregion'))),
                                                                          br(),br(), br()),# a little breathing room
                                                                 tabPanel('Dissolved Metals Criteria',
-                                                                         dissolvedMetalsCriteriaUI('metals')))), 
+                                                                         dissolvedMetalsCriteriaUI('metals')),
+                                                                tabPanel('Lake Data Visualization',
+                                                                         h4('Interactive Lake Data Parameter Scatter Plot'),
+                                                                         #helpText('The interactive scatterplot below ')
+                                                                         tabsetPanel(
+                                                                           tabPanel('Thermocline',
+                                                                                    thermoclinePlotlySingleStationUI('thermocline')),
+                                                                           tabPanel('Temperature',
+                                                                                    temperaturePlotlySingleStationUI('temperature')),
+                                                                           tabPanel('Dissolved Oxygen',
+                                                                                    DOPlotlySingleStationUI('DO')),
+                                                                           tabPanel('pH',
+                                                                                    pHPlotlySingleStationUI('pH'))
+                                                                         )
+                                                                         ))), 
                                                      tabPanel('Data Download Formats',
                                                               tabsetPanel(
                                                                 tabPanel('Raw Field Data',
@@ -302,7 +316,21 @@ shinyUI(fluidPage(tags$head(
                                                                                  column(3, checkboxInput('multistationAddJitter', 'Add jittered raw data'))),
                                                                         plotlyOutput('multistationParameterBoxplot'), br(), br(), br()),
                                                                tabPanel('Dissolved Metals Criteria',
-                                                                        dissolvedMetalsCriteriaUI('multistationMetals')))),
+                                                                        dissolvedMetalsCriteriaUI('multistationMetals')),
+                                                               tabPanel('Lake Data Visualization',
+                                                                        h4('Interactive Lake Data Parameter Scatter Plot'),
+                                                                        #helpText('The interactive scatterplot below ')
+                                                                        tabsetPanel(
+                                                                          tabPanel('Thermocline',
+                                                                                   thermoclinePlotlySingleStationUI('multistationThermocline')),
+                                                                          tabPanel('Temperature',
+                                                                                   temperaturePlotlySingleStationUI('multistationTemperature')),
+                                                                          tabPanel('Dissolved Oxygen',
+                                                                                   DOPlotlySingleStationUI('multistationDO')),
+                                                                          tabPanel('pH',
+                                                                                   pHPlotlySingleStationUI('multistationpH'))
+                                                                        ) )
+                                                               )),
                                                     tabPanel('Data Download Formats',
                                                              tabsetPanel(
                                                                tabPanel('Raw Field Data',

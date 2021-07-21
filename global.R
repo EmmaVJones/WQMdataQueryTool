@@ -29,6 +29,11 @@ conn <- config::get("connectionSettings") # get configuration settings
 board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_KEY"),
                          server = conn$CONNECT_SERVER)#Sys.getenv("CONNECT_SERVER"))
 
+modulesToReadIn <- c('thermocline', 'temperature','DO','pH')
+for (i in 1:length(modulesToReadIn)){
+  source(paste('assessmentModules/',modulesToReadIn[i],'ModuleWQMtoolEdition.R',sep=''))
+}
+
 # Retrieve Pins
 WQM_Station_Full <- pin_get("ejones/WQM-Station-Full", board = "rsconnect")
 Wqm_Stations_View <- pin_get("ejones/WQM-Stations-View", board = "rsconnect")
@@ -1140,3 +1145,51 @@ parameterBoxplotFunction <- function(basicData, parameter, unitData, WQSlookup, 
 }
 #parameterBoxplotFunction(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addJitter = F)
 
+
+
+
+# From assessment apps
+# change WQS for a given module
+changeWQSfunction <- function(stationData,  # single station dataset
+                              inputCLASS_DESCRIPTION){ # from user module)
+  WQSvalues <- bind_rows(WQSvalues, 
+                         tribble(
+                           ~`pH Min`, ~`pH Max`, ~CLASS_DESCRIPTION, 
+                           6.5, 9.5, 'SPSTDS = 6.5-9.5'))
+  if(inputCLASS_DESCRIPTION != unique(stationData$CLASS_DESCRIPTION)){
+    changedWQS <- filter(WQSvalues, CLASS_DESCRIPTION %in% inputCLASS_DESCRIPTION)
+    return(dplyr::select(stationData, -c(`Description Of Waters`:CLASS_DESCRIPTION)) %>%
+             mutate(CLASS = changedWQS$CLASS, 
+                    `Description Of Waters` = changedWQS$`Description Of Waters` ) %>%
+             left_join(changedWQS, by = c('CLASS', 'Description Of Waters'))) 
+  } else {return(stationData)} 
+}
+
+
+# From assessment apps
+# Calculate daily thermocline depth and designate Epilimnion vs Hypolimnion
+thermoclineDepth <- function(stationData){
+  stationData <- stationData %>%
+    mutate(SampleDate = as.Date(FDT_DATE_TIME)) %>%
+    group_by(FDT_STA_ID, SampleDate) 
+  
+  dailyThermDepth <- dplyr::select(stationData, FDT_STA_ID, SampleDate, FDT_DEPTH, FDT_TEMP_CELCIUS) %>%
+    mutate(DepthDiff = c(NA, diff(FDT_DEPTH)),
+           TempDiff = c(NA, diff(FDT_TEMP_CELCIUS))) %>%
+    filter(DepthDiff == 1) # get rid of changes less than 1 meter depth
+  # Alt route in case shallow lake
+  if(nrow(dailyThermDepth) > 0){
+    dailyThermDepth <- filter(dailyThermDepth, TempDiff <= -1)
+    # one more catch if no thermocline established
+    if(nrow(dailyThermDepth) > 0){
+      dailyThermDepth <- summarise(dailyThermDepth, ThermoclineDepth = min(FDT_DEPTH) - 0.5) %>% ungroup() 
+    } else {
+      dailyThermDepth <- summarise(stationData, ThermoclineDepth = NA) %>% ungroup()  }
+  } else {
+    dailyThermDepth <- summarise(stationData, ThermoclineDepth = NA) %>% ungroup() }
+  
+  
+  full_join(stationData, dailyThermDepth, by = c('FDT_STA_ID', 'SampleDate')) %>%
+    mutate(LakeStratification= ifelse(FDT_DEPTH < ThermoclineDepth,"Epilimnion","Hypolimnion"))%>% ungroup() 
+}
+# stationData %>% thermoclineDepth()
