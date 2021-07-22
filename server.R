@@ -1057,7 +1057,7 @@ shinyServer(function(input, output, session) {
     
     # Visualization Tools: Lake Scatter Plots
     # Need this as a reactive to regenerate below modules when user changes station 
-    stationSelected <- reactive({ unique(multistationBasicSummary()$StationID) })
+    multistationSelected <- reactive({ unique(multistationBasicSummary()$StationID) })
     
     multistationlakeData <- reactive({req(multistationFieldAnalyteDateRange())
       multistationFieldAnalyteDateRange() %>% rename_all(toupper) %>% thermoclineDepth() %>% 
@@ -1070,16 +1070,16 @@ shinyServer(function(input, output, session) {
         rename('CLASS' = 'CLASS.x') })
     
     ## Thermocline Sub Tab  ##------------------------------------------------------------------------------------------------------
-    callModule(thermoclinePlotlySingleStation,'multistationThermocline', AUdata =  multistationlakeData , stationSelected)
+    callModule(thermoclinePlotlySingleStation,'multistationThermocline', AUdata =  multistationlakeData , multistationSelected )
     
     ## Temperature Sub Tab ##------------------------------------------------------------------------------------------------------
-    callModule(temperaturePlotlySingleStation,'multistationTemperature', AUdata =  multistationlakeData , stationSelected)
+    callModule(temperaturePlotlySingleStation,'multistationTemperature', AUdata =  multistationlakeData , multistationSelected )
     
     ## Dissolved Oxygen Sub Tab ##------------------------------------------------------------------------------------------------------
-    callModule(DOPlotlySingleStation,'multistationDO', AUdata =  multistationlakeData , stationSelected)
+    callModule(DOPlotlySingleStation,'multistationDO', AUdata =  multistationlakeData , multistationSelected )
     
     ## pH Sub Tab ##------------------------------------------------------------------------------------------------------
-    callModule(pHPlotlySingleStation,'multistationpH', AUdata =  multistationlakeData , stationSelected)
+    callModule(pHPlotlySingleStation,'multistationpH', AUdata =  multistationlakeData , multistationSelected )
     
     
     
