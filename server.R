@@ -76,6 +76,11 @@ shinyServer(function(input, output, session) {
     reactive_objects$stationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
       filter(Sta_Id %in% !! toupper(input$station)) %>%
       as_tibble()
+    
+    # for conventionals later
+    reactive_objects$stationGIS_View <-  pool %>% tbl(in_schema("wqm",  "Wqm_Sta_GIS_View")) %>%
+      filter(Station_Id %in% !! toupper(input$station)) %>%
+      as_tibble()
 
     if(nrow(reactive_objects$stationInfo) == 0){
       showNotification("Not a valid StationID.")   }  })
@@ -287,11 +292,21 @@ shinyServer(function(input, output, session) {
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
                              pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
+  
+  conventionalsData <- reactive({req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
+    conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+                         stationFieldDataUserFilter= reactive_objects$stationFieldDataUserFilter, 
+                         stationAnalyteDataUserFilter = reactive_objects$stationAnalyteDataUserFilter, 
+                         reactive_objects$stationInfo,
+                         stationGIS_View = reactive_objects$stationGIS_View,
+                         dropCodes = c('QF', input$labCodesDropped)) %>% 
+      arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)})
 
 
   ## Visualization Tools: Simplified Dataset Tab
-  basicStationSummary <- reactive({req(stationFieldAnalyteDateRange())
-    basicSummary(stationFieldAnalyteDateRange()) })
+  basicStationSummary <- reactive({req(stationFieldAnalyteDateRange(), conventionalsData())
+    #basicSummary(stationFieldAnalyteDateRange()) })
+    basicSummaryConventionals(conventionalsData(), stationFieldAnalyteDateRange()) })
 
   output$basicSummary <- renderDataTable({ req(basicStationSummary())
     datatable(basicStationSummary(), rownames = F, escape= F, extensions = 'Buttons',

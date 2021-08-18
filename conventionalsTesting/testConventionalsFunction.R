@@ -20,9 +20,9 @@ pool <- dbPool(
   trusted_connection = "yes"
 )
 
-station <- '2-ANG003.35'#'2-HRE000.44'#'2-JKS030.65'
+station <- '4AROA216.75'#'2-ANG003.35'#'2-HRE000.44'#'2-JKS030.65'
 
-dateRange <- c(as.Date('2015-01-01'), as.Date('2020-12-31'))
+dateRange <- c(as.Date('2015-01-01'), as.Date('2021-12-31'))
 stationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
   filter(Fdt_Sta_Id %in% !! station &
            between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ) %>%

@@ -54,8 +54,8 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '4AROA175.63'#'1BDUR000.11'#'2-JKS023.61'#'2-SKC001.17'#'2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
-dateRange <- c(as.Date('2018-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
+station <- '4AROA216.75'#'4AROA175.63'#'1BDUR000.11'#'2-JKS023.61'#'2-SKC001.17'#'2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+dateRange <- c(as.Date('2010-01-01'), as.Date('2021-08-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
 # z <- pool %>% tbl( "Wqm_Field_data_View") %>%
@@ -70,6 +70,9 @@ dateRange <- c(as.Date('2018-01-01'), as.Date('2021-01-01'))# as.Date(Sys.Date()
 # Basic station info and make sure station in CEDS
 stationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
   filter(Sta_Id %in% !! toupper(station)) %>%
+  as_tibble()
+stationGIS_View <-  pool %>% tbl(in_schema("wqm",  "Wqm_Sta_GIS_View")) %>%
+  filter(Station_Id %in% !! toupper(station)) %>%
   as_tibble()
 
 # Pull as many details about station from REST service (if available). Work around provided in case station isn't on REST server
@@ -165,12 +168,26 @@ uniqueSampleCodes(stationFieldAnalyte1)
 # Special Comments
 uniqueComments(stationFieldAnalyte1)
 
+
+# conventionals dataset to correctly consolidate data
+conventionalsData <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+                     stationFieldDataUserFilter= stationFieldDataUserFilter, stationAnalyteDataUserFilter = stationAnalyteDataUserFilter, 
+                     stationInfo,
+                     stationGIS_View,
+                     dropCodes = c('QF', labCodesDropped)) %>% 
+  arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
+
 # Basic Dataset people will actually use
-basicData <- basicSummary(stationFieldAnalyte1)
+basicData <- basicSummaryConventionals(conventionalsData, stationFieldAnalyte1)
+####################################################################################################################################
+### old method that relied on name matching vs actual storet codes and standardized data consolidation steps (conventionals method)
+### Basic Dataset people will actually use
+####basicData <- basicSummary(stationFieldAnalyte1)
+####################################################################################################################################
 
 # parameter graph
 parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addBSAcolors = T) #unique(filter(unitData, !is.na(AltName))$AltName)
-parameterPlotly(basicData, "Secci Depth", unitData, WQSlookup) 
+parameterPlotly(basicData, "Secchi Depth", unitData, WQSlookup) 
 
 names(basicData)[names(basicData) %in% unitData$AltName]
 dplyr::select(basicData, parameterPlot = !! parameter) %>% # rename clutch for nse

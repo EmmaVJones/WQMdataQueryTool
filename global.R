@@ -21,6 +21,7 @@ library(dbplyr)
 source('vlookup.R')
 source('cdfRiskTable.R')
 source('dissolvedMetalsModule.R') #also contains dissolved metals functions that are more flexible than from assessment apps
+source('conventionalsTesting/conventionalsFunction.R')
 
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
@@ -44,32 +45,32 @@ mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSE
                 "LEAD, DISSOLVED (UG/L AS PB)", "NICKEL, DISSOLVED (UG/L AS NI)","ZINC, DISSOLVED (UG/L AS ZN)")
 
 ## For testing: connect to ODS production
-# pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
-#  Server= "DEQ-SQLODS-PROD,50000",
-#  dbname = "ODS",
-#  trusted_connection = "yes"
-# )
+pool <- dbPool(
+ drv = odbc::odbc(),
+ Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+ Server= "DEQ-SQLODS-PROD,50000",
+ dbname = "ODS",
+ trusted_connection = "yes"
+)
 
 # For deployment on the R server: Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
 
 onStop(function() {
   poolClose(pool)
@@ -373,6 +374,78 @@ concatenateCols2 <- function(df, containString){
 #stationFieldAnalyte$Fdt_Do_Optical[7] <- NA
 
 
+basicSummaryConventionals <- function(conventionalsData, stationFieldAnalyte){
+  conventionalsDataFields <- conventionalsData %>% 
+    dplyr::select(StationID = FDT_STA_ID, `Collection Date` = FDT_DATE_TIME, Depth = FDT_DEPTH, # fields for joining
+                  Comments = FDT_COMMENT, 
+                  # parameters where standardized data handling techniques are already applied in conventionals function
+                  Temperature = FDT_TEMP_CELCIUS, pH = FDT_FIELD_PH, `Dissolved Oxygen` = DO_mg_L, # DO coalesce already happened in convetionals function
+                  `Specific Conductance` = FDT_SPECIFIC_CONDUCTANCE, Salinity = FDT_SALINITY, 
+                  `Secchi Depth` = SECCHI_DEPTH_M, Ecoli = ECOLI, Enterococci = ENTEROCOCCI, `Fecal Coliform` = FECAL_COLI, 
+                  `Total Nitrogen` = NITROGEN_mg_L, `Total Kjeldahl Nitrogen` = NITROGEN_KJELDAHL_TOTAL_00625_mg_L, 
+                  `Total Nitrate Nitrogen` = NITRATE_mg_L , NOx = NOX_mg_L, `Ammonia` = AMMONIA_mg_L, `Total Phosphorus` = PHOSPHORUS_mg_L,
+                  `Ortho Phosphorus` = PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L, `Chlorophyll a` = CHLOROPHYLL_A_ug_L, 
+                  `Total Suspended Solids` = TSS_mg_L, `Suspended Sediment Concentration` = SSC_mg_L, 
+                  `Chloride` = CHLORIDE_mg_L, `Sulfate` = SULFATE_mg_L)
+  stationFieldAnalyteDataFields <- mutate(stationFieldAnalyte, 
+                                    blankColForSelect = NA, # placeholder to enable selection below
+                                    StationID = Fdt_Sta_Id,
+                                    `Collection Date` = Fdt_Date_Time,
+                                    `Collector ID` = Fdt_Collector_Id,
+                                    `Run ID` = Fdt_Run_Id,
+                                    `SPG Code` = Fdt_Spg_Code,
+                                    `SPG Description` = Spg_Description,
+                                    Depth = Fdt_Depth,
+                                    `Weather Code` = Fdt_Weather_Code,
+                                    `Tide Code` = Fdt_Tide_Code,
+                                    `DO Percent Saturation` = Fdt_Do_Satr_Per,
+                                    Hardness = concatenateCols(stationFieldAnalyte, 'HARDNESS, TOTAL (MG/L AS CACO3)'),
+                                    `Turbidity` = coalesce(Fdt_Turbidity, concatenateCols(stationFieldAnalyte, 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU')), #combine field and lab turbidity
+                                    `Total Dissolved Solids` = concatenateCols(stationFieldAnalyte, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'),
+                                    `Suspended Sediment Concentration Coarse` = concatenateCols(stationFieldAnalyte, 'SUSP. SED. CONC. - >62 um,MG/L, (Method C)'),
+                                    `Suspended Sediment Concentration Fine` = concatenateCols(stationFieldAnalyte, 'SUSP. SED. CONC. - <62 um,MG/L, (Method C)'),
+                                    `Calcium` = concatenateCols(stationFieldAnalyte, 'CALCIUM, DISSOLVED (MG/L AS CA)'),
+                                    `Magnesium` = concatenateCols(stationFieldAnalyte, 'MAGNESIUM, DISSOLVED (MG/L AS MG)'),
+                                    `Sodium` = concatenateCols(stationFieldAnalyte, 'SODIUM, DISSOLVED (MG/L AS NA)'),
+                                    `Potassium` = concatenateCols(stationFieldAnalyte, 'POTASSIUM, DISSOLVED (MG/L AS K)'),
+                                    `Arsenic` = concatenateCols(stationFieldAnalyte, "ARSENIC, DISSOLVED  (UG/L AS AS)"),
+                                    `Barium` = concatenateCols(stationFieldAnalyte, "BARIUM, DISSOLVED (UG/L AS BA)"),
+                                    `Beryllium` = concatenateCols(stationFieldAnalyte, "BERYLLIUM, DISSOLVED (UG/L AS BE)"),
+                                    `Cadmium` = concatenateCols(stationFieldAnalyte,  "CADMIUM, DISSOLVED (UG/L AS CD)"),
+                                    `Chromium` = concatenateCols(stationFieldAnalyte, "CHROMIUM, DISSOLVED (UG/L AS CR)"),
+                                    `Copper` = concatenateCols(stationFieldAnalyte, "COPPER, DISSOLVED (UG/L AS CU)"),
+                                    `Iron` = concatenateCols(stationFieldAnalyte, "IRON, DISSOLVED (UG/L AS FE)"),
+                                    `Lead` = concatenateCols(stationFieldAnalyte, "LEAD, DISSOLVED (UG/L AS PB)"), 
+                                    `Manganese` = concatenateCols(stationFieldAnalyte, "MANGANESE, DISSOLVED (UG/L AS MN)"),
+                                    `Thallium` = concatenateCols(stationFieldAnalyte, "THALLIUM, DISSOLVED (UG/L AS TL)"),
+                                    `Nickel` = concatenateCols(stationFieldAnalyte, "NICKEL, DISSOLVED (UG/L AS NI)"),
+                                    `Silver` = concatenateCols(stationFieldAnalyte, "SILVER, DISSOLVED (UG/L AS AG)"),
+                                    `Strontium` = concatenateCols(stationFieldAnalyte, "STRONTIUM, DISSOLVED (UG/L AS SR)"),
+                                    `Zinc` = concatenateCols(stationFieldAnalyte, "ZINC, DISSOLVED (UG/L AS ZN)"),
+                                    `Antimony` = concatenateCols(stationFieldAnalyte, "ANTIMONY, DISSOLVED (UG/L AS SB)"),
+                                    `Aluminum` = concatenateCols(stationFieldAnalyte, "ALUMINUM, DISSOLVED (UG/L AS AL)"),
+                                    `Selenium` = concatenateCols(stationFieldAnalyte, "SELENIUM, DISSOLVED (UG/L AS SE)"),
+                                    `Total Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, TOTAL ORGANIC (MG/L AS C)'),
+                                    `Dissolved Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, DISSOLVED ORGANIC (MG/L AS C)'),
+                                    `Benthic Ash Free Dry Mass` = concatenateCols(stationFieldAnalyte, 'BENTHIC ASH FREE DRY MASS, GM/M2'),
+                                    `Benthic Chlorophyll a` = concatenateCols(stationFieldAnalyte, 'BENTHIC CHLOROPHYLL A, MG/M2'), # billy addition
+                                    `Benthic Chlorophyll b` = concatenateCols(stationFieldAnalyte, 'BENTHIC, CHLOROPHYLL B, MG/M2'),# billy addition
+                                    `Benthic Pheophytin a` = concatenateCols(stationFieldAnalyte, 'BENTHIC, PHEOPHYTIN A, MG/M2')) # billy addition
+  combo <- full_join(conventionalsDataFields, stationFieldAnalyteDataFields, 
+                     by = c('StationID', 'Collection Date', 'Depth')) %>% 
+    dplyr::select(StationID, `Collection Date`, Comments, `Collector ID`, `Run ID`, `SPG Code`, `SPG Description`,
+                  Depth, `Weather Code`, `Tide Code`, Temperature, pH, `Dissolved Oxygen`, `DO Percent Saturation`,
+                  `Specific Conductance`, Salinity,  `Turbidity`, `Secchi Depth`, Hardness, Ecoli, Enterococci, `Fecal Coliform`,
+                  `Total Nitrogen`, `Total Kjeldahl Nitrogen`, `Total Nitrate Nitrogen`, `Ammonia`, `Total Phosphorus`, `Ortho Phosphorus`, 
+                  `Chlorophyll a`,`Total Dissolved Solids`, `Total Suspended Solids`, `Suspended Sediment Concentration Coarse`, 
+                  `Suspended Sediment Concentration Fine`, `Calcium`, `Magnesium`, `Sodium`, `Potassium`, `Chloride`, `Sulfate`, `Arsenic`, 
+                  `Barium`, `Beryllium`, `Cadmium`, `Chromium`, `Copper`, `Iron`, `Lead`, `Manganese`, `Thallium`, `Nickel`, `Silver`, 
+                  `Strontium`, `Zinc`, `Antimony`, `Aluminum`, `Selenium`, `Fecal Coliform`, `Total Organic Carbon`, `Dissolved Organic Carbon`, 
+                  `Benthic Ash Free Dry Mass`,`Benthic Chlorophyll a`, `Benthic Chlorophyll b`, `Benthic Pheophytin a` )   
+  return(combo)
+}
+
+# old bandaid solution using string matches instead of standardized data handling logic
 basicSummary <- function(stationFieldAnalyte){
   suppressWarnings(
   mutate(stationFieldAnalyte, 
