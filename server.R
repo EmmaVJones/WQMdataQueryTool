@@ -299,7 +299,8 @@ shinyServer(function(input, output, session) {
                          stationAnalyteDataUserFilter = reactive_objects$stationAnalyteDataUserFilter, 
                          reactive_objects$stationInfo,
                          stationGIS_View = reactive_objects$stationGIS_View,
-                         dropCodes = c('QF', input$labCodesDropped)) %>% 
+                         dropCodes = c('QF', input$labCodesDropped),
+                         assessmentUse = F) %>% 
       arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)})
 
 
@@ -862,6 +863,16 @@ shinyServer(function(input, output, session) {
   
   # Update "final" site selection after user input
   observe({req(reactive_objects$multistationSelection)
+    
+    ## Station info for conventionals
+    reactive_objects$multiStationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
+      filter(Sta_Id %in% !! toupper(reactive_objects$multistationSelection$Sta_Id)) %>%
+      as_tibble()
+    reactive_objects$multiStationGIS_View <-  pool %>% tbl(in_schema("wqm",  "Wqm_Sta_GIS_View")) %>%
+      filter(Station_Id %in% !! toupper(reactive_objects$multistationSelection$Sta_Id)) %>%
+      as_tibble()
+    
+    
     ## Station Sampling Information
     reactive_objects$multistationInfoSampleMetrics <- reactive_objects$multistationSelection %>%
       group_by(Sta_Id) %>%
@@ -1010,10 +1021,22 @@ shinyServer(function(input, output, session) {
                                pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
 
 
+    ## Conventionals Dataset to correctly consolidate data
+    mulitStationConventionalsData <- reactive({req(reactive_objects$multistationFieldDataUserFilter, reactive_objects$multistationAnalyteDataUserFilter)
+      conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+                           stationFieldDataUserFilter= reactive_objects$multistationFieldDataUserFilter, 
+                           stationAnalyteDataUserFilter = reactive_objects$multistationAnalyteDataUserFilter, 
+                           reactive_objects$multiStationInfo,
+                           reactive_objects$multiStationGIS_View,
+                           dropCodes = c('QF', input$multistationLabCodesDropped),
+                           assessmentUse = F) %>% 
+        arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH) })
+    
 
     ## Visualization Tools: Simplified Dataset Tab
-    multistationBasicSummary <- reactive({req(multistationFieldAnalyteDateRange())
-      basicSummary(multistationFieldAnalyteDateRange()) })
+    multistationBasicSummary <- reactive({req(multistationFieldAnalyteDateRange(), mulitStationConventionalsData())
+      basicSummaryConventionals(mulitStationConventionalsData(), multistationFieldAnalyteDateRange()) })
+      #basicSummary(multistationFieldAnalyteDateRange()) })
 
     output$multistationBasicSummary <- renderDataTable({ req(multistationBasicSummary())
       datatable(multistationBasicSummary(), rownames = F, escape= F, extensions = 'Buttons',

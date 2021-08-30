@@ -93,7 +93,7 @@ shinyUI(fluidPage(tags$head(
                                                                          h4('Simplified Field and Chemistry Dataset'),
                                                                          helpText('This dataset cleans up the CEDS default parameter names and simplifies
                                                                          results to one measure per sample event (using a median statistic where more than
-                                                                                  one measure per sampel event is available).'),
+                                                                                  one measure per sample event is available).'),
                                                                          DT::dataTableOutput('basicSummary'), br(), br(), br()),
                                                                 tabPanel('Parameter Scatter Plot',
                                                                          h4('Interactive Parameter Scatter Plot'),
@@ -290,7 +290,7 @@ shinyUI(fluidPage(tags$head(
                                                                         h4('Simplified Field and Chemistry Dataset'),
                                                                         helpText('This dataset cleans up the CEDS default parameter names and simplifies
                                                                                             results to one measure per sample event (using a median statistic where more than
-                                                                                                     one measure per sampel event is available).'),
+                                                                                                     one measure per sample event is available).'),
                                                                         DT::dataTableOutput('multistationBasicSummary'), br(), br(), br()),
                                                                tabPanel('Parameter Scatter Plot',
                                                                         h4('Interactive Parameter Scatter Plot'),

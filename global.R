@@ -21,7 +21,7 @@ library(dbplyr)
 source('vlookup.R')
 source('cdfRiskTable.R')
 source('dissolvedMetalsModule.R') #also contains dissolved metals functions that are more flexible than from assessment apps
-source('conventionalsTesting/conventionalsFunction.R')
+source('conventionalsFunction.R')
 
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
@@ -374,19 +374,35 @@ concatenateCols2 <- function(df, containString){
 #stationFieldAnalyte$Fdt_Do_Optical[7] <- NA
 
 
+# conventionalsData <- organizeData$More; stationFieldAnalyte <- stationFieldAnalyte1
+
 basicSummaryConventionals <- function(conventionalsData, stationFieldAnalyte){
+  conventionalsVariables <- c('FDT_STA_ID','FDT_DATE_TIME', 'FDT_DEPTH', 'FDT_COMMENT', 'FDT_TEMP_CELCIUS', 'FDT_FIELD_PH', 'DO_mg_L', 'FDT_SPECIFIC_CONDUCTANCE', 'FDT_SALINITY', 
+                              'SECCHI_DEPTH_M', 'ECOLI', 'ENTEROCOCCI', 'FECAL_COLI', 'NITROGEN_mg_L', 'NITROGEN_KJELDAHL_TOTAL_00625_mg_L', 'NITRATE_mg_L' , 'NOX_mg_L', 'AMMONIA_mg_L', 
+                              'PHOSPHORUS_mg_L', 'PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L', 'CHLOROPHYLL_A_ug_L', 'TSS_mg_L', 'SSC_mg_L', 'CHLORIDE_mg_L', 'SULFATE_mg_L')
+  
+  ## add more in here
+  
   conventionalsDataFields <- conventionalsData %>% 
-    dplyr::select(StationID = FDT_STA_ID, `Collection Date` = FDT_DATE_TIME, Depth = FDT_DEPTH, # fields for joining
-                  Comments = FDT_COMMENT, 
-                  # parameters where standardized data handling techniques are already applied in conventionals function
-                  Temperature = FDT_TEMP_CELCIUS, pH = FDT_FIELD_PH, `Dissolved Oxygen` = DO_mg_L, # DO coalesce already happened in convetionals function
-                  `Specific Conductance` = FDT_SPECIFIC_CONDUCTANCE, Salinity = FDT_SALINITY, 
-                  `Secchi Depth` = SECCHI_DEPTH_M, Ecoli = ECOLI, Enterococci = ENTEROCOCCI, `Fecal Coliform` = FECAL_COLI, 
-                  `Total Nitrogen` = NITROGEN_mg_L, `Total Kjeldahl Nitrogen` = NITROGEN_KJELDAHL_TOTAL_00625_mg_L, 
-                  `Total Nitrate Nitrogen` = NITRATE_mg_L , NOx = NOX_mg_L, `Ammonia` = AMMONIA_mg_L, `Total Phosphorus` = PHOSPHORUS_mg_L,
-                  `Ortho Phosphorus` = PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L, `Chlorophyll a` = CHLOROPHYLL_A_ug_L, 
-                  `Total Suspended Solids` = TSS_mg_L, `Suspended Sediment Concentration` = SSC_mg_L, 
-                  `Chloride` = CHLORIDE_mg_L, `Sulfate` = SULFATE_mg_L)
+    dplyr::select(one_of(conventionalsVariables )) %>% 
+    # using this method to skip renaming process where variables do not exist in dataset
+    rename_all(recode, StationID = 'FDT_STA_ID', `Collection Date` = 'FDT_DATE_TIME', Depth = 'FDT_DEPTH', # fields for joining
+               Comments = 'FDT_COMMENT',
+               # parameters where standardized data handling techniques are already applied in conventionals function
+               Temperature = 'FDT_TEMP_CELCIUS', pH = 'FDT_FIELD_PH', `Dissolved Oxygen` = 'DO_mg_L', # DO coalesce already happened in convetionals function
+               `Specific Conductance` = 'FDT_SPECIFIC_CONDUCTANCE', Salinity = 'FDT_SALINITY',
+               `Secchi Depth` = 'SECCHI_DEPTH_M', Ecoli = 'ECOLI', Enterococci = 'ENTEROCOCCI', `Fecal Coliform` = 'FECAL_COLI', 
+               `Total Nitrogen` = 'NITROGEN_mg_L', `Total Kjeldahl Nitrogen` = 'NITROGEN_KJELDAHL_TOTAL_00625_mg_L', 
+               `Total Nitrate Nitrogen` = 'NITRATE_mg_L', NOx = 'NOX_mg_L', Ammonia = 'AMMONIA_mg_L', `Total Phosphorus` = 'PHOSPHORUS_mg_L',
+               `Ortho Phosphorus` = 'PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L', `Chlorophyll a` = 'CHLOROPHYLL_A_ug_L', 
+               `Total Suspended Solids` = 'TSS_mg_L', `Suspended Sediment Concentration` = 'SSC_mg_L', 
+               Chloride = 'CHLORIDE_mg_L', Sulfate = 'SULFATE_mg_L')
+  
+  
+  
+  # add more in here
+  
+  
   stationFieldAnalyteDataFields <- mutate(stationFieldAnalyte, 
                                     blankColForSelect = NA, # placeholder to enable selection below
                                     StationID = Fdt_Sta_Id,

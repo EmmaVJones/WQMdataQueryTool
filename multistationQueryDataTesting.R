@@ -96,7 +96,7 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (
                                                     manualSelection = manualSelection1, wildcardSelection = NULL)
 
 # wildcard troubleshooting
-wildcardText1 <- '2-JKS02%'#'4aroa%'#'2-JKS02%'#'3-RPP10%'
+wildcardText1 <- '4aroa2%'#'2-JKS02%'#'4aroa%'#'2-JKS02%'#'3-RPP10%'
 # wildcardResults <- sqldf(paste0('SELECT * FROM WQM_Stations_Spatial WHERE StationID like "',
 #                                 wildcardText1, '"'))
 WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection', 
@@ -173,6 +173,15 @@ multistationInfoFin <- left_join(Wqm_Stations_View %>%  # need to repull data in
                 BASINS_HUC_8_NAME, BASINS_VAHU6, WQS_WATER_NAME, WQS_SEC, WQS_CLASS, 
                 WQS_SPSTDS, WQS_PWS, WQS_TROUT, WQS_TIER_III, everything()) 
 
+
+
+# Basic station info for conventionals
+multiStationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
+  filter(Sta_Id %in% !! toupper(multistationInfoFin$Sta_Id)) %>%
+  as_tibble()
+multiStationGIS_View <-  pool %>% tbl(in_schema("wqm",  "Wqm_Sta_GIS_View")) %>%
+  filter(Station_Id %in% !! toupper(multistationInfoFin$Sta_Id)) %>%
+  as_tibble()
 
 
 # map stuff
@@ -320,8 +329,26 @@ uniqueSampleCodes(multistationFieldAnalyte1)
 # Special Comments
 uniqueComments(multistationFieldAnalyte1)
 
+
+# conventionals dataset to correctly consolidate data
+mulitStationConventionalsData <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+                                          stationFieldDataUserFilter= multistationFieldDataUserFilter, 
+                                          stationAnalyteDataUserFilter = multistationAnalyteDataUserFilter, 
+                                          multiStationInfo,
+                                          multiStationGIS_View,
+                                          dropCodes = c('QF', multistationLabCodesDropped),
+                                          assessmentUse = F) %>% 
+  arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
+
+
+
 # Basic Dataset people will actually use
-basicData <- basicSummary(multistationFieldAnalyte1)
+basicData <- basicSummaryConventionals(mulitStationConventionalsData, multistationFieldAnalyte1)
+####################################################################################################################################
+### old method that relied on name matching vs actual storet codes and standardized data consolidation steps (conventionals method)
+### Basic Dataset people will actually use
+###basicData <- basicSummary(multistationFieldAnalyte1)
+####################################################################################################################################
 
 # parameter graph
 parameterPlotly(basicData, 'Dissolved Oxygen', unitData, WQSlookup, addBSAcolors = T) #unique(filter(unitData, !is.na(AltName))$AltName)

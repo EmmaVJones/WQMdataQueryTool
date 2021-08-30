@@ -130,7 +130,7 @@ stationAnalyteDataUserFilter <- filter(stationAnalyteData, between(as.Date(Fdt_D
 
 ### Organize field and analyte info into prettier table
 
-stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = TRUE)
+stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = FALSE)
 #stationFieldAnalyte1 <- stationFieldAnalyteDataPretty(stationAnalyteDataUserFilter, stationFieldDataUserFilter, averageResults = FALSE)
 
 
@@ -170,11 +170,14 @@ uniqueComments(stationFieldAnalyte1)
 
 
 # conventionals dataset to correctly consolidate data
-conventionalsData <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+organizeData <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
                      stationFieldDataUserFilter= stationFieldDataUserFilter, stationAnalyteDataUserFilter = stationAnalyteDataUserFilter, 
                      stationInfo,
                      stationGIS_View,
-                     dropCodes = c('QF', labCodesDropped)) %>% 
+                     dropCodes = c('QF', labCodesDropped),
+                     assessmentUse = F)
+
+conventionalsData <- organizeData$Conventionals %>% 
   arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
 
 # Basic Dataset people will actually use

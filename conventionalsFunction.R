@@ -29,7 +29,7 @@ fixMultipleParameterResultsFunction <- function(newMethod){
         if(all(parameter$Ana_Uncensored_Val_Comment %in% c('T', 'QQ'))){
           parameter <- suppressWarnings(suppressMessages(
             parameter %>% 
-              group_by(Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, Pg_Storet_Code, ParameterName) %>%
+              group_by(Fdt_Sta_Id, Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, Pg_Storet_Code, ParameterName) %>%
               summarise(Ana_Uncensored_Value = max(Ana_Uncensored_Value)) ))
           parameterOut <- bind_rows(parameterOut, parameter)
         } else {
@@ -38,8 +38,8 @@ fixMultipleParameterResultsFunction <- function(newMethod){
               filter(., ! Ana_Uncensored_Val_Comment %in% c('T', 'QQ'))
               else . } %>% 
             ungroup() %>% 
-            group_by(Fdt_Sta_Id, Fdt_Date_Time, Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, Pg_Storet_Code, ParameterName) %>%
-            summarise(Ana_Uncensored_Value = median(Ana_Uncensored_Value))
+            group_by(Fdt_Sta_Id, Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, Pg_Storet_Code, ParameterName) %>%
+            summarise(Ana_Uncensored_Value = mean(Ana_Uncensored_Value))
           parameterOut <- bind_rows(parameterOut, parameter) }
       }
       
@@ -193,15 +193,7 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                    '00625', '00630', '00631', '00665', '00666', '00671', '00900', '00940',
                                    '00941', '00945', '00946', '31616', '31648', '31649', '32211', '49567',
                                    '49570', '49571', '49572', '70507', 'ECOLI', 'OPWLF', 'PIPLF', 'PPWLF',
-                                   'SSC-TOTAL', 'TDNLF', 'TDPLF', 'TSS45',
-                                   
-                                   # metals for assessment
-                                   '01106','01095','01000','01005','01010','01025','00915','01030','01040',
-                                   'DHARD','01046','01049','00925','01056','01065','00935','01145','01075',
-                                   '00930','01080','01057','01090',
-                                   
-                                   # others
-                                   '00681','00680','50091','50092','82079')) %>% 
+                                   'SSC-TOTAL', 'TDNLF', 'TDPLF', 'TSS45')) %>% 
       
       mutate(ParameterName = case_when(Pg_Storet_Code == '00530' ~ 'TOTAL_SUSPENDED_SOLIDS_00530_mg_L',
                                        Pg_Storet_Code == '00600' ~ 'NITROGEN_TOTAL_00600_mg_L',
@@ -239,39 +231,6 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                        Pg_Storet_Code == 'TDNLF' ~ 'NITROGEN_TOTAL_DISSOLVED_TDNLF_mg_L',
                                        Pg_Storet_Code == 'TDPLF' ~ 'PHOSPHORUS_TOTAL_DISSOLVED_TDPLF_mg_L',
                                        Pg_Storet_Code == 'TSS45' ~ 'TOTAL_SUSPENDED_SOLIDS_TSS45_mg_L',
-                                       
-                                       # metals for assessment
-                                       Pg_Storet_Code == '01106' ~ 'ALUMINUM, DISSOLVED (UG/L AS AL)',
-                                       Pg_Storet_Code == '01095' ~ 'ANTIMONY, DISSOLVED (UG/L AS SB)',
-                                       Pg_Storet_Code == '01000' ~ 'ARSENIC, DISSOLVED  (UG/L AS AS)',
-                                       Pg_Storet_Code == '01005' ~ 'BARIUM, DISSOLVED (UG/L AS BA)',
-                                       Pg_Storet_Code == '01010' ~ 'BERYLLIUM, DISSOLVED (UG/L AS BE)',
-                                       Pg_Storet_Code == '01025' ~ 'CADMIUM, DISSOLVED (UG/L AS CD)',
-                                       Pg_Storet_Code == '00915' ~ 'CALCIUM, DISSOLVED (MG/L AS CA)',
-                                       Pg_Storet_Code == '01030' ~ 'CHROMIUM, DISSOLVED (UG/L AS CR)',
-                                       Pg_Storet_Code == '01040' ~ 'COPPER, DISSOLVED (UG/L AS CU)',
-                                       Pg_Storet_Code == 'DHARD' ~ 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED',
-                                       Pg_Storet_Code == '01046' ~ 'IRON, DISSOLVED (UG/L AS FE)',
-                                       Pg_Storet_Code == '01049' ~ 'LEAD, DISSOLVED (UG/L AS PB)',
-                                       Pg_Storet_Code == '00925' ~ 'MAGNESIUM, DISSOLVED (MG/L AS MG)',
-                                       Pg_Storet_Code == '01056' ~ 'MANGANESE, DISSOLVED (UG/L AS MN)',
-                                       Pg_Storet_Code == '01065' ~ 'NICKEL, DISSOLVED (UG/L AS NI)',
-                                       Pg_Storet_Code == '00935' ~ 'POTASSIUM, DISSOLVED (MG/L AS K)',
-                                       Pg_Storet_Code == '01145' ~ 'SELENIUM, DISSOLVED (UG/L AS SE)',
-                                       Pg_Storet_Code == '01075' ~ 'SILVER, DISSOLVED (UG/L AS AG)',
-                                       Pg_Storet_Code == '00930' ~ 'SODIUM, DISSOLVED (MG/L AS NA)',
-                                       Pg_Storet_Code == '01080' ~ 'STRONTIUM, DISSOLVED (UG/L AS SR)',
-                                       Pg_Storet_Code == '01057' ~ 'THALLIUM, DISSOLVED (UG/L AS TL)',
-                                       Pg_Storet_Code == '01090' ~ 'ZINC, DISSOLVED (UG/L AS ZN)',
-                                       
-                                       # others
-                                       Pg_Storet_Code == '00681' ~ 'CARBON, DISSOLVED ORGANIC (MG/L AS C)',
-                                       Pg_Storet_Code == '00680' ~ 'CARBON, TOTAL ORGANIC (MG/L AS C)',
-                                       Pg_Storet_Code == '50091' ~ 'MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L',
-                                       Pg_Storet_Code == '50092' ~ 'MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L',
-                                       Pg_Storet_Code == '82079' ~ 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU',
-                                       
-                                       
                                        TRUE ~ as.character(Pg_Storet_Code))) 
     
     
@@ -350,9 +309,9 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
              ENTEROCOCCI = ENTEROCOCCI_31649_NO_100mL,
              FECAL_COLI = FECAL_COLIFORM_31616_NO_100mL,
              CHLOROPHYLL_A_ug_L = CHLOROPHYLL_32211_ug_L,
-             SSC_mg_L = `SSC-TOTAL_00530_mg_L`  ) 
+             SSC_mg_L = `SSC-TOTAL_00530_mg_L`  ) %>% 
       # now limit to just necessary columns for Conventionals format
-    stationAnalyteDataUserFilter1conventionals <- dplyr::select(stationAnalyteDataUserFilter1, #Ana_Id, 
+      dplyr::select(#Ana_Id, 
         Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
         NITROGEN_mg_L,  AMMONIA_mg_L, NITRATE_mg_L, NOX_mg_L, NITROGEN_TOTAL_00600_mg_L, NITROGEN_AMMONIA_DISSOLVED_00608_mg_L,
         NITROGEN_AMMONIA_TOTAL_00610_mg_L, NITROGEN_NITRITE_DISSOLVED_00613_mg_L, NITROGEN_NITRITE_TOTAL_00615_mg_L,
@@ -370,22 +329,6 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
       #left_join(dplyr::select(stationFieldDataUserFilter1, FDT_ID:FDT_DEPTH_DESC), by = c("Ana_Sam_Fdt_Id"= "FDT_ID")) %>% 
       #dplyr::select(FDT_STA_ID:FDT_DEPTH_DESC, everything())
     
-    # everything
-    stationAnalyteDataUserFilter1all <- dplyr::select(stationAnalyteDataUserFilter1, #Ana_Id, 
-                                                      Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
-                                                      # metals for assessment
-                                                      `ALUMINUM, DISSOLVED (UG/L AS AL)`, `ANTIMONY, DISSOLVED (UG/L AS SB)`, `ARSENIC, DISSOLVED  (UG/L AS AS)`, `BARIUM, DISSOLVED (UG/L AS BA)`,
-                                                      `BERYLLIUM, DISSOLVED (UG/L AS BE)`, `CADMIUM, DISSOLVED (UG/L AS CD)`, `CALCIUM, DISSOLVED (MG/L AS CA)`, `CHROMIUM, DISSOLVED (UG/L AS CR)`,
-                                                      `COPPER, DISSOLVED (UG/L AS CU)`, `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED`, `IRON, DISSOLVED (UG/L AS FE)`, `LEAD, DISSOLVED (UG/L AS PB)`,
-                                                      `MAGNESIUM, DISSOLVED (MG/L AS MG)`, `MANGANESE, DISSOLVED (UG/L AS MN)`, `NICKEL, DISSOLVED (UG/L AS NI)`, `POTASSIUM, DISSOLVED (MG/L AS K)`,
-                                                      `SELENIUM, DISSOLVED (UG/L AS SE)`, `SILVER, DISSOLVED (UG/L AS AG)`, `SODIUM, DISSOLVED (MG/L AS NA)`, `STRONTIUM, DISSOLVED (UG/L AS SR)`,
-                                                      `THALLIUM, DISSOLVED (UG/L AS TL)`, `ZINC, DISSOLVED (UG/L AS ZN)`,
-                                                      # others
-                                                      `CARBON, DISSOLVED ORGANIC (MG/L AS C)`, `CARBON, TOTAL ORGANIC (MG/L AS C)`, `MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L`,
-                                                      `MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L`, `TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU`)
-                                                      
-                                                      
-    
     
     # Step 3.4: Organize lab remark fields
     # now fix remark fields
@@ -400,15 +343,7 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                                                                 '00625', '00630', '00631', '00665', '00666', '00671', '00900', '00940',
                                                                                 '00941', '00945', '00946', '31616', '31648', '31649', '32211', '49567',
                                                                                 '49570', '49571', '49572', '70507', 'ECOLI', 'OPWLF', 'PIPLF', 'PPWLF',
-                                                                                'SSC-TOTAL', 'TDNLF', 'TDPLF', 'TSS45',
-                                                                                
-                                                                                # metals for assessment
-                                                                                '01106','01095','01000','01005','01010','01025','00915','01030','01040',
-                                                                                'DHARD','01046','01049','00925','01056','01065','00935','01145','01075',
-                                                                                '00930','01080','01057','01090',
-                                                                                
-                                                                                # others
-                                                                                '00681','00680','50091','50092','82079')) %>% 
+                                                                                'SSC-TOTAL', 'TDNLF', 'TDPLF', 'TSS45')) %>% 
                                                    
                                                    dplyr::select(Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, Pg_Storet_Code, Ana_Uncensored_Val_Comment) %>% 
                                                    pivot_wider(id_cols = Ana_Sam_Fdt_Id, 
@@ -446,39 +381,30 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
              LEVEL_SULFATE_TOTAL = as.character(NA), LEVEL_SULFATE_DISS = as.character(NA), LEVEL_ECOLI = as.character(NA),
              LEVEL_31648 = as.character(NA), LEVEL_ENTEROCOCCI = as.character(NA), LEVEL_FECAL_COLI = as.character(NA),
              LEVEL_CHLOROPHYLL_A = as.character(NA), LEVEL_TSS = as.character(NA), LEVEL_00530 = as.character(NA),
-             LEVEL_SSC = as.character(NA), LEVEL_TSS45 = as.character(NA)) 
-    
-    stationAnalyteDataUserFilter2conventionals <- dplyr::select(stationAnalyteDataUserFilter2,#Ana_Id, 
-                                                                Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
-                                                                RMK_NITROGEN, LEVEL_NITROGEN, RMK_AMMONIA, LEVEL_AMMONIA, RMK_NITRATE, LEVEL_NITRATE,
-                                                                RMK_NOX, LEVEL_NOX, RMK_00600, LEVEL_00600, RMK_00608, LEVEL_00608,
-                                                                RMK_00610, LEVEL_00610, RMK_00613, LEVEL_00613, RMK_00615, LEVEL_00615, RMK_00618, LEVEL_00618,
-                                                                RMK_00620, LEVEL_00620, RMK_00625, LEVEL_00625, RMK_00630, LEVEL_00630, RMK_00631, LEVEL_00631, RMK_49570, LEVEL_49570,
-                                                                RMK_49571, LEVEL_49571, RMK_TDNLF, LEVEL_TDNLF, RMK_PHOSPHORUS, LEVEL_PHOSPHORUS, RMK_00665, LEVEL_00665,
-                                                                RMK_00666, LEVEL_00666, RMK_00671, LEVEL_00671, RMK_49567, LEVEL_49567, RMK_49572, LEVEL_49572, RMK_70507, 
-                                                                LEVEL_70507, RMK_OPWLF, LEVEL_OPWLF, RMK_PIPLF, LEVEL_PIPLF, RMK_PPWLF, LEVEL_PPWLF, RMK_TDPLF, LEVEL_TDPLF,
-                                                                RMK_00900, LEVEL_00900, RMK_CHLORIDE, LEVEL_CHLORIDE, RMK_00940, LEVEL_00940, RMK_00941, LEVEL_00941,
-                                                                RMK_SULFATE, LEVEL_SULFATE, RMK_SULFATE_TOTAL, LEVEL_SULFATE_TOTAL, RMK_SULFATE_DISS, LEVEL_SULFATE_DISS,
-                                                                RMK_ECOLI, LEVEL_ECOLI, RMK_31648, LEVEL_31648, RMK_ENTEROCOCCI, LEVEL_ENTEROCOCCI, RMK_FECAL_COLI, LEVEL_FECAL_COLI,
-                                                                RMK_CHLOROPHYLL_A, LEVEL_CHLOROPHYLL_A, RMK_TSS, LEVEL_TSS, RMK_00530, LEVEL_00530, RMK_SSC, LEVEL_SSC,
-                                                                RMK_TSS45, LEVEL_TSS45 ) %>% 
+             LEVEL_SSC = as.character(NA), LEVEL_TSS45 = as.character(NA)) %>% 
+      dplyr::select(#Ana_Id, 
+        Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
+        RMK_NITROGEN, LEVEL_NITROGEN, RMK_AMMONIA, LEVEL_AMMONIA, RMK_NITRATE, LEVEL_NITRATE,
+        RMK_NOX, LEVEL_NOX, RMK_00600, LEVEL_00600, RMK_00608, LEVEL_00608,
+        RMK_00610, LEVEL_00610, RMK_00613, LEVEL_00613, RMK_00615, LEVEL_00615, RMK_00618, LEVEL_00618,
+        RMK_00620, LEVEL_00620, RMK_00625, LEVEL_00625, RMK_00630, LEVEL_00630, RMK_00631, LEVEL_00631, RMK_49570, LEVEL_49570,
+        RMK_49571, LEVEL_49571, RMK_TDNLF, LEVEL_TDNLF, RMK_PHOSPHORUS, LEVEL_PHOSPHORUS, RMK_00665, LEVEL_00665,
+        RMK_00666, LEVEL_00666, RMK_00671, LEVEL_00671, RMK_49567, LEVEL_49567, RMK_49572, LEVEL_49572, RMK_70507, 
+        LEVEL_70507, RMK_OPWLF, LEVEL_OPWLF, RMK_PIPLF, LEVEL_PIPLF, RMK_PPWLF, LEVEL_PPWLF, RMK_TDPLF, LEVEL_TDPLF,
+        RMK_00900, LEVEL_00900, RMK_CHLORIDE, LEVEL_CHLORIDE, RMK_00940, LEVEL_00940, RMK_00941, LEVEL_00941,
+        RMK_SULFATE, LEVEL_SULFATE, RMK_SULFATE_TOTAL, LEVEL_SULFATE_TOTAL, RMK_SULFATE_DISS, LEVEL_SULFATE_DISS,
+        RMK_ECOLI, LEVEL_ECOLI, RMK_31648, LEVEL_31648, RMK_ENTEROCOCCI, LEVEL_ENTEROCOCCI, RMK_FECAL_COLI, LEVEL_FECAL_COLI,
+        RMK_CHLOROPHYLL_A, LEVEL_CHLOROPHYLL_A, RMK_TSS, LEVEL_TSS, RMK_00530, LEVEL_00530, RMK_SSC, LEVEL_SSC,
+        RMK_TSS45, LEVEL_TSS45 ) %>% 
       filter(! is.na(Ana_Sam_Fdt_Id)) # drop blank row from row_bind
-    # double check things
-    #left_join(dplyr::select(stationFieldDataUserFilter1, FDT_ID:FDT_DEPTH_DESC), by = c("Ana_Sam_Fdt_Id"= "FDT_ID")) %>% 
-    #dplyr::select(FDT_STA_ID:FDT_DEPTH_DESC, everything())
+      # double check things
+      #left_join(dplyr::select(stationFieldDataUserFilter1, FDT_ID:FDT_DEPTH_DESC), by = c("Ana_Sam_Fdt_Id"= "FDT_ID")) %>% 
+      #dplyr::select(FDT_STA_ID:FDT_DEPTH_DESC, everything())
     
-    
-    stationAnalyteDataUserFilter2all <- dplyr::select(stationAnalyteDataUserFilter2,#Ana_Id,
-                                                      Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
-                                                      RMK_01106, RMK_01095, RMK_01000, RMK_01005, RMK_01010, RMK_01025, RMK_00915, RMK_01030, RMK_01040, RMK_DHARD, RMK_01046, RMK_01049, RMK_00925, RMK_01056,
-                                                      RMK_01065, RMK_00935, RMK_01145, RMK_01075, RMK_00930, RMK_01080, RMK_01057, RMK_01090, RMK_01106, RMK_01095, RMK_01000, RMK_01005, RMK_01010, RMK_01025,
-                                                      RMK_00915, RMK_01030, RMK_01040, RMK_DHARD, RMK_01046, RMK_01049, RMK_00925, RMK_01056, RMK_01065, RMK_00935, RMK_01145, RMK_01075, RMK_00930, RMK_01080,
-                                                      RMK_01057, RMK_01090, RMK_00681, RMK_00680, RMK_50091, RMK_50092, RMK_82079)
-
     
       
     # Step 3.5: Combine analyte data and remarks (and empty Level fields)
-    stationAnalyteDataUserFilter3conventionals <- left_join(stationAnalyteDataUserFilter1conventionals, stationAnalyteDataUserFilter2conventionals,
+    stationAnalyteDataUserFilter3 <- left_join(stationAnalyteDataUserFilter1, stationAnalyteDataUserFilter2,
                                                by = c(#"Ana_Id", 
                                                  "Ana_Sam_Fdt_Id", "Ana_Sam_Mrs_Container_Id_Desc")) %>% 
       # secondary adjustment based on remark codes when combined with remarks
@@ -519,53 +445,22 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
       # QUick double check
       # left_join(dplyr::select(stationFieldDataUserFilter1, FDT_ID:FDT_DEPTH_DESC), by = c("Ana_Sam_Fdt_Id"= "FDT_ID")) %>% 
       # dplyr::select(FDT_STA_ID:FDT_DEPTH_DESC, everything())
-      
-    # everything
-    stationAnalyteDataUserFilter3all <- left_join(stationAnalyteDataUserFilter3conventionals,
-                                                  left_join(stationAnalyteDataUserFilter1all, stationAnalyteDataUserFilter2all,
-                                                            by = c(#"Ana_Id", 
-                                                              "Ana_Sam_Fdt_Id", "Ana_Sam_Mrs_Container_Id_Desc")) ,
-                                                  by = c(#"Ana_Id", 
-                                                    "Ana_Sam_Fdt_Id", "Ana_Sam_Mrs_Container_Id_Desc")) %>% 
-      dplyr::select(names(stationAnalyteDataUserFilter3conventionals), 
-                    # metals for assessment
-                    `ALUMINUM, DISSOLVED (UG/L AS AL)`, RMK_01106, `ANTIMONY, DISSOLVED (UG/L AS SB)`, RMK_01095,
-                    `ARSENIC, DISSOLVED  (UG/L AS AS)`, RMK_01000, `BARIUM, DISSOLVED (UG/L AS BA)`, RMK_01005,
-                    `BERYLLIUM, DISSOLVED (UG/L AS BE)`, RMK_01010, `CADMIUM, DISSOLVED (UG/L AS CD)`, RMK_01025,
-                    `CALCIUM, DISSOLVED (MG/L AS CA)`, RMK_00915, `CHROMIUM, DISSOLVED (UG/L AS CR)`, RMK_01030,
-                    `COPPER, DISSOLVED (UG/L AS CU)`, RMK_01040, `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED`, RMK_DHARD,
-                    `IRON, DISSOLVED (UG/L AS FE)`, RMK_01046, `LEAD, DISSOLVED (UG/L AS PB)`, RMK_01049, 
-                    `MAGNESIUM, DISSOLVED (MG/L AS MG)`, RMK_00925, `MANGANESE, DISSOLVED (UG/L AS MN)`, RMK_01056,
-                    `NICKEL, DISSOLVED (UG/L AS NI)`,  RMK_01065, `POTASSIUM, DISSOLVED (MG/L AS K)`, RMK_00935,
-                    `SELENIUM, DISSOLVED (UG/L AS SE)`, RMK_01145, `SILVER, DISSOLVED (UG/L AS AG)`, RMK_01075,
-                    `SODIUM, DISSOLVED (MG/L AS NA)`, RMK_00930, `STRONTIUM, DISSOLVED (UG/L AS SR)`, RMK_01080,
-                    `THALLIUM, DISSOLVED (UG/L AS TL)`, RMK_01057, `ZINC, DISSOLVED (UG/L AS ZN)`, RMK_01090,
-                    
-                    # others
-                    `CARBON, DISSOLVED ORGANIC (MG/L AS C)`, RMK_00681, `CARBON, TOTAL ORGANIC (MG/L AS C)`, RMK_00680,
-                    `MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L`, RMK_50091, `MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L`, RMK_50092,
-                     `TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU`, RMK_82079)
-      
-
+      # 
+    
     
     # Step 4: Combine field and analyte data
     # use left join here bc stationFieldDataUserFilter1 removes any unwanted sample types (incident response, facility data)
-    comboConventionals <- left_join(stationFieldDataUserFilter1, stationAnalyteDataUserFilter3conventionals, by = c("FDT_ID" = "Ana_Sam_Fdt_Id")) %>% 
-      dplyr::select(-FDT_ID) # no longer needed
-    comboAll <- left_join(stationFieldDataUserFilter1, stationAnalyteDataUserFilter3all, by = c("FDT_ID" = "Ana_Sam_Fdt_Id")) %>% 
+    combo <- left_join(stationFieldDataUserFilter1, stationAnalyteDataUserFilter3, by = c("FDT_ID" = "Ana_Sam_Fdt_Id")) %>% 
       dplyr::select(-FDT_ID) # no longer needed
     
     # Step 5: Combine station and combo data
-    combo2 <- full_join(stationData, comboConventionals, by = 'FDT_STA_ID') %>% 
+    combo2 <- full_join(stationData, combo, by = 'FDT_STA_ID') %>% 
       dplyr::select(names(conventionals))
-    combo2all <- full_join(stationData, comboAll, by = 'FDT_STA_ID') 
         
-    return(list(Conventionals = combo2,
-                More = combo2all))
+    return(combo2)
     
   } else {
-    return(list(Conventionals = conventionals,
-                More = tibble()))
+    return(conventionals)
   }
 }
     
