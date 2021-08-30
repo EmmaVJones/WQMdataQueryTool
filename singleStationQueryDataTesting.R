@@ -54,7 +54,7 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '4AROA216.75'#'4AROA175.63'#'1BDUR000.11'#'2-JKS023.61'#'2-SKC001.17'#'2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+station <- '4AROA216.75'#'2-JKS023.61'#'4AROA175.63'#'1BDUR000.11'#'2-JKS023.61'#'2-SKC001.17'#'2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
 dateRange <- c(as.Date('2010-01-01'), as.Date('2021-08-01'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
@@ -177,11 +177,12 @@ organizeData <- conventionalsSummary(conventionals= pin_get("conventionals2022IR
                      dropCodes = c('QF', labCodesDropped),
                      assessmentUse = F)
 
-conventionalsData <- organizeData$Conventionals %>% 
-  arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
+# conventionalsData <- organizeData$Conventionals %>% 
+#   arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
+# basicData <- basicSummaryConventionals(conventionalsData, stationFieldAnalyte1)
 
 # Basic Dataset people will actually use
-basicData <- basicSummaryConventionals(conventionalsData, stationFieldAnalyte1)
+basicData <- basicSummaryConventionals(organizeData$More, stationFieldAnalyte1)
 ####################################################################################################################################
 ### old method that relied on name matching vs actual storet codes and standardized data consolidation steps (conventionals method)
 ### Basic Dataset people will actually use

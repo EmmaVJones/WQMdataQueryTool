@@ -5,6 +5,18 @@ date: "8/30/2021"
 output: html_document
 resource_files:
 - config.yml
+- data/GIS/AssessmentRegions_simple.dbf
+- data/GIS/AssessmentRegions_simple.prj
+- data/GIS/AssessmentRegions_simple.shx
+- data/GIS/vaECOREGIONlevel3__proj84.dbf
+- data/GIS/vaECOREGIONlevel3__proj84.prj
+- data/GIS/vaECOREGIONlevel3__proj84.sbn
+- data/GIS/vaECOREGIONlevel3__proj84.sbx
+- data/GIS/vaECOREGIONlevel3__proj84.shp.xml
+- data/GIS/vaECOREGIONlevel3__proj84.shx
+- data/GIS/DEQ_VAHUSB_subbasins_EVJ.dbf
+- data/GIS/DEQ_VAHUSB_subbasins_EVJ.prj
+- data/GIS/DEQ_VAHUSB_subbasins_EVJ.shx
 ---
   
 ```{r setup, include=FALSE}

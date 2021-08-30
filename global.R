@@ -379,24 +379,58 @@ concatenateCols2 <- function(df, containString){
 basicSummaryConventionals <- function(conventionalsData, stationFieldAnalyte){
   conventionalsVariables <- c('FDT_STA_ID','FDT_DATE_TIME', 'FDT_DEPTH', 'FDT_COMMENT', 'FDT_TEMP_CELCIUS', 'FDT_FIELD_PH', 'DO_mg_L', 'FDT_SPECIFIC_CONDUCTANCE', 'FDT_SALINITY', 
                               'SECCHI_DEPTH_M', 'ECOLI', 'ENTEROCOCCI', 'FECAL_COLI', 'NITROGEN_mg_L', 'NITROGEN_KJELDAHL_TOTAL_00625_mg_L', 'NITRATE_mg_L' , 'NOX_mg_L', 'AMMONIA_mg_L', 
-                              'PHOSPHORUS_mg_L', 'PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L', 'CHLOROPHYLL_A_ug_L', 'TSS_mg_L', 'SSC_mg_L', 'CHLORIDE_mg_L', 'SULFATE_mg_L')
+                              'PHOSPHORUS_mg_L', 'PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L', 'CHLOROPHYLL_A_ug_L', 'TSS_mg_L', 'SSC_mg_L', 'CHLORIDE_mg_L', 'SULFATE_mg_L',
+                              
+                              # more
+                              'SODIUM, DISSOLVED (MG/L AS NA)', 'POTASSIUM, DISSOLVED (MG/L AS K)',
+                              "SELENIUM, DISSOLVED (UG/L AS SE)", "CALCIUM, DISSOLVED (MG/L AS CA)", "MAGNESIUM, DISSOLVED (MG/L AS MG)",
+                              "ARSENIC, DISSOLVED  (UG/L AS AS)", "BARIUM, DISSOLVED (UG/L AS BA)", "ALUMINUM, DISSOLVED (UG/L AS AL)",
+                              "BERYLLIUM, DISSOLVED (UG/L AS BE)", "CADMIUM, DISSOLVED (UG/L AS CD)", "CHROMIUM, DISSOLVED (UG/L AS CR)",
+                              "COPPER, DISSOLVED (UG/L AS CU)", "IRON, DISSOLVED (UG/L AS FE)", "LEAD, DISSOLVED (UG/L AS PB)", "MANGANESE, DISSOLVED (UG/L AS MN)",
+                              "THALLIUM, DISSOLVED (UG/L AS TL)", "NICKEL, DISSOLVED (UG/L AS NI)", "SILVER, DISSOLVED (UG/L AS AG)", "ZINC, DISSOLVED (UG/L AS ZN)",
+                              "ANTIMONY, DISSOLVED (UG/L AS SB)", "HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "STRONTIUM, DISSOLVED (UG/L AS SR)")
+                              
   
   ## add more in here
   
   conventionalsDataFields <- conventionalsData %>% 
     dplyr::select(one_of(conventionalsVariables )) %>% 
     # using this method to skip renaming process where variables do not exist in dataset
-    rename_all(recode, StationID = 'FDT_STA_ID', `Collection Date` = 'FDT_DATE_TIME', Depth = 'FDT_DEPTH', # fields for joining
-               Comments = 'FDT_COMMENT',
+    rename_all(recode, FDT_STA_ID = 'StationID', FDT_DATE_TIME ='Collection Date', FDT_DEPTH = 'Depth', # fields for joining
+               FDT_COMMENT = 'Comments',
                # parameters where standardized data handling techniques are already applied in conventionals function
-               Temperature = 'FDT_TEMP_CELCIUS', pH = 'FDT_FIELD_PH', `Dissolved Oxygen` = 'DO_mg_L', # DO coalesce already happened in convetionals function
-               `Specific Conductance` = 'FDT_SPECIFIC_CONDUCTANCE', Salinity = 'FDT_SALINITY',
-               `Secchi Depth` = 'SECCHI_DEPTH_M', Ecoli = 'ECOLI', Enterococci = 'ENTEROCOCCI', `Fecal Coliform` = 'FECAL_COLI', 
-               `Total Nitrogen` = 'NITROGEN_mg_L', `Total Kjeldahl Nitrogen` = 'NITROGEN_KJELDAHL_TOTAL_00625_mg_L', 
-               `Total Nitrate Nitrogen` = 'NITRATE_mg_L', NOx = 'NOX_mg_L', Ammonia = 'AMMONIA_mg_L', `Total Phosphorus` = 'PHOSPHORUS_mg_L',
-               `Ortho Phosphorus` = 'PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L', `Chlorophyll a` = 'CHLOROPHYLL_A_ug_L', 
-               `Total Suspended Solids` = 'TSS_mg_L', `Suspended Sediment Concentration` = 'SSC_mg_L', 
-               Chloride = 'CHLORIDE_mg_L', Sulfate = 'SULFATE_mg_L')
+               FDT_TEMP_CELCIUS = 'Temperature', FDT_FIELD_PH = 'pH', DO_mg_L = 'Dissolved Oxygen', # DO coalesce already happened in convetionals function
+               FDT_SPECIFIC_CONDUCTANCE = 'Specific Conductance', FDT_SALINITY = 'Salinity',
+               SECCHI_DEPTH_M = 'Secchi Depth', ECOLI = 'Ecoli', ENTEROCOCCI = 'Enterococci', FECAL_COLI = 'Fecal Coliform', 
+               NITROGEN_mg_L = 'Total Nitrogen', NITROGEN_KJELDAHL_TOTAL_00625_mg_L = 'Total Kjeldahl Nitrogen', 
+               NITRATE_mg_L = 'Total Nitrate Nitrogen', NOX_mg_L = 'NOx', AMMONIA_mg_L = 'Ammonia', PHOSPHORUS_mg_L = 'Total Phosphorus',
+               PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L = 'Ortho Phosphorus', CHLOROPHYLL_A_ug_L = 'Chlorophyll a', 
+               TSS_mg_L = 'Total Suspended Solids', SSC_mg_L = 'Suspended Sediment Concentration', 
+               CHLORIDE_mg_L = 'Chloride', SULFATE_mg_L = 'Sulfate',
+               
+               # more
+               `SODIUM, DISSOLVED (MG/L AS NA)` = 'Sodium',
+               `POTASSIUM, DISSOLVED (MG/L AS K)` = 'Potassium',
+               `STRONTIUM, DISSOLVED (UG/L AS SR)` = "Strontium",
+               `SELENIUM, DISSOLVED (UG/L AS SE)` = "Selenium",
+               `CALCIUM, DISSOLVED (MG/L AS CA)` = "Calcium",
+               `MAGNESIUM, DISSOLVED (MG/L AS MG)` = "Magnesium",
+               `ARSENIC, DISSOLVED  (UG/L AS AS)` = "Arsenic",
+               `BARIUM, DISSOLVED (UG/L AS BA)` = "Barium",
+               `ALUMINUM, DISSOLVED (UG/L AS AL)` = "Aluminum",
+               `BERYLLIUM, DISSOLVED (UG/L AS BE)` = "Beryllium",
+               `CADMIUM, DISSOLVED (UG/L AS CD)` = "Cadmium",
+               `CHROMIUM, DISSOLVED (UG/L AS CR)` = "Chromium",
+               `COPPER, DISSOLVED (UG/L AS CU)` = "Copper", 
+               `IRON, DISSOLVED (UG/L AS FE)` = "Iron",
+               `LEAD, DISSOLVED (UG/L AS PB)` = "Lead",
+               `MANGANESE, DISSOLVED (UG/L AS MN)` = "Manganese",
+               `THALLIUM, DISSOLVED (UG/L AS TL)` = "Thallium",
+               `NICKEL, DISSOLVED (UG/L AS NI)` = "Nickel",
+               `SILVER, DISSOLVED (UG/L AS AG)` = "Silver",
+               `ZINC, DISSOLVED (UG/L AS ZN)` = "Zinc",
+               `ANTIMONY, DISSOLVED (UG/L AS SB)` = "Antimony", 
+               `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED` = "Hardness")
   
   
   
@@ -415,32 +449,32 @@ basicSummaryConventionals <- function(conventionalsData, stationFieldAnalyte){
                                     `Weather Code` = Fdt_Weather_Code,
                                     `Tide Code` = Fdt_Tide_Code,
                                     `DO Percent Saturation` = Fdt_Do_Satr_Per,
-                                    Hardness = concatenateCols(stationFieldAnalyte, 'HARDNESS, TOTAL (MG/L AS CACO3)'),
+                                    #Hardness = concatenateCols(stationFieldAnalyte, 'HARDNESS, TOTAL (MG/L AS CACO3)'),
                                     `Turbidity` = coalesce(Fdt_Turbidity, concatenateCols(stationFieldAnalyte, 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU')), #combine field and lab turbidity
                                     `Total Dissolved Solids` = concatenateCols(stationFieldAnalyte, 'TDS RESIDUE,TOTAL FILTRABLE (DRIED AT 180C),MG/L'),
                                     `Suspended Sediment Concentration Coarse` = concatenateCols(stationFieldAnalyte, 'SUSP. SED. CONC. - >62 um,MG/L, (Method C)'),
                                     `Suspended Sediment Concentration Fine` = concatenateCols(stationFieldAnalyte, 'SUSP. SED. CONC. - <62 um,MG/L, (Method C)'),
-                                    `Calcium` = concatenateCols(stationFieldAnalyte, 'CALCIUM, DISSOLVED (MG/L AS CA)'),
-                                    `Magnesium` = concatenateCols(stationFieldAnalyte, 'MAGNESIUM, DISSOLVED (MG/L AS MG)'),
-                                    `Sodium` = concatenateCols(stationFieldAnalyte, 'SODIUM, DISSOLVED (MG/L AS NA)'),
-                                    `Potassium` = concatenateCols(stationFieldAnalyte, 'POTASSIUM, DISSOLVED (MG/L AS K)'),
-                                    `Arsenic` = concatenateCols(stationFieldAnalyte, "ARSENIC, DISSOLVED  (UG/L AS AS)"),
-                                    `Barium` = concatenateCols(stationFieldAnalyte, "BARIUM, DISSOLVED (UG/L AS BA)"),
-                                    `Beryllium` = concatenateCols(stationFieldAnalyte, "BERYLLIUM, DISSOLVED (UG/L AS BE)"),
-                                    `Cadmium` = concatenateCols(stationFieldAnalyte,  "CADMIUM, DISSOLVED (UG/L AS CD)"),
-                                    `Chromium` = concatenateCols(stationFieldAnalyte, "CHROMIUM, DISSOLVED (UG/L AS CR)"),
-                                    `Copper` = concatenateCols(stationFieldAnalyte, "COPPER, DISSOLVED (UG/L AS CU)"),
-                                    `Iron` = concatenateCols(stationFieldAnalyte, "IRON, DISSOLVED (UG/L AS FE)"),
-                                    `Lead` = concatenateCols(stationFieldAnalyte, "LEAD, DISSOLVED (UG/L AS PB)"), 
-                                    `Manganese` = concatenateCols(stationFieldAnalyte, "MANGANESE, DISSOLVED (UG/L AS MN)"),
-                                    `Thallium` = concatenateCols(stationFieldAnalyte, "THALLIUM, DISSOLVED (UG/L AS TL)"),
-                                    `Nickel` = concatenateCols(stationFieldAnalyte, "NICKEL, DISSOLVED (UG/L AS NI)"),
-                                    `Silver` = concatenateCols(stationFieldAnalyte, "SILVER, DISSOLVED (UG/L AS AG)"),
-                                    `Strontium` = concatenateCols(stationFieldAnalyte, "STRONTIUM, DISSOLVED (UG/L AS SR)"),
-                                    `Zinc` = concatenateCols(stationFieldAnalyte, "ZINC, DISSOLVED (UG/L AS ZN)"),
-                                    `Antimony` = concatenateCols(stationFieldAnalyte, "ANTIMONY, DISSOLVED (UG/L AS SB)"),
-                                    `Aluminum` = concatenateCols(stationFieldAnalyte, "ALUMINUM, DISSOLVED (UG/L AS AL)"),
-                                    `Selenium` = concatenateCols(stationFieldAnalyte, "SELENIUM, DISSOLVED (UG/L AS SE)"),
+                                    #`Calcium` = concatenateCols(stationFieldAnalyte, 'CALCIUM, DISSOLVED (MG/L AS CA)'),
+                                    #`Magnesium` = concatenateCols(stationFieldAnalyte, 'MAGNESIUM, DISSOLVED (MG/L AS MG)'),
+                                    #`Sodium` = concatenateCols(stationFieldAnalyte, 'SODIUM, DISSOLVED (MG/L AS NA)'),
+                                    #`Potassium` = concatenateCols(stationFieldAnalyte, 'POTASSIUM, DISSOLVED (MG/L AS K)'),
+                                    # `Arsenic` = concatenateCols(stationFieldAnalyte, "ARSENIC, DISSOLVED  (UG/L AS AS)"),
+                                    # `Barium` = concatenateCols(stationFieldAnalyte, "BARIUM, DISSOLVED (UG/L AS BA)"),
+                                    # `Beryllium` = concatenateCols(stationFieldAnalyte, "BERYLLIUM, DISSOLVED (UG/L AS BE)"),
+                                    # `Cadmium` = concatenateCols(stationFieldAnalyte,  "CADMIUM, DISSOLVED (UG/L AS CD)"),
+                                    # `Chromium` = concatenateCols(stationFieldAnalyte, "CHROMIUM, DISSOLVED (UG/L AS CR)"),
+                                    # `Copper` = concatenateCols(stationFieldAnalyte, "COPPER, DISSOLVED (UG/L AS CU)"),
+                                    # `Iron` = concatenateCols(stationFieldAnalyte, "IRON, DISSOLVED (UG/L AS FE)"),
+                                    # `Lead` = concatenateCols(stationFieldAnalyte, "LEAD, DISSOLVED (UG/L AS PB)"), 
+                                    # `Manganese` = concatenateCols(stationFieldAnalyte, "MANGANESE, DISSOLVED (UG/L AS MN)"),
+                                    # `Thallium` = concatenateCols(stationFieldAnalyte, "THALLIUM, DISSOLVED (UG/L AS TL)"),
+                                    # `Nickel` = concatenateCols(stationFieldAnalyte, "NICKEL, DISSOLVED (UG/L AS NI)"),
+                                    # `Silver` = concatenateCols(stationFieldAnalyte, "SILVER, DISSOLVED (UG/L AS AG)"),
+                                    # `Strontium` = concatenateCols(stationFieldAnalyte, "STRONTIUM, DISSOLVED (UG/L AS SR)"),
+                                    # `Zinc` = concatenateCols(stationFieldAnalyte, "ZINC, DISSOLVED (UG/L AS ZN)"),
+                                    # `Antimony` = concatenateCols(stationFieldAnalyte, "ANTIMONY, DISSOLVED (UG/L AS SB)"),
+                                    # `Aluminum` = concatenateCols(stationFieldAnalyte, "ALUMINUM, DISSOLVED (UG/L AS AL)"),
+                                    # `Selenium` = concatenateCols(stationFieldAnalyte, "SELENIUM, DISSOLVED (UG/L AS SE)"),
                                     `Total Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, TOTAL ORGANIC (MG/L AS C)'),
                                     `Dissolved Organic Carbon` = concatenateCols(stationFieldAnalyte, 'CARBON, DISSOLVED ORGANIC (MG/L AS C)'),
                                     `Benthic Ash Free Dry Mass` = concatenateCols(stationFieldAnalyte, 'BENTHIC ASH FREE DRY MASS, GM/M2'),
