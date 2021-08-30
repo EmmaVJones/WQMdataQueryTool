@@ -293,21 +293,25 @@ shinyServer(function(input, output, session) {
               options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
                              pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
   
-  conventionalsData <- reactive({req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
+  organizedData <- reactive({req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
     conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
                          stationFieldDataUserFilter= reactive_objects$stationFieldDataUserFilter, 
                          stationAnalyteDataUserFilter = reactive_objects$stationAnalyteDataUserFilter, 
                          reactive_objects$stationInfo,
                          stationGIS_View = reactive_objects$stationGIS_View,
                          dropCodes = c('QF', input$labCodesDropped),
-                         assessmentUse = F) %>% 
-      arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)})
+                         assessmentUse = F) #%>% 
+     # arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
+    })
+  
+  conventionalsData <- reactive({req(organizedData)
+    organizedData()$Conventionals})
 
 
   ## Visualization Tools: Simplified Dataset Tab
-  basicStationSummary <- reactive({req(stationFieldAnalyteDateRange(), conventionalsData())
+  basicStationSummary <- reactive({req(stationFieldAnalyteDateRange(), organizedData())
     #basicSummary(stationFieldAnalyteDateRange()) })
-    basicSummaryConventionals(conventionalsData(), stationFieldAnalyteDateRange()) })
+    basicSummaryConventionals(organizedData()$More, stationFieldAnalyteDateRange()) })
 
   output$basicSummary <- renderDataTable({ req(basicStationSummary())
     datatable(basicStationSummary(), rownames = F, escape= F, extensions = 'Buttons',
@@ -1022,20 +1026,24 @@ shinyServer(function(input, output, session) {
 
 
     ## Conventionals Dataset to correctly consolidate data
-    mulitStationConventionalsData <- reactive({req(reactive_objects$multistationFieldDataUserFilter, reactive_objects$multistationAnalyteDataUserFilter)
+    mulitStationOrganizedData <- reactive({req(reactive_objects$multistationFieldDataUserFilter, reactive_objects$multistationAnalyteDataUserFilter)
       conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
                            stationFieldDataUserFilter= reactive_objects$multistationFieldDataUserFilter, 
                            stationAnalyteDataUserFilter = reactive_objects$multistationAnalyteDataUserFilter, 
                            reactive_objects$multiStationInfo,
                            reactive_objects$multiStationGIS_View,
                            dropCodes = c('QF', input$multistationLabCodesDropped),
-                           assessmentUse = F) %>% 
-        arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH) })
+                           assessmentUse = F) #%>% 
+        #arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
+      })
+    
+    mulitStationConventionalsData <- reactive({req(mulitStationOrganizedData())
+      mulitStationOrganizedData()$Conventionals})
     
 
     ## Visualization Tools: Simplified Dataset Tab
-    multistationBasicSummary <- reactive({req(multistationFieldAnalyteDateRange(), mulitStationConventionalsData())
-      basicSummaryConventionals(mulitStationConventionalsData(), multistationFieldAnalyteDateRange()) })
+    multistationBasicSummary <- reactive({req(multistationFieldAnalyteDateRange(), mulitStationOrganizedData())
+      basicSummaryConventionals(mulitStationOrganizedData()$More, multistationFieldAnalyteDateRange()) })
       #basicSummary(multistationFieldAnalyteDateRange()) })
 
     output$multistationBasicSummary <- renderDataTable({ req(multistationBasicSummary())
