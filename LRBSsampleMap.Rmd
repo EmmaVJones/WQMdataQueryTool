@@ -36,6 +36,7 @@ library(geojsonsf)
 library(pins)
 #library(sqldf)
 #library(dbplyr)
+library(DT)
 
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
@@ -124,3 +125,13 @@ CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
 ```
 
 Please use the <b><a href='https://rconnect.deq.virginia.gov/CEDSWQMDataQueryTool/' target= '_blank'>CEDS WQM Data Query Tool</a></b> to investigate the LRBS data further.
+
+Below is a table of LRBS data with approved spatial metadata.
+
+```{r download table}
+datatable(LRBSstationsSummary, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px', pageLength = nrow(LRBSstationsSummary),
+                               buttons=list('copy',list(extend='excel',filename=paste0('LRBSstationsSummary', Sys.Date())),
+                                            'colvis')), selection = 'none')
+```
+
