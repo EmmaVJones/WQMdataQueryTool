@@ -371,19 +371,34 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
       #dplyr::select(FDT_STA_ID:FDT_DEPTH_DESC, everything())
     
     # everything
-    stationAnalyteDataUserFilter1all <- dplyr::select(stationAnalyteDataUserFilter1, #Ana_Id, 
-                                                      Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
-                                                      # metals for assessment
-                                                      `ALUMINUM, DISSOLVED (UG/L AS AL)`, `ANTIMONY, DISSOLVED (UG/L AS SB)`, `ARSENIC, DISSOLVED  (UG/L AS AS)`, `BARIUM, DISSOLVED (UG/L AS BA)`,
-                                                      `BERYLLIUM, DISSOLVED (UG/L AS BE)`, `CADMIUM, DISSOLVED (UG/L AS CD)`, `CALCIUM, DISSOLVED (MG/L AS CA)`, `CHROMIUM, DISSOLVED (UG/L AS CR)`,
-                                                      `COPPER, DISSOLVED (UG/L AS CU)`, `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED`, `IRON, DISSOLVED (UG/L AS FE)`, `LEAD, DISSOLVED (UG/L AS PB)`,
-                                                      `MAGNESIUM, DISSOLVED (MG/L AS MG)`, `MANGANESE, DISSOLVED (UG/L AS MN)`, `NICKEL, DISSOLVED (UG/L AS NI)`, `POTASSIUM, DISSOLVED (MG/L AS K)`,
-                                                      `SELENIUM, DISSOLVED (UG/L AS SE)`, `SILVER, DISSOLVED (UG/L AS AG)`, `SODIUM, DISSOLVED (MG/L AS NA)`, `STRONTIUM, DISSOLVED (UG/L AS SR)`,
-                                                      `THALLIUM, DISSOLVED (UG/L AS TL)`, `ZINC, DISSOLVED (UG/L AS ZN)`,
-                                                      # others
-                                                      `CARBON, DISSOLVED ORGANIC (MG/L AS C)`, `CARBON, TOTAL ORGANIC (MG/L AS C)`, `MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L`,
-                                                      `MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L`, `TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU`)
-                                                      
+    stationAnalyteDataUserFilter1all <- stationAnalyteDataUserFilter1 %>% 
+      dplyr::select(any_of(c(#Ana_Id, 
+        'Ana_Sam_Fdt_Id', 'Ana_Sam_Mrs_Container_Id_Desc',
+        # metals for assessment
+        'ALUMINUM, DISSOLVED (UG/L AS AL)', 'ANTIMONY, DISSOLVED (UG/L AS SB)', 'ARSENIC, DISSOLVED  (UG/L AS AS)', 'BARIUM, DISSOLVED (UG/L AS BA)',
+        'BERYLLIUM, DISSOLVED (UG/L AS BE)', 'CADMIUM, DISSOLVED (UG/L AS CD)', 'CALCIUM, DISSOLVED (MG/L AS CA)', 'CHROMIUM, DISSOLVED (UG/L AS CR)',
+        'COPPER, DISSOLVED (UG/L AS CU)', 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED', 'IRON, DISSOLVED (UG/L AS FE)', 'LEAD, DISSOLVED (UG/L AS PB)',
+        'MAGNESIUM, DISSOLVED (MG/L AS MG)', 'MANGANESE, DISSOLVED (UG/L AS MN)', 'NICKEL, DISSOLVED (UG/L AS NI)', 'POTASSIUM, DISSOLVED (MG/L AS K)',
+        'SELENIUM, DISSOLVED (UG/L AS SE)', 'SILVER, DISSOLVED (UG/L AS AG)', 'SODIUM, DISSOLVED (MG/L AS NA)', 'STRONTIUM, DISSOLVED (UG/L AS SR)',
+        'THALLIUM, DISSOLVED (UG/L AS TL)', 'ZINC, DISSOLVED (UG/L AS ZN)',
+        # others
+        'CARBON, DISSOLVED ORGANIC (MG/L AS C)', 'CARBON, TOTAL ORGANIC (MG/L AS C)', 'MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L',
+        'MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L', 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU')))
+               
+    # old method that bombs out if a field is missing                                       
+    # stationAnalyteDataUserFilter1all <- dplyr::select(stationAnalyteDataUserFilter1, #Ana_Id, 
+    #                                                   Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
+    #                                                   # metals for assessment
+    #                                                   `ALUMINUM, DISSOLVED (UG/L AS AL)`, `ANTIMONY, DISSOLVED (UG/L AS SB)`, `ARSENIC, DISSOLVED  (UG/L AS AS)`, `BARIUM, DISSOLVED (UG/L AS BA)`,
+    #                                                   `BERYLLIUM, DISSOLVED (UG/L AS BE)`, `CADMIUM, DISSOLVED (UG/L AS CD)`, `CALCIUM, DISSOLVED (MG/L AS CA)`, `CHROMIUM, DISSOLVED (UG/L AS CR)`,
+    #                                                   `COPPER, DISSOLVED (UG/L AS CU)`, `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED`, `IRON, DISSOLVED (UG/L AS FE)`, `LEAD, DISSOLVED (UG/L AS PB)`,
+    #                                                   `MAGNESIUM, DISSOLVED (MG/L AS MG)`, `MANGANESE, DISSOLVED (UG/L AS MN)`, `NICKEL, DISSOLVED (UG/L AS NI)`, `POTASSIUM, DISSOLVED (MG/L AS K)`,
+    #                                                   `SELENIUM, DISSOLVED (UG/L AS SE)`, `SILVER, DISSOLVED (UG/L AS AG)`, `SODIUM, DISSOLVED (MG/L AS NA)`, `STRONTIUM, DISSOLVED (UG/L AS SR)`,
+    #                                                   `THALLIUM, DISSOLVED (UG/L AS TL)`, `ZINC, DISSOLVED (UG/L AS ZN)`,
+    #                                                   # others
+    #                                                   `CARBON, DISSOLVED ORGANIC (MG/L AS C)`, `CARBON, TOTAL ORGANIC (MG/L AS C)`, `MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L`,
+    #                                                   `MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L`, `TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU`)
+    #                                                   
                                                       
     
     
@@ -468,13 +483,21 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
     #dplyr::select(FDT_STA_ID:FDT_DEPTH_DESC, everything())
     
     
-    stationAnalyteDataUserFilter2all <- dplyr::select(stationAnalyteDataUserFilter2,#Ana_Id,
-                                                      Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
-                                                      RMK_01106, RMK_01095, RMK_01000, RMK_01005, RMK_01010, RMK_01025, RMK_00915, RMK_01030, RMK_01040, RMK_DHARD, RMK_01046, RMK_01049, RMK_00925, RMK_01056,
-                                                      RMK_01065, RMK_00935, RMK_01145, RMK_01075, RMK_00930, RMK_01080, RMK_01057, RMK_01090, RMK_01106, RMK_01095, RMK_01000, RMK_01005, RMK_01010, RMK_01025,
-                                                      RMK_00915, RMK_01030, RMK_01040, RMK_DHARD, RMK_01046, RMK_01049, RMK_00925, RMK_01056, RMK_01065, RMK_00935, RMK_01145, RMK_01075, RMK_00930, RMK_01080,
-                                                      RMK_01057, RMK_01090, RMK_00681, RMK_00680, RMK_50091, RMK_50092, RMK_82079)
-
+    stationAnalyteDataUserFilter2all <- dplyr::select(stationAnalyteDataUserFilter2,
+                                                      any_of(c(#Ana_Id,
+                                                      'Ana_Sam_Fdt_Id', 'Ana_Sam_Mrs_Container_Id_Desc',
+                                                      'RMK_01106', 'RMK_01095', 'RMK_01000', 'RMK_01005', 'RMK_01010', 'RMK_01025', 'RMK_00915', 'RMK_01030', 'RMK_01040', 'RMK_DHARD', 'RMK_01046', 'RMK_01049', 'RMK_00925', 'RMK_01056',
+                                                      'RMK_01065', 'RMK_00935', 'RMK_01145', 'RMK_01075', 'RMK_00930', 'RMK_01080', 'RMK_01057', 'RMK_01090', 'RMK_01106', 'RMK_01095', 'RMK_01000', 'RMK_01005', 'RMK_01010', 'RMK_01025',
+                                                      'RMK_00915', 'RMK_01030', 'RMK_01040', 'RMK_DHARD', 'RMK_01046', 'RMK_01049', 'RMK_00925', 'RMK_01056', 'RMK_01065', 'RMK_00935', 'RMK_01145', 'RMK_01075', 'RMK_00930', 'RMK_01080',
+                                                      'RMK_01057', 'RMK_01090', 'RMK_00681', 'RMK_00680', 'RMK_50091', 'RMK_50092', 'RMK_82079')))
+    # old method that bombs out if any field missing
+    # stationAnalyteDataUserFilter2all <- dplyr::select(stationAnalyteDataUserFilter2,#Ana_Id,
+    #                                                   Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
+    #                                                   RMK_01106, RMK_01095, RMK_01000, RMK_01005, RMK_01010, RMK_01025, RMK_00915, RMK_01030, RMK_01040, RMK_DHARD, RMK_01046, RMK_01049, RMK_00925, RMK_01056,
+    #                                                   RMK_01065, RMK_00935, RMK_01145, RMK_01075, RMK_00930, RMK_01080, RMK_01057, RMK_01090, RMK_01106, RMK_01095, RMK_01000, RMK_01005, RMK_01010, RMK_01025,
+    #                                                   RMK_00915, RMK_01030, RMK_01040, RMK_DHARD, RMK_01046, RMK_01049, RMK_00925, RMK_01056, RMK_01065, RMK_00935, RMK_01145, RMK_01075, RMK_00930, RMK_01080,
+    #                                                   RMK_01057, RMK_01090, RMK_00681, RMK_00680, RMK_50091, RMK_50092, RMK_82079)
+    
     
       
     # Step 3.5: Combine analyte data and remarks (and empty Level fields)
@@ -527,26 +550,44 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                                               "Ana_Sam_Fdt_Id", "Ana_Sam_Mrs_Container_Id_Desc")) ,
                                                   by = c(#"Ana_Id", 
                                                     "Ana_Sam_Fdt_Id", "Ana_Sam_Mrs_Container_Id_Desc")) %>% 
-      dplyr::select(names(stationAnalyteDataUserFilter3conventionals), 
+      dplyr::select(any_of(c(names(stationAnalyteDataUserFilter3conventionals), 
                     # metals for assessment
-                    `ALUMINUM, DISSOLVED (UG/L AS AL)`, RMK_01106, `ANTIMONY, DISSOLVED (UG/L AS SB)`, RMK_01095,
-                    `ARSENIC, DISSOLVED  (UG/L AS AS)`, RMK_01000, `BARIUM, DISSOLVED (UG/L AS BA)`, RMK_01005,
-                    `BERYLLIUM, DISSOLVED (UG/L AS BE)`, RMK_01010, `CADMIUM, DISSOLVED (UG/L AS CD)`, RMK_01025,
-                    `CALCIUM, DISSOLVED (MG/L AS CA)`, RMK_00915, `CHROMIUM, DISSOLVED (UG/L AS CR)`, RMK_01030,
-                    `COPPER, DISSOLVED (UG/L AS CU)`, RMK_01040, `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED`, RMK_DHARD,
-                    `IRON, DISSOLVED (UG/L AS FE)`, RMK_01046, `LEAD, DISSOLVED (UG/L AS PB)`, RMK_01049, 
-                    `MAGNESIUM, DISSOLVED (MG/L AS MG)`, RMK_00925, `MANGANESE, DISSOLVED (UG/L AS MN)`, RMK_01056,
-                    `NICKEL, DISSOLVED (UG/L AS NI)`,  RMK_01065, `POTASSIUM, DISSOLVED (MG/L AS K)`, RMK_00935,
-                    `SELENIUM, DISSOLVED (UG/L AS SE)`, RMK_01145, `SILVER, DISSOLVED (UG/L AS AG)`, RMK_01075,
-                    `SODIUM, DISSOLVED (MG/L AS NA)`, RMK_00930, `STRONTIUM, DISSOLVED (UG/L AS SR)`, RMK_01080,
-                    `THALLIUM, DISSOLVED (UG/L AS TL)`, RMK_01057, `ZINC, DISSOLVED (UG/L AS ZN)`, RMK_01090,
+                    'ALUMINUM, DISSOLVED (UG/L AS AL)', 'RMK_01106', 'ANTIMONY, DISSOLVED (UG/L AS SB)', 'RMK_01095',
+                    'ARSENIC, DISSOLVED  (UG/L AS AS)', 'RMK_01000', 'BARIUM, DISSOLVED (UG/L AS BA)', 'RMK_01005',
+                    'BERYLLIUM, DISSOLVED (UG/L AS BE)', 'RMK_01010', 'CADMIUM, DISSOLVED (UG/L AS CD)', 'RMK_01025',
+                    'CALCIUM, DISSOLVED (MG/L AS CA)', 'RMK_00915', 'CHROMIUM, DISSOLVED (UG/L AS CR)', 'RMK_01030',
+                    'COPPER, DISSOLVED (UG/L AS CU)', 'RMK_01040', 'HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED', 'RMK_DHARD',
+                    'IRON, DISSOLVED (UG/L AS FE)', 'RMK_01046', 'LEAD, DISSOLVED (UG/L AS PB)', 'RMK_01049', 
+                    'MAGNESIUM, DISSOLVED (MG/L AS MG)', 'RMK_00925', 'MANGANESE, DISSOLVED (UG/L AS MN)', 'RMK_01056',
+                    'NICKEL, DISSOLVED (UG/L AS NI)',  'RMK_01065', 'POTASSIUM, DISSOLVED (MG/L AS K)', 'RMK_00935',
+                    'SELENIUM, DISSOLVED (UG/L AS SE)', 'RMK_01145', 'SILVER, DISSOLVED (UG/L AS AG)', 'RMK_01075',
+                    'SODIUM, DISSOLVED (MG/L AS NA)', 'RMK_00930', 'STRONTIUM, DISSOLVED (UG/L AS SR)', 'RMK_01080',
+                    'THALLIUM, DISSOLVED (UG/L AS TL)', 'RMK_01057', 'ZINC, DISSOLVED (UG/L AS ZN)', 'RMK_01090',
                     
                     # others
-                    `CARBON, DISSOLVED ORGANIC (MG/L AS C)`, RMK_00681, `CARBON, TOTAL ORGANIC (MG/L AS C)`, RMK_00680,
-                    `MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L`, RMK_50091, `MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L`, RMK_50092,
-                     `TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU`, RMK_82079)
-      
-
+                    'CARBON, DISSOLVED ORGANIC (MG/L AS C)', 'RMK_00681', 'CARBON, TOTAL ORGANIC (MG/L AS C)', 'RMK_00680',
+                    'MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L', 'RMK_50091', 'MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L', 'RMK_50092',
+                     'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU', 'RMK_82079')))
+    # old method that bombed out when fields weren't there
+    # dplyr::select(names(stationAnalyteDataUserFilter3conventionals), 
+    #               # metals for assessment
+    #               `ALUMINUM, DISSOLVED (UG/L AS AL)`, RMK_01106, `ANTIMONY, DISSOLVED (UG/L AS SB)`, RMK_01095,
+    #               `ARSENIC, DISSOLVED  (UG/L AS AS)`, RMK_01000, `BARIUM, DISSOLVED (UG/L AS BA)`, RMK_01005,
+    #               `BERYLLIUM, DISSOLVED (UG/L AS BE)`, RMK_01010, `CADMIUM, DISSOLVED (UG/L AS CD)`, RMK_01025,
+    #               `CALCIUM, DISSOLVED (MG/L AS CA)`, RMK_00915, `CHROMIUM, DISSOLVED (UG/L AS CR)`, RMK_01030,
+    #               `COPPER, DISSOLVED (UG/L AS CU)`, RMK_01040, `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED`, RMK_DHARD,
+    #               `IRON, DISSOLVED (UG/L AS FE)`, RMK_01046, `LEAD, DISSOLVED (UG/L AS PB)`, RMK_01049, 
+    #               `MAGNESIUM, DISSOLVED (MG/L AS MG)`, RMK_00925, `MANGANESE, DISSOLVED (UG/L AS MN)`, RMK_01056,
+    #               `NICKEL, DISSOLVED (UG/L AS NI)`,  RMK_01065, `POTASSIUM, DISSOLVED (MG/L AS K)`, RMK_00935,
+    #               `SELENIUM, DISSOLVED (UG/L AS SE)`, RMK_01145, `SILVER, DISSOLVED (UG/L AS AG)`, RMK_01075,
+    #               `SODIUM, DISSOLVED (MG/L AS NA)`, RMK_00930, `STRONTIUM, DISSOLVED (UG/L AS SR)`, RMK_01080,
+    #               `THALLIUM, DISSOLVED (UG/L AS TL)`, RMK_01057, `ZINC, DISSOLVED (UG/L AS ZN)`, RMK_01090,
+    #               
+    #               # others
+    #               `CARBON, DISSOLVED ORGANIC (MG/L AS C)`, RMK_00681, `CARBON, TOTAL ORGANIC (MG/L AS C)`, RMK_00680,
+    #               `MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L`, RMK_50091, `MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L`, RMK_50092,
+    #               `TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU`, RMK_82079)
+    
     
     # Step 4: Combine field and analyte data
     # use left join here bc stationFieldDataUserFilter1 removes any unwanted sample types (incident response, facility data)
