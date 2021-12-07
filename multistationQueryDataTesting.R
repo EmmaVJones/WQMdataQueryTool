@@ -72,7 +72,7 @@ programCodeFilter <- NULL#'HF'#c('AW','TR')
 countyFilter <- NULL#"Roanoke City"#
 ecoregionFilter <- NULL#"Middle Atlantic Coastal Plain"#NULL#"Blue Ridge"#unique(ecoregion$US_L3NAME)
 ecoregionLevel4Filter <- NULL
-dateRange_multistation <- c(as.Date('2010-01-01'), as.Date('2020-12-31'))#as.Date(Sys.Date()- 7))
+dateRange_multistation <- c(as.Date('2016-01-01'), as.Date('2017-12-31'))#as.Date(Sys.Date()- 7))
 ## pull based on parameter
 analyte_Filter <- NULL#
   c('SODIUM (NA), ATM DEP, WET, DISS, MG/L', 'SODIUM, DISSOLVED (MG/L AS NA)', 'SODIUM, TOTAL (MG/L AS NA)', 'SODIUM-TOTAL  UG/L (AS NA)')
@@ -110,7 +110,7 @@ WQM_Stations_Filter <- WQM_Stations_Filter_function('Wildcard Selection',
 # Spatial filters troubleshooting
 ### begin
 assessmentRegionFilter <- c("BRRO")#c("BRRO")#NULL#c("PRO")#unique(subbasins$ASSESS_REG)
-subbasinFilter <- "James-Upper"#NULL#"Appomattox"#"James-Upper"# c("James-Middle",'Potomac-Lower')#NULL# c("James River - Middle",'Potomac River')#NULL#"James River - Lower"
+subbasinFilter <- "New"#"James-Upper"#NULL#"Appomattox"#"James-Upper"# c("James-Middle",'Potomac-Lower')#NULL# c("James River - Middle",'Potomac River')#NULL#"James River - Lower"
 # filter(WQM_Stations_Spatial, ASSESS_REG %in% assessmentRegionFilter) %>%
 #   distinct(Basin_Name) %>%  pull()
 VAHU6Filter <- NULL#'JU11'#NULL 
@@ -270,7 +270,7 @@ multistationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %
 
 
 # User filters
-multistationDateRangeFilter <-  c(as.Date('2010-01-01'), as.Date(Sys.Date()))#as.Date('2011-01-01'), as.Date('2011-12-31'))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
+multistationDateRangeFilter <-  c(as.Date('2016-01-01'),as.Date('2016-12-31')) #as.Date(Sys.Date()))#as.Date('2011-01-01'), as.Date('2011-12-31'))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
 multistationLabCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
 multistationRepFilter <- c('R')
 multistationDepthFilter <- T
@@ -331,19 +331,19 @@ uniqueComments(multistationFieldAnalyte1)
 
 
 # conventionals dataset to correctly consolidate data
-mulitStationConventionalsData <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+multistationOrganizeData <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
                                           stationFieldDataUserFilter= multistationFieldDataUserFilter, 
                                           stationAnalyteDataUserFilter = multistationAnalyteDataUserFilter, 
-                                          multiStationInfo,
-                                          multiStationGIS_View,
+                                          stationInfo = multiStationInfo,
+                                          stationGIS_View = multiStationGIS_View,
                                           dropCodes = c('QF', multistationLabCodesDropped),
-                                          assessmentUse = F) %>% 
-  arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
+                                          assessmentUse = F) #%>% 
+ # arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
 
 
 
 # Basic Dataset people will actually use
-basicData <- basicSummaryConventionals(mulitStationConventionalsData, multistationFieldAnalyte1)
+basicData <- basicSummaryConventionals(multistationOrganizeData$More, multistationFieldAnalyte1)
 ####################################################################################################################################
 ### old method that relied on name matching vs actual storet codes and standardized data consolidation steps (conventionals method)
 ### Basic Dataset people will actually use

@@ -21,7 +21,8 @@ library(dbplyr)
 source('vlookup.R')
 source('cdfRiskTable.R')
 source('dissolvedMetalsModule.R') #also contains dissolved metals functions that are more flexible than from assessment apps
-source('conventionalsFunction.R')
+source('conventionalsFunction1232021.R')
+#source('conventionalsFunction.R')
 
 # Server connection things
 conn <- config::get("connectionSettings") # get configuration settings
@@ -134,7 +135,8 @@ staticLimit <- c("Antimony PWS", "Antimony All Other Surface Waters", "Arsenic A
 WQM_Station_Full_REST_request <- function(pool, station, subbasinVAHU6crosswalk, subbasins, ecoregion){
   WQM_Station_Full_REST <- suppressWarnings(
     geojson_sf(
-      paste0("http://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%27",
+      paste0("http://apps.deq.virginia.gov/arcgis/rest/services/public/WQM_STATIONS_ALL/MapServer/0/query?&where=STATION_ID%3D%27",
+        #"http://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%27",
              toupper(station),"%27&outFields=*&f=geojson"))) 
 
   if(nrow(WQM_Station_Full_REST ) > 0){
@@ -160,7 +162,8 @@ WQM_Station_Full_REST_request <- function(pool, station, subbasinVAHU6crosswalk,
     # pull a known station to steal data structure
     WQM_Station_Full_REST <- suppressWarnings(
       geojson_sf(
-        paste0("http://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%272-JKS023.61%27&outFields=*&f=geojson")))[1,] %>%
+        paste0("http://apps.deq.virginia.gov/arcgis/rest/services/public/WQM_STATIONS_ALL/MapServer/0/query?&where=STATION_ID%3D%272-JKS023.61%27&outFields=*&f=geojson")))[1,] %>%
+          #"http://gis.deq.virginia.gov/arcgis/rest/services/staff/DEQInternalDataViewer/MapServer/104/query?&where=STATION_ID%3D%272-JKS023.61%27&outFields=*&f=geojson")))[1,] %>%
       mutate(WQM_YRS_YEAR = ifelse(!is.na(WQM_YRS_YEAR), lubridate::year(as.Date(as.POSIXct(WQM_YRS_YEAR/1000, origin="1970-01-01"))), NA)) %>% 
       left_join(dplyr::select(subbasinVAHU6crosswalk, SubbasinVAHU6code, BASIN_NAME), by = c('BASINS_VAHUSB' = 'SubbasinVAHU6code')) %>%
       st_drop_geometry()
@@ -388,12 +391,28 @@ basicSummaryConventionals <- function(conventionalsData, stationFieldAnalyte){
                               "BERYLLIUM, DISSOLVED (UG/L AS BE)", "CADMIUM, DISSOLVED (UG/L AS CD)", "CHROMIUM, DISSOLVED (UG/L AS CR)",
                               "COPPER, DISSOLVED (UG/L AS CU)", "IRON, DISSOLVED (UG/L AS FE)", "LEAD, DISSOLVED (UG/L AS PB)", "MANGANESE, DISSOLVED (UG/L AS MN)",
                               "THALLIUM, DISSOLVED (UG/L AS TL)", "NICKEL, DISSOLVED (UG/L AS NI)", "SILVER, DISSOLVED (UG/L AS AG)", "ZINC, DISSOLVED (UG/L AS ZN)",
-                              "ANTIMONY, DISSOLVED (UG/L AS SB)", "HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "STRONTIUM, DISSOLVED (UG/L AS SR)")
+                              "ANTIMONY, DISSOLVED (UG/L AS SB)", "HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "HARDNESS_TOTAL_00900_mg_L", # bonus for older data
+                              "STRONTIUM, DISSOLVED (UG/L AS SR)")
                               
+  conventionalsBlank <- tibble(FDT_STA_ID = NA_character_,FDT_DATE_TIME = as.Date(NA), FDT_DEPTH = as.numeric(NA), FDT_COMMENT= NA_character_, FDT_TEMP_CELCIUS= as.numeric(NA), 
+                               FDT_FIELD_PH= as.numeric(NA), DO_mg_L= as.numeric(NA), FDT_SPECIFIC_CONDUCTANCE= as.numeric(NA), FDT_SALINITY= as.numeric(NA), 
+                              SECCHI_DEPTH_M= as.numeric(NA), ECOLI= as.numeric(NA), ENTEROCOCCI= as.numeric(NA), FECAL_COLI= as.numeric(NA), NITROGEN_mg_L= as.numeric(NA), 
+                              NITROGEN_KJELDAHL_TOTAL_00625_mg_L= as.numeric(NA), NITRATE_mg_L= as.numeric(NA) , NOX_mg_L= as.numeric(NA), AMMONIA_mg_L= as.numeric(NA), 
+                              PHOSPHORUS_mg_L= as.numeric(NA), PHOSPHORUS_TOTAL_ORTHOPHOSPHATE_70507_mg_L= as.numeric(NA), CHLOROPHYLL_A_ug_L= as.numeric(NA), TSS_mg_L= as.numeric(NA), 
+                              SSC_mg_L= as.numeric(NA), CHLORIDE_mg_L= as.numeric(NA), SULFATE_mg_L= as.numeric(NA),
+                              # more
+                              `SODIUM, DISSOLVED (MG/L AS NA)`= as.numeric(NA), `POTASSIUM, DISSOLVED (MG/L AS K)`= as.numeric(NA),
+                              `SELENIUM, DISSOLVED (UG/L AS SE)`= as.numeric(NA), `CALCIUM, DISSOLVED (MG/L AS CA)`= as.numeric(NA), `MAGNESIUM, DISSOLVED (MG/L AS MG)`= as.numeric(NA),
+                              `ARSENIC, DISSOLVED  (UG/L AS AS)`= as.numeric(NA), `BARIUM, DISSOLVED (UG/L AS BA)`= as.numeric(NA), `ALUMINUM, DISSOLVED (UG/L AS AL)`= as.numeric(NA),
+                              `BERYLLIUM, DISSOLVED (UG/L AS BE)`= as.numeric(NA), `CADMIUM, DISSOLVED (UG/L AS CD)`= as.numeric(NA), `CHROMIUM, DISSOLVED (UG/L AS CR)`= as.numeric(NA),
+                              `COPPER, DISSOLVED (UG/L AS CU)`= as.numeric(NA), `IRON, DISSOLVED (UG/L AS FE)`= as.numeric(NA), `LEAD, DISSOLVED (UG/L AS PB)`= as.numeric(NA), `MANGANESE, DISSOLVED (UG/L AS MN)`= as.numeric(NA),
+                              `THALLIUM, DISSOLVED (UG/L AS TL)`= as.numeric(NA), `NICKEL, DISSOLVED (UG/L AS NI)`= as.numeric(NA), `SILVER, DISSOLVED (UG/L AS AG)`= as.numeric(NA), `ZINC, DISSOLVED (UG/L AS ZN)`= as.numeric(NA),
+                              `ANTIMONY, DISSOLVED (UG/L AS SB)`= as.numeric(NA), `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED`= as.numeric(NA), `HARDNESS_TOTAL_00900_mg_L`= as.numeric(NA), # bonus for older data
+                              `STRONTIUM, DISSOLVED (UG/L AS SR)`= as.numeric(NA)                              )
   
   ## add more in here
   
-  conventionalsDataFields <- conventionalsData %>% 
+  conventionalsDataFields <- bind_rows(conventionalsData, conventionalsBlank) %>% 
     dplyr::select(one_of(conventionalsVariables )) %>% 
     # using this method to skip renaming process where variables do not exist in dataset
     rename_all(recode, FDT_STA_ID = 'StationID', FDT_DATE_TIME ='Collection Date', FDT_DEPTH = 'Depth', # fields for joining
@@ -430,7 +449,10 @@ basicSummaryConventionals <- function(conventionalsData, stationFieldAnalyte){
                `SILVER, DISSOLVED (UG/L AS AG)` = "Silver",
                `ZINC, DISSOLVED (UG/L AS ZN)` = "Zinc",
                `ANTIMONY, DISSOLVED (UG/L AS SB)` = "Antimony", 
-               `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED` = "Hardness")
+               `HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED` = "Hardness1",
+               `HARDNESS_TOTAL_00900_mg_L` = "Hardness2") %>% 
+    mutate(Hardness = coalesce(Hardness1, Hardness2)) %>% 
+    dplyr::select(-c(Hardness1, Hardness2))
   
   
   

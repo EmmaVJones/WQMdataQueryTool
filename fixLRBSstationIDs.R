@@ -4,6 +4,12 @@ library(tidyverse)
 library(fuzzyjoin)
 library(pins)
 
+
+
+# Server connection things
+conn <- config::get("connectionSettings") # get configuration settings
+
+
 board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_KEY"),
                          server = conn$CONNECT_SERVER)#Sys.getenv("CONNECT_SERVER"))
 

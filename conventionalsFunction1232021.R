@@ -88,13 +88,16 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                            "E.COLI_ECOLI_CFU_100mL", "ORTHOPHOSPHATE_DISSOLVED_OPWLF_mg_L", 
                                            "PHOSPHORUS_SUSPENDED_INORGANIC_PIPLF_mg_L", "PHOSPHORUS_PARTICULATE_PPWLF_mg_L", 
                                            "SSC-TOTAL_00530_mg_L", "NITROGEN_TOTAL_DISSOLVED_TDNLF_mg_L", 
-                                           "PHOSPHORUS_TOTAL_DISSOLVED_TDPLF_mg_L", "TOTAL_SUSPENDED_SOLIDS_TSS45_mg_L"),  ~dbl_name_fun(.x)) )
+                                           "PHOSPHORUS_TOTAL_DISSOLVED_TDPLF_mg_L", "TOTAL_SUSPENDED_SOLIDS_TSS45_mg_L",
+                                           # added for probmon
+                                           "TDS_mg_L", "SSC%Finer", "SSC_COARSE", "SSC_FINE", "SSC_TOTAL"),  ~dbl_name_fun(.x)) )
   remarkTemplate <-  map_dfc(c("Ana_Sam_Fdt_Id", "Ana_Sam_Mrs_Container_Id_Desc", "RMK_00530", "RMK_00600", "RMK_00608", "RMK_00610", 
                                "RMK_00613", "RMK_00615", "RMK_00618", "RMK_00620", "RMK_00625", "RMK_00630", "RMK_00631", "RMK_00665", 
                                "RMK_00666", "RMK_00671", "RMK_00900", "RMK_00940", "RMK_00941", "RMK_00945", "RMK_00946", "RMK_31616", 
                                "RMK_31648", "RMK_31649", "RMK_32211", "RMK_49567", "RMK_49570", "RMK_49571", "RMK_49572", "RMK_70507", 
-                               "RMK_ECOLI", "RMK_OPWLF", "RMK_PIPLF", "RMK_PPWLF", "RMK_SSC_TOTAL_00530","RMK_TDNLF","RMK_TDPLF","RMK_TSS45"),
-                             ~char_name_fun(.x))
+                               "RMK_ECOLI", "RMK_OPWLF", "RMK_PIPLF", "RMK_PPWLF", "RMK_SSC_TOTAL_00530","RMK_TDNLF","RMK_TDPLF","RMK_TSS45",
+                               # added for probmon
+                               "RMK_70300", "RMK_70331", "RMK_SSC-COARSE", "RMK_SSC-FINE", "RMK_SSC-TOTAL"), ~char_name_fun(.x))
     
   # Step 1: Organize station information to match conventionals format
   stationData <- left_join(stationInfo, stationGIS_View, by = c('Sta_Id' = 'Station_Id')) %>%
@@ -201,7 +204,8 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                    '00930','01080','01057','01090',
                                    
                                    # others
-                                   '00681','00680','50091','50092','82079')) %>% 
+                                   '00681','00680','50091','50092','82079', 
+                                   '70300', '70331', 'SSC-COARSE', 'SSC-FINE', 'SSC-TOTAL')) %>% 
       
       mutate(ParameterName = case_when(Pg_Storet_Code == '00530' ~ 'TOTAL_SUSPENDED_SOLIDS_00530_mg_L',
                                        Pg_Storet_Code == '00600' ~ 'NITROGEN_TOTAL_00600_mg_L',
@@ -271,7 +275,11 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                        Pg_Storet_Code == '50092' ~ 'MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L',
                                        Pg_Storet_Code == '82079' ~ 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU',
                                        
-                                       
+                                       Pg_Storet_Code == '70300' ~ 'TDS_mg_L',
+                                       Pg_Storet_Code == '70331' ~ 'SSC%Finer',
+                                       Pg_Storet_Code == 'SSC-COARSE' ~ 'SSC_COARSE',
+                                       Pg_Storet_Code == 'SSC-FINE' ~ 'SSC_FINE',
+                                       #Pg_Storet_Code == 'SSC-TOTAL' ~ 'SSC_TOTAL',
                                        TRUE ~ as.character(Pg_Storet_Code))) 
     
     
@@ -350,7 +358,8 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
              ENTEROCOCCI = ENTEROCOCCI_31649_NO_100mL,
              FECAL_COLI = FECAL_COLIFORM_31616_NO_100mL,
              CHLOROPHYLL_A_ug_L = CHLOROPHYLL_32211_ug_L,
-             SSC_mg_L = `SSC-TOTAL_00530_mg_L`  ) 
+             SSC_mg_L = `SSC-TOTAL_00530_mg_L`,
+             SSC_TOTAL = `SSC-TOTAL_00530_mg_L`) # for probmon
       # now limit to just necessary columns for Conventionals format
     stationAnalyteDataUserFilter1conventionals <- dplyr::select(stationAnalyteDataUserFilter1, #Ana_Id, 
         Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
@@ -383,7 +392,8 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
         'THALLIUM, DISSOLVED (UG/L AS TL)', 'ZINC, DISSOLVED (UG/L AS ZN)',
         # others
         'CARBON, DISSOLVED ORGANIC (MG/L AS C)', 'CARBON, TOTAL ORGANIC (MG/L AS C)', 'MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L',
-        'MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L', 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU'))) %>% 
+        'MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L', 'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU',
+        'TDS_mg_L', 'SSC%Finer', 'SSC_COARSE', 'SSC_FINE', 'SSC_TOTAL'))) %>% 
       filter(! is.na(Ana_Sam_Fdt_Id)) #%>%  # drop blank row from row_bind
                
     # old method that bombs out if a field is missing                                       
@@ -424,7 +434,8 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                                                                 '00930','01080','01057','01090',
                                                                                 
                                                                                 # others
-                                                                                '00681','00680','50091','50092','82079')) %>% 
+                                                                                '00681','00680','50091','50092','82079',
+                                                                                "70300", "70331", "SSC-COARSE", "SSC-FINE", "SSC-TOTAL" )) %>% 
                                                    
                                                    dplyr::select(Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc, Pg_Storet_Code, Ana_Uncensored_Val_Comment) %>% 
                                                    pivot_wider(id_cols = c(Ana_Sam_Fdt_Id, 'Ana_Sam_Mrs_Container_Id_Desc'),
@@ -448,6 +459,13 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
              RMK_FECAL_COLI = RMK_31616,
              RMK_CHLOROPHYLL_A = RMK_32211,
              RMK_SSC = RMK_00530,
+             
+             RMK_TDS = RMK_70300,
+             `RMK_SSC%Finer` = RMK_70331,
+             RMK_SSC_COARSE = `RMK_SSC-COARSE`, 
+             RMK_SSC_FINE = `RMK_SSC-FINE`,
+             RMK_SSC_TOTAL = `RMK_SSC-TOTAL`,
+             
              LEVEL_NITROGEN = as.character(NA), LEVEL_AMMONIA = as.character(NA), LEVEL_NITRATE = as.character(NA),
              LEVEL_NOX = as.character(NA), LEVEL_00600 = as.character(NA), LEVEL_00608 = as.character(NA),
              LEVEL_00610 = as.character(NA), LEVEL_00613 = as.character(NA), LEVEL_00615 = as.character(NA),
@@ -462,7 +480,12 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
              LEVEL_SULFATE_TOTAL = as.character(NA), LEVEL_SULFATE_DISS = as.character(NA), LEVEL_ECOLI = as.character(NA),
              LEVEL_31648 = as.character(NA), LEVEL_ENTEROCOCCI = as.character(NA), LEVEL_FECAL_COLI = as.character(NA),
              LEVEL_CHLOROPHYLL_A = as.character(NA), LEVEL_TSS = as.character(NA), LEVEL_00530 = as.character(NA),
-             LEVEL_SSC = as.character(NA), LEVEL_TSS45 = as.character(NA)) 
+             LEVEL_SSC = as.character(NA), LEVEL_TSS45 = as.character(NA),
+            
+             # don't need level info of stuff not in conventionals query
+             # LEVEL_TDS = as.character(NA), LEVEL_70331 = as.character(NA), LEVEL_SSC_COARSE = as.character(NA), 
+             # LEVEL_SSC_FINE = as.character(NA), LEVEL_SSC_TOTAL = as.character(NA)
+             ) 
     
     stationAnalyteDataUserFilter2conventionals <- dplyr::select(stationAnalyteDataUserFilter2,#Ana_Id, 
                                                                 Ana_Sam_Fdt_Id, Ana_Sam_Mrs_Container_Id_Desc,
@@ -490,7 +513,8 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                                                       'RMK_01106', 'RMK_01095', 'RMK_01000', 'RMK_01005', 'RMK_01010', 'RMK_01025', 'RMK_00915', 'RMK_01030', 'RMK_01040', 'RMK_DHARD', 'RMK_01046', 'RMK_01049', 'RMK_00925', 'RMK_01056',
                                                       'RMK_01065', 'RMK_00935', 'RMK_01145', 'RMK_01075', 'RMK_00930', 'RMK_01080', 'RMK_01057', 'RMK_01090', 'RMK_01106', 'RMK_01095', 'RMK_01000', 'RMK_01005', 'RMK_01010', 'RMK_01025',
                                                       'RMK_00915', 'RMK_01030', 'RMK_01040', 'RMK_DHARD', 'RMK_01046', 'RMK_01049', 'RMK_00925', 'RMK_01056', 'RMK_01065', 'RMK_00935', 'RMK_01145', 'RMK_01075', 'RMK_00930', 'RMK_01080',
-                                                      'RMK_01057', 'RMK_01090', 'RMK_00681', 'RMK_00680', 'RMK_50091', 'RMK_50092', 'RMK_82079'))) %>% 
+                                                      'RMK_01057', 'RMK_01090', 'RMK_00681', 'RMK_00680', 'RMK_50091', 'RMK_50092', 'RMK_82079',
+                                                      'RMK_TDS', 'RMK_SSC%Finer', 'RMK_SSC_COARSE', 'RMK_SSC_FINE', 'RMK_SSC_TOTAL'))) %>% 
       filter(! is.na(Ana_Sam_Fdt_Id)) #%>%  # drop blank row from row_bind
     # old method that bombs out if any field missing
     # stationAnalyteDataUserFilter2all <- dplyr::select(stationAnalyteDataUserFilter2,#Ana_Id,
@@ -569,7 +593,9 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
                     # others
                     'CARBON, DISSOLVED ORGANIC (MG/L AS C)', 'RMK_00681', 'CARBON, TOTAL ORGANIC (MG/L AS C)', 'RMK_00680',
                     'MERCURY-TL,FILTERED WATER,ULTRATRACE METHOD NG/L', 'RMK_50091', 'MERCURY-TL,UNFILTERED WATER,ULTRATRACE METHOD NG/L', 'RMK_50092',
-                     'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU', 'RMK_82079')))
+                     'TURBIDITY,LAB NEPHELOMETRIC TURBIDITY UNITS, NTU', 'RMK_82079',
+                    'TDS_mg_L', 'RMK_TDS', 'SSC%Finer', 'RMK_SSC%Finer', 'SSC_COARSE', 'RMK_SSC_COARSE', 'SSC_FINE', 'RMK_SSC_FINE', 
+                    'SSC_TOTAL', 'RMK_SSC_TOTAL')))
     # old method that bombed out when fields weren't there
     # dplyr::select(names(stationAnalyteDataUserFilter3conventionals), 
     #               # metals for assessment
