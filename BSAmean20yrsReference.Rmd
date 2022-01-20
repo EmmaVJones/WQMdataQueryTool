@@ -1,0 +1,100 @@
+---
+title: "BenStress Query"
+author: "Emma Jones"
+date: "1/20/2022"
+output: html_document
+---
+
+## Background
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(config)
+library(sf)
+library(plotly)
+library(lubridate)
+library(pool)
+library(pins)
+library(sqldf)
+library(dbplyr)
+library(readxl)
+
+source("BSAfunctions.R")
+
+LRBS <- pin_get("ejones/LRBS", board = 'rsconnect') # most recent LRBS dataset from R server
+```
+
+
+2002-2020
+```{r}
+dateRange <- c(as.Date('2002-01-01'), as.Date('2020-12-31'))
+```
+
+
+```{r reference sites}
+refSites <- read_excel('C:/HardDriveBackup/R/GitHub/LandcoverAnalysis/RefSiteDelineation/RefSitesSourceGIS.xlsx')
+```
+
+
+Pull spatial info from GIS REST endpoint. We are cheating here and pulling from a pinned version of this data maintained on the R server.
+
+```{r REST query}
+## Pull station info from REST service
+stationInfo_sf <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect')) %>% 
+  filter(WQM_STA_ID %in% refSites$StationID)
+
+```
+
+
+Connect to ODS
+
+```{r ODS connection}
+## Connect to ODS production
+pool <- dbPool(
+  drv = odbc::odbc(),
+  Driver = "ODBC Driver 11 for SQL Server",#"SQL Server Native Client 11.0",
+  Server= "DEQ-SQLODS-PROD,50000",
+  dbname = "ODS",
+  trusted_connection = "yes"
+)
+
+```
+
+
+Query field data based on sites of interest (refSites$StationID) and date range  (between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ).
+
+```{r field data}
+### Field Data Information
+stationFieldData <- pool %>% tbl(in_schema("wqm", "Wqm_Field_Data_View")) %>%
+  filter(Fdt_Sta_Id %in% !! refSites$StationID &
+           between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ) %>% # & # x >= left & x <= right
+  as_tibble() %>% 
+  filter(! Ssc_Description %in% "INVALID DATA SET QUALITY ASSURANCE FAILURE")
+
+```
+
+Query analytes. Notice we are pulling analye identifier based on field data id (stationFieldData$Fdt_Id) because analyte view doesn't have collection date/time info.
+
+```{r analytes}
+stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
+  filter(Ana_Sam_Fdt_Id %in% !! stationFieldData$Fdt_Id  &
+           Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
+  as_tibble() %>%
+  left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))# %>% 
+
+```
+
+
+```{r}
+BSAtoolOutput <- BSAtooloutputFunction(pool, refSites$StationID,#station, 
+                                       dateRange, LRBS, stationInfo_sf, stationAnalyteData, stationFieldData) 
+
+BSAmean <- BSAtoolOutput %>% 
+  group_by(StationID) %>% 
+  summarise(across(c(`pH (unitless)`:`Temperature (C)`), ~ mean(.x, na.rm = TRUE), .names = "mean_{col}"),
+            across(c(`pH (unitless)`:`Temperature (C)`), ~ median(.x, na.rm = TRUE), .names = "median_{col}"))
+
+```
+
