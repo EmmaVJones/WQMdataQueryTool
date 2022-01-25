@@ -21,7 +21,8 @@ library(dbplyr)
 source('vlookup.R')
 source('cdfRiskTable.R')
 source('dissolvedMetalsModule.R') #also contains dissolved metals functions that are more flexible than from assessment apps
-source('conventionalsFunction1232021.R')
+source('conventionalsFunction12142021.R')
+#source('conventionalsFunction1232021.R')
 #source('conventionalsFunction.R')
 
 # Server connection things

@@ -7,6 +7,8 @@ output: html_document
 
 ## Background
 
+This script walks you through pulling data from the R server (pinned data) and ODS (using conventionals logic) to summarize the BSA parameters for a set of reference sites statewide over ~20 yrs.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -22,29 +24,20 @@ library(dbplyr)
 library(readxl)
 
 source("BSAfunctions.R")
+source('conventionalsFunction12142021.R')
 
 LRBS <- pin_get("ejones/LRBS", board = 'rsconnect') # most recent LRBS dataset from R server
 ```
 
-
-2002-2020
+Establish a date range of 2002-2020. 
 ```{r}
 dateRange <- c(as.Date('2002-01-01'), as.Date('2020-12-31'))
 ```
 
+Bring in reference site list.
 
 ```{r reference sites}
 refSites <- read_excel('C:/HardDriveBackup/R/GitHub/LandcoverAnalysis/RefSiteDelineation/RefSitesSourceGIS.xlsx')
-```
-
-
-Pull spatial info from GIS REST endpoint. We are cheating here and pulling from a pinned version of this data maintained on the R server.
-
-```{r REST query}
-## Pull station info from REST service
-stationInfo_sf <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect')) %>% 
-  filter(WQM_STA_ID %in% refSites$StationID)
-
 ```
 
 
@@ -61,6 +54,20 @@ pool <- dbPool(
 )
 
 ```
+
+
+Query station data for conventionals logic.
+
+```{r}
+# Basic station info for conventionals
+multiStationInfo <- pool %>% tbl(in_schema("wqm",  "Wqm_Stations_View")) %>%
+  filter(Sta_Id %in% !! refSites$StationID) %>%
+  as_tibble()
+multiStationGIS_View <-  pool %>% tbl(in_schema("wqm",  "Wqm_Sta_GIS_View")) %>%
+  filter(Station_Id %in% !! refSites$StationID) %>%
+  as_tibble()
+```
+
 
 
 Query field data based on sites of interest (refSites$StationID) and date range  (between(as.Date(Fdt_Date_Time), !! dateRange[1], !! dateRange[2]) ).
@@ -82,19 +89,48 @@ stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
   filter(Ana_Sam_Fdt_Id %in% !! stationFieldData$Fdt_Id  &
            Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>% 
   as_tibble() %>%
-  left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))# %>% 
+  left_join(dplyr::select(stationFieldData, Fdt_Id, Fdt_Sta_Id, Fdt_Date_Time, Fdt_Depth), by = c("Ana_Sam_Fdt_Id" = "Fdt_Id"))# %>% 
 
 ```
 
 
-```{r}
-BSAtoolOutput <- BSAtooloutputFunction(pool, refSites$StationID,#station, 
-                                       dateRange, LRBS, stationInfo_sf, stationAnalyteData, stationFieldData) 
+Run conventionals logic on field and analyte data to appropriately combine datasets. This is basically the "one query to rule them all" that will become ingrained in all DEQ query logic. It standardizes the data management approach across the agency. There is a lot of funny data to smash and this approach uses the same logic across the board. 
 
+```{r}
+multistationOrganizeData <- conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
+                                          stationFieldDataUserFilter= stationFieldData, 
+                                          stationAnalyteDataUserFilter = stationAnalyteData, 
+                                          stationInfo = multiStationInfo,
+                                          stationGIS_View = multiStationGIS_View,
+                                          dropCodes = c('QF'),
+                                          assessmentUse = F,
+                                          overwriteUncensoredZeros = TRUE) #Overwrite 0 if reported in Ana_Uncensored_Value field 
+```
+
+Reorganize all the datasets into one master BSA style output by StationID, Date, Depth, and container ID info
+
+```{r BSA output}
+BSAtoolOutput <- BSAtooloutputFunctionMultistation(pool, refSites$StationID,
+                                                   dateRange, LRBS, 
+                                                   multistationOrganizeData$More)
+
+```
+                
+Now take the above data and run central tendency stats across a set of variables by StationID.                                       
+                                       
+```{r meanBSA}
 BSAmean <- BSAtoolOutput %>% 
   group_by(StationID) %>% 
   summarise(across(c(`pH (unitless)`:`Temperature (C)`), ~ mean(.x, na.rm = TRUE), .names = "mean_{col}"),
             across(c(`pH (unitless)`:`Temperature (C)`), ~ median(.x, na.rm = TRUE), .names = "median_{col}"))
+
+```
+
+save these for review
+
+```{r}
+write.csv(BSAtoolOutput, 'rawData.csv', row.names = F, na = '')
+write.csv(BSAmean, 'summarizedData.csv', row.names = F, na = '')
 
 ```
 
