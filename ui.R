@@ -29,7 +29,7 @@ shinyUI(fluidPage(tags$head(
                                                  sidebarPanel(
                                                    helpText("Query will pull directly from CEDS. Data is refreshed nightly."),
                                                    helpText("Begin typing a DEQ StationID and available options will auto-filter based on the user input."),
-                                                   selectInput('station', 'DEQ Station ID', choices = c("", unique(stationOptions$Station_Id))),#textInput('station', 'DEQ Station ID', placeholder = "DEQ Station ID"),
+                                                   selectInput('station', 'DEQ Station ID', choices = c("", sort(unique(stationOptions$Station_Id)))),#textInput('station', 'DEQ Station ID', placeholder = "DEQ Station ID"),
                                                    dateRangeInput('dateRange',
                                                                   label = 'Filter Data By Sample Date Range (YYYY-MM-DD)',
                                                                   start = as.Date("1970-01-01"), ##################################################as.Date("2015-01-01"),
@@ -69,9 +69,11 @@ shinyUI(fluidPage(tags$head(
                                                                         data collected more than once for a given sample event
                                                                         (e.g. more than one lab parameter per date time combination)
                                                                        are presented as separate rows and can duplicate the field data associated with a given date time. Where these
-                                                                       instances occurr, the additional rows are highlighted in yellow. If you wish to consolidate this information into a single
+                                                                       instances occur, the additional rows are highlighted in yellow. If you wish to consolidate this information into a single
                                                                        measure by averaging these values, please choose the `Average similar parameters by sample date time`
                                                                        option below."),
+                                                              helpText('The Simplified Dataset tab offers data organized in a standardized format consistent across assessment program tools (the 
+                                                                       "conventionals" query logic.'),
                                                               radioButtons('averageParameters', strong("Display Options"),
                                                                            choices = c('Report all available parameters and highlight rows with duplicate analyte measures. The first field named
                                                                                        `Associated Analyte Records` identifies when multiple analytes with the same lab name are returned
@@ -93,7 +95,11 @@ shinyUI(fluidPage(tags$head(
                                                                          h4('Simplified Field and Chemistry Dataset'),
                                                                          helpText('This dataset cleans up the CEDS default parameter names and simplifies
                                                                          results to one measure per sample event (using a median statistic where more than
-                                                                                  one measure per sample event is available).'),
+                                                                                  one measure per sample event is available). This output uses the "conventionals" query logic
+                                                                                  consistent with assessment program tools.'),
+                                                                         radioButtons('overwrite0','For analytes, the uncensored value is reported. Sometimes the lab reports 0 for an uncensored value. 
+                                                                                  By choosing "Overwrite Uncensored 0s" below, the system will report out the censored value in those instances.',
+                                                                                      choices = c('Overwrite Uncensored 0s', 'Report Uncensored Values Only')),
                                                                          DT::dataTableOutput('basicSummary'), br(), br(), br()),
                                                                 tabPanel('Parameter Scatter Plot',
                                                                          h4('Interactive Parameter Scatter Plot'),
@@ -189,7 +195,36 @@ shinyUI(fluidPage(tags$head(
                                                                          DT::dataTableOutput('BSAmetalsTemplateData'), br(),br(),br())))
                                                               
                                                      )
-                                                 ))
+                                                 )),
+                                        tabPanel('Benthic Data',
+                                                 sidebarPanel(
+                                                   uiOutput('dateRange_'),
+                                                   radioButtons('SCIchoice', "SCI Choice", choices = c('VSCI', 'VCPMI63 + Chowan', 'VCPMI65 - Chowan')),
+                                                   checkboxInput('rarifiedFilter', "Only Include Target Count = 110", value=TRUE),
+                                                   checkboxInput('boatableFilter', "Only Include Wadeable Methods", value=TRUE),
+                                                   checkboxGroupInput('repFilter', "Filter Reps (if none are selected then all are included)", 
+                                                                      choices = c('1','2'), selected = NULL)   ),
+                                                 mainPanel(
+                                                   tabsetPanel(
+                                                     tabPanel('SCI Results',
+                                                              verbatimTextOutput('benthicTest'),
+                                                              h4("SCI Interactive Plot"),
+                                                              helpText("Note: Only rarified samples are plotted."),
+                                                              plotlyOutput('SCIplot'),
+                                                              h4("SCI Metrics"),
+                                                              DT::dataTableOutput('SCIresultsTable'),
+                                                              br(), br(), br()),
+                                                     tabPanel('Raw Data Download Formats',
+                                                              tabsetPanel(
+                                                                tabPanel('Raw Genus Level Data Crosstab View',
+                                                                         DT::dataTableOutput('rawBenthicCrosstabGenus'),
+                                                                         br(), br(), br()), # a little breathing room
+                                                                tabPanel('Raw Genus Level Data Long View',
+                                                                         DT::dataTableOutput('rawBenthicGenus'),
+                                                                         br(), br(), br())))))
+                                                          
+                                                 
+                                                 )
                                       )),
                             tabPanel('Multiple Station Query (Archived Spatial Data Refreshed Weekly)',
                                      tabsetPanel(
@@ -199,7 +234,7 @@ shinyUI(fluidPage(tags$head(
                                                            used to assist spatial querying methods are stored on R server (spatial data is refreshed weekly)."),
                                                   radioButtons('queryType', "How would you like to query stations?",
                                                                choices = c('Spatial Filters', 'Wildcard Selection', 
-                                                                           'Manually Specify Stations (requires a few seconds for the station text box to appear)')),
+                                                                           'Manually Specify Stations')),
                                                 
                                                   # Spatial filters
                                                   conditionalPanel(condition = "input.queryType == 'Spatial Filters'",
@@ -210,8 +245,10 @@ shinyUI(fluidPage(tags$head(
                                                   conditionalPanel(condition = "input.queryType == 'Wildcard Selection'",
                                                     uiOutput('wildcardSelection')),
                                                   # Manually Specify Stations Selection
-                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)'",
-                                                    uiOutput('manualSelectionUI')),
+                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations'",
+                                                    #uiOutput('manualSelectionUI')),
+                                                    helpText('Begin typing station names and the app will filter available data by input text. Multiple stations are allowed.'),
+                                                    selectInput('manualSelection','Station ID', choices = sort(unique(stationOptions$Station_Id)), multiple = T)), #sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)),
                                                   hr(), # keep these at the top level to allow reuse of same filter parameters
                                                   helpText("Additional filter(s) applied on 'Pull Stations' request. These filters are not interactively cross validated."),
                                                   uiOutput('spatialFilters_Ecoregion'),
@@ -234,7 +271,7 @@ shinyUI(fluidPage(tags$head(
                                                                    actionButton('begin_multistation_spatial', 'Pull Stations',class='btn-block')),
                                                   conditionalPanel(condition = "input.queryType == 'Wildcard Selection'",
                                                                    actionButton('begin_multistation_wildcard', 'Pull Stations',class='btn-block')),
-                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)'",
+                                                  conditionalPanel(condition = "input.queryType == 'Manually Specify Stations'",
                                                                    actionButton('begin_multistation_manual', 'Pull Stations',class='btn-block')) ),
                                                  mainPanel(
                                                   leafletOutput('multistationMap'),
@@ -289,8 +326,12 @@ shinyUI(fluidPage(tags$head(
                                                                tabPanel('Simplified Dataset',
                                                                         h4('Simplified Field and Chemistry Dataset'),
                                                                         helpText('This dataset cleans up the CEDS default parameter names and simplifies
-                                                                                            results to one measure per sample event (using a median statistic where more than
-                                                                                                     one measure per sample event is available).'),
+                                                                         results to one measure per sample event (using a median statistic where more than
+                                                                                  one measure per sample event is available). This output uses the "conventionals" query logic
+                                                                                  consistent with assessment program tools.'),
+                                                                        radioButtons('multistationOverwrite0','For analytes, the uncensored value is reported. Sometimes the lab reports 0 for an uncensored value. 
+                                                                                  By choosing "Overwrite Uncensored 0s" below, the system will report out the censored value in those instances.',
+                                                                                     choices = c('Overwrite Uncensored 0s', 'Report Uncensored Values Only')),
                                                                         DT::dataTableOutput('multistationBasicSummary'), br(), br(), br()),
                                                                tabPanel('Parameter Scatter Plot',
                                                                         h4('Interactive Parameter Scatter Plot'),

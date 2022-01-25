@@ -175,7 +175,8 @@ organizeData <- conventionalsSummary(conventionals= pin_get("conventionals2022IR
                      stationInfo,
                      stationGIS_View,
                      dropCodes = c('QF', labCodesDropped),
-                     assessmentUse = F)
+                     assessmentUse = F,
+                     overwriteUncensoredZeros= T)
 
 # conventionalsData <- organizeData$Conventionals %>% 
 #   arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)

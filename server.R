@@ -1,53 +1,53 @@
-source('global.R')
-
-assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
-ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
-ecoregionLevel4 <- st_read('data/GIS/vaECOREGIONlevel4__proj84.shp')
-county <- st_read('data/GIS/VACountyBoundaries.shp')
-assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
-  st_transform( st_crs(4326))
-subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
-  rename('SUBBASIN' = 'SUBBASIN_1') %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
-  mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
-                               SUBBASIN == 'Chowan River' ~ 'Chowan',
-                               SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
-                               SUBBASIN == 'New River' ~ 'New',
-                               SUBBASIN == 'Potomac River' ~ 'Potomac',
-                               SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
-                               SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
-                               SUBBASIN == 'Roanoke River' ~ 'Roanoke',
-                               SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
-                               SUBBASIN == 'Holston River' ~ 'Holston',
-                               SUBBASIN == 'York River' ~ 'York',
-                               TRUE ~ as.character(NA)),
-         ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
-                                    SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
-                                    SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
-                                    TRUE ~ as.character(NA)))
-
-subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
-  filter(!is.na(SubbasinVAHU6code)) %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
-#dplyr::select(SUBBASIN, SubbasinVAHU6code)
-
-# labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
-#   as_tibble()
-# pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
-labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
-
-WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
-WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
-  rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
-WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
-
-
-
-# analyte options
-Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl(in_schema("wqm", 'Wqm_Parameter_Grp_Cds_Codes_Wqm_View')) %>%
-  filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
-  distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
-
+# source('global.R')
+# 
+# assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
+# ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
+# ecoregionLevel4 <- st_read('data/GIS/vaECOREGIONlevel4__proj84.shp')
+# county <- st_read('data/GIS/VACountyBoundaries.shp')
+# assessmentLayer <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>%
+#   st_transform( st_crs(4326))
+# subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
+#   rename('SUBBASIN' = 'SUBBASIN_1') %>%
+#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
+#   mutate(ProbBasin = case_when(SUBBASIN == 'Big Sandy River' ~ 'Big Sandy',
+#                                SUBBASIN == 'Chowan River' ~ 'Chowan',
+#                                SUBBASIN %in% c('James River - Lower', "James River - Middle", "James River - Upper") ~ 'James',
+#                                SUBBASIN == 'New River' ~ 'New',
+#                                SUBBASIN == 'Potomac River' ~ 'Potomac',
+#                                SUBBASIN == 'Shenandoah River' ~ 'Shenandoah',
+#                                SUBBASIN == 'Rappahannock River' ~ 'Rappahannock',
+#                                SUBBASIN == 'Roanoke River' ~ 'Roanoke',
+#                                SUBBASIN == 'Clinch and Powell Rivers' ~ 'Clinch',
+#                                SUBBASIN == 'Holston River' ~ 'Holston',
+#                                SUBBASIN == 'York River' ~ 'York',
+#                                TRUE ~ as.character(NA)),
+#          ProbSuperBasin = case_when(SUBBASIN %in% c('Big Sandy River','Holston River','Clinch and Powell Rivers') ~ 'Tennessee',
+#                                     SUBBASIN %in% c('Potomac River', 'Shenandoah River') ~ 'Potomac-Shenandoah',
+#                                     SUBBASIN %in% c('Rappahannock River', 'York River') ~ 'Rappahannock-York',
+#                                     TRUE ~ as.character(NA)))
+# 
+# subbasinVAHU6crosswalk <- read_csv('data/basinAssessmentReg_clb_EVJ.csv') %>%
+#   filter(!is.na(SubbasinVAHU6code)) %>%
+#   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), BASIN_NAME, SUBBASIN)) #%>%
+# #dplyr::select(SUBBASIN, SubbasinVAHU6code)
+# 
+# # labCommentCodes <- pool %>% tbl( "Wqm_Comment_Cds_Codes_Wqm_View") %>%
+# #   as_tibble()
+# # pin(labCommentCodes, description = 'Lab Comment Codes', board = 'rsconnect')
+# labCommentCodes <- pin_get("labCommentCodes", board = 'rsconnect')
+# 
+# WQSlookup <- pin_get("WQSlookup-withStandards",  board = "rsconnect")
+# WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
+#   rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
+# WQM_Stations_Full <- st_as_sf(pin_get('ejones/WQM-Station-Full', board = 'rsconnect'))
+# 
+# 
+# 
+# # analyte options
+# Wqm_Parameter_Grp_Cds_Codes_Wqm_View <- pool %>% tbl(in_schema("wqm", 'Wqm_Parameter_Grp_Cds_Codes_Wqm_View')) %>%
+#   filter(Pg_Parm_Name != "STORET STORAGE TRANSACTION DATE YR/MO/DAY") %>%
+#   distinct(Pg_Parm_Name) %>% arrange(Pg_Parm_Name) %>% as_tibble() %>% drop_na()
+# 
 
 
 shinyServer(function(input, output, session) {
@@ -157,7 +157,7 @@ shinyServer(function(input, output, session) {
       domain = ecoregion$US_L3NAME)
 
     CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
-                 options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
+                 options= leafletOptions(zoomControl = TRUE,minZoom = 5, maxZoom = 20,
                                          preferCanvas = TRUE)) %>%
       setView(-79.1, 37.7, zoom=7)  %>%
       addPolygons(data= ecoregion,  color = 'gray', weight = 1,
@@ -293,6 +293,10 @@ shinyServer(function(input, output, session) {
               options = list(dom = 'Bit', scrollX = TRUE, scrollY = '350px',
                              pageLength = nrow(z), buttons=list('copy')), selection = 'none')})
   
+  
+  ## Visualization Tools: Simplified Dataset Tab
+  
+  # Conventionals dataset
   organizedData <- reactive({req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
     conventionalsSummary(conventionals= pin_get("conventionals2022IRfinalWithSecchi", board = "rsconnect")[0,],
                          stationFieldDataUserFilter= reactive_objects$stationFieldDataUserFilter, 
@@ -300,15 +304,14 @@ shinyServer(function(input, output, session) {
                          reactive_objects$stationInfo,
                          stationGIS_View = reactive_objects$stationGIS_View,
                          dropCodes = c('QF', input$labCodesDropped),
-                         assessmentUse = F) #%>% 
-     # arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
-    })
-  
+                         assessmentUse = F, 
+                         overwriteUncensoredZeros = ifelse(input$overwrite0 == 'Overwrite Uncensored 0s', T, F ))     })
+                           
+
   conventionalsData <- reactive({req(organizedData)
     organizedData()$Conventionals})
 
 
-  ## Visualization Tools: Simplified Dataset Tab
   basicStationSummary <- reactive({req(stationFieldAnalyteDateRange(), organizedData())
     #basicSummary(stationFieldAnalyteDateRange()) })
     basicSummaryConventionals(organizedData()$More, stationFieldAnalyteDateRange()) })
@@ -480,8 +483,9 @@ shinyServer(function(input, output, session) {
 
 
   output$BSAtemplateData <- renderDataTable({ req(reactive_objects$stationFieldDataUserFilter, reactive_objects$stationAnalyteDataUserFilter)
-    z <-  BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf,
-                                reactive_objects$stationAnalyteDataUserFilter, reactive_objects$stationFieldDataUserFilter)
+    z <- BSAtooloutputFunctionMultistation(pool, input$station, input$dateRangeFilter, LRBS,  conventionalsData())
+    # z <-  BSAtooloutputFunction(pool, input$station, input$dateRangeFilter, LRBS, reactive_objects$stationInfo_sf,
+    #                             reactive_objects$stationAnalyteDataUserFilter, reactive_objects$stationFieldDataUserFilter)
     datatable(z, rownames = F, escape= F, extensions = 'Buttons',
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                              buttons=list('copy',
@@ -506,6 +510,219 @@ shinyServer(function(input, output, session) {
 
 
 
+### Add in Benthic Data
+  
+  ## Pull Station Benthic and Habitat Information
+  observeEvent(nrow(organizedData()$More) > 0, {
+
+  show_modal_spinner(spin = 'flower')
+
+    ## Benthic Sampling Information
+    reactive_objects$stationInfoBenSamps <- pool %>% tbl(in_schema("wqm",  "Edas_Benthic_Sample_View")) %>%
+      filter(STA_ID %in% !! toupper(input$station) &
+               between(as.Date(FDT_DATE_TIME), !! input$dateRangeFilter[1], !! input$dateRangeFilter[2] )) %>%
+      as_tibble() %>%
+      # fix names
+      rename( "StationID" = "STA_ID",
+              "BenSampID"  = "WBS_SAMP_ID",
+              "RepNum" = "WBS_REP_NUM",
+              "Number of Grids" = "WBS_GRID_NUM",
+              "Sample Comments" = "WBS_COMMENT",
+              "Entered By" = "WBS_INSERTED_BY", # not in EDAS table but good info
+              "Collected By" = "COLLECTOR_NAME",  # not in EDAS table but good info
+              "Entered Date" = "WBS_INSERTED_DATE",
+              "Gradient" = "WBCM_DESCRIPTION",
+              "Taxonomist" = "TAXONOMIST_NAME",  # not in EDAS table but good info
+              "Target Count" = "WBS_TARGET_COUNT",
+              "Field Team" = "WBS_FIELD_TEAM",
+              "Collection Date" = "FDT_DATE_TIME") %>%
+      # Add sample season
+      mutate(monthday = as.numeric(paste0(sprintf("%02d",month(`Collection Date`)),
+                                          sprintf("%02d",day(`Collection Date`)))),
+             Season = case_when(monthday >= 0215 & monthday <= 0615 ~ 'Spring',
+                                monthday >= 0815 & monthday <= 1215 ~ 'Fall',
+                                TRUE ~ as.character("Outside Sample Window"))) %>%
+      left_join(dplyr::select(reactive_objects$stationInfoFin, Sta_Id, Sta_Desc)  %>% distinct(Sta_Id, .keep_all = T), by = c('StationID' = 'Sta_Id')) %>%
+      dplyr::select(StationID, Sta_Desc, BenSampID, RepNum, `Collection Date`, `Sample Comments`, `Collected By`, `Field Team`, `Entered By`,
+                    Taxonomist, `Entered Date`, Gradient, `Target Count`, `Number of Grids`, Season) %>%
+      arrange(`Collection Date`)
+
+    output$benthicTest <- renderPrint({reactive_objects$stationInfoBenSamps})
+    
+    ## Habitat data must be reactive to adjusted to benthic or habitat date filter
+    # reactive_objects$habSampleStation <- pool %>% tbl(in_schema("wqm",  "Edas_Habitat_Sample_View")) %>%
+    #   filter(STA_ID %in% !! toupper(input$station) &
+    #            between(as.Date(FDT_DATE_TIME), !! input$dateRangeFilter[1], !! input$dateRangeFilter[2] )) %>%
+    #   as_tibble() %>%
+    #   rename("StationID" = "STA_ID",
+    #          "HabSampID" = "WHS_SAMP_ID",
+    #          "Entered Date" = "WHS_INSERTED_DATE",
+    #          "Entered By" = "WHS_INSERTED_BY",
+    #          "Field Team" = "WHS_FIELD_TEAM",
+    #          "HabSample Comment" = "WHS_COMMENT",
+    #          "Gradient" = "WSGC_DESCRIPTION",
+    #          "Collection Date" = "FDT_DATE_TIME") %>%
+    #   # Add sample season
+    #   mutate(monthday = as.numeric(paste0(sprintf("%02d",month(`Collection Date`)),
+    #                                       sprintf("%02d",day(`Collection Date`)))),
+    #          Season = case_when(monthday >= 0215 & monthday <= 0615 ~ 'Spring',
+    #                             monthday >= 0815 & monthday <= 1215 ~ 'Fall',
+    #                             TRUE ~ as.character("Outside Sample Window"))) %>%
+    #   dplyr::select(HabSampID, StationID, `Collection Date`, `Entered By`, `Entered Date`, `Field Team`, `HabSample Comment`, Gradient, Season)
+
+    # other benthic and hab values have to be reactive
+    remove_modal_spinner()      })
+  
+  # # Benthic and Habitat pull after initial ben samps data available
+  # observe({    req(nrow(reactive_objects$stationInfoBenSamps) >0)
+  # 
+  #   show_modal_spinner(spin = 'flower')
+  # 
+  #   # master taxa info
+  #   reactive_objects$masterTaxaGenus <- pool %>% tbl(in_schema("wqm",  "Edas_Benthic_Master_Taxa_View")) %>%
+  #     as_tibble() %>%
+  #     # make columns match expected format
+  #     rename('Phylum' = 'PHYLUM_NAME',
+  #            'Class' = 'CLASS_NAME',
+  #            'Subclass' = 'SUBCLASS_NAME',
+  #            'Order' = 'ORDER_NAME',
+  #            'Suborder' = 'SUBORDER_NAME',
+  #            'Superfamily' = 'SUPERFAMILY_NAME',
+  #            'Family' = 'FAMILY_NAME',
+  #            'Subfamily' = 'SUBFAMILY_NAME',
+  #            'Tribe' = 'TRIBE_NAME',
+  #            'Genus' = 'GENUS_NAME',
+  #            'Species' = 'SPECIES_NAME',
+  #            "Final VA Family ID" =  "WBMT_FINAL_FAMILY_ID",
+  #            "FinalID" = "WBMT_FINAL_ID",
+  #            "TolVal" = "WBMT_TOLERANCE_VALUE",
+  #            "FFG" =   "FEEDING_GROUP",
+  #            "Habit" = "HABIT",
+  #            "FamFFG" =  "FAMILY_FEEDING_GROUP",
+  #            "FamTolVal" = "WBMT_FAM_TOLERANCE_VALUE",
+  #            "FamHabit" ="FAMILY_HABIT") %>%
+  #     dplyr::select(Phylum, Class, Subclass, Order, Suborder, Superfamily, Family, Subfamily, Tribe,
+  #                   Genus, Species, `Final VA Family ID`, FinalID, TolVal, FFG,
+  #                   Habit, FamFFG, FamTolVal, FamHabit) # keep EDAS Master Taxa list names
+  # 
+  #   ## Benthic Information
+  #   reactive_objects$stationBenthics <- pool %>% tbl(in_schema("wqm",  "Edas_Benthic_View")) %>%
+  #     filter(WBS_SAMP_ID %in% !! unique(reactive_objects$stationInfoBenSamps$BenSampID)  ) %>%
+  #     #filter(STA_ID %in% !! toupper(input$station)) %>%
+  #     as_tibble() %>%
+  #     rename( "StationID" = "STA_ID",
+  #             "BenSampID"  = "WBS_SAMP_ID",
+  #             "RepNum" = "WBS_REP_NUM",
+  #             "FinalID" = "WBMT_FINAL_ID",
+  #             "Individuals" = "WBE_INDIVIDUALS",
+  #             "ID Comments" = "WBE_COMMENT",
+  #             "Entered By" = "WBE_INSERTED_BY", # not in EDAS table but good info
+  #             "Taxonomist" = "TAXONOMIST_NAME",  # not in EDAS table but good info
+  #             "Entered Date" = "WBE_INSERTED_DATE") %>%
+  #     mutate(`Excluded Taxa` = ifelse(WBE_EXCLUDED_TAXA_YN == "Y", -1, 0)) %>%
+  #     dplyr::select(StationID, BenSampID, RepNum, FinalID, Individuals, `Excluded Taxa`, `ID Comments`, Taxonomist, `Entered By`, `Entered Date`)
+  # 
+  #   # Tolerance Value Stuff
+  #   reactive_objects$vmast <- reactive_objects$masterTaxaGenus %>%
+  #     # get Family level tolerance value, FFG
+  #     rename('GenusTolVal' = 'TolVal',
+  #            'TolVal' = 'FamTolVal',
+  #            'GenusFFG' = 'FFG',
+  #            'FFG' = 'FamFFG',
+  #            'GenusHabit' = 'Habit',
+  #            'Habit' = 'FamHabit') %>%
+  #     mutate(e=ifelse(Order=="Ephemeroptera", 1, 0),
+  #            p=ifelse(Order=="Plecoptera",1,0),
+  #            t=ifelse(Order=="Trichoptera", 1, 0),
+  #            tmin=ifelse((Order=="Trichoptera" & Family != "Hydropsychidae") |
+  #                          (Order=="Trichoptera" & is.na(Family)) , 1, 0),
+  #            ept=ifelse(e+p+t>0,1,0),
+  #            scraper = ifelse(FFG=="Scraper", 1, 0),
+  #            chiro = ifelse(Family=="Chironomidae",1, 0),
+  #            ptmin = ifelse(p + tmin > 0,1,0),
+  #            `clinger-HS` = ifelse(Habit == 'Clinger' & ! Family %in% c("Hydropsychidae","Simuliidae"), 1, 0)) %>%
+  #     # Then put it in long format so it can be merged to and input taxa list
+  #     select(`Final VA Family ID`,TolVal, e,p,t, ept,ptmin, scraper, chiro,`clinger-HS`) %>%
+  #     distinct(`Final VA Family ID`, .keep_all = T) %>% # drop multiple rows bc working back to family level data from genus
+  #     filter(!is.na(`Final VA Family ID`)) %>%
+  #     pivot_longer(-`Final VA Family ID`, names_to = 'metric', values_to = 'metric_val') %>%
+  #     #  pivot_longer(-`Final VA Family ID`, names_to = 'metric', values_to = 'metric_val') %>%
+  #     filter(!is.na(metric_val))
+  #   remove_modal_spinner()   })
+  # 
+  # # Habitat pull after initial hab samps data available
+  # observe({    req(nrow(reactive_objects$habSampleStation) >0)
+  #   reactive_objects$habValuesStation <- pool %>% tbl(in_schema("wqm",  "Edas_Habitat_Values_View")) %>%
+  #     filter(WHS_SAMP_ID %in% !! reactive_objects$habSampleStation$HabSampID) %>%
+  #     as_tibble() %>%
+  #     rename("HabSampID" = "WHS_SAMP_ID",
+  #            "HabParameter" = "WHVP_CODE",
+  #            "HabParameterDescription" = "WHVP_DESCRIPTION",
+  #            "HabValue" = "WHV_HAB_VALUE",
+  #            "HabValue Comment" = "WHV_COMMENT") %>%
+  #     dplyr::select(HabSampID, HabParameter, HabParameterDescription, HabValue, `HabValue Comment`)
+  # 
+  #   reactive_objects$habObsStation <- pool %>% tbl(in_schema("wqm",  "Edas_Habitat_Observations_View")) %>%
+  #     filter(WHS_SAMP_ID %in% !! reactive_objects$habSampleStation$HabSampID) %>%
+  #     as_tibble() %>%
+  #     rename("HabSampID" = "WHS_SAMP_ID",
+  #            "ObsParameter" = "WOBP_CODE",
+  #            "ObsParameterDescription" = "WOBP_DESCRIPTION",
+  #            "ObsValue" = "WOB_OBS_VALUE") %>%
+  #     dplyr::select(HabSampID, ObsParameter, ObsParameterDescription, ObsValue)  })
+
+  #   
+  #   
+  #   
+  #   
+  #   
+  #   
+  # 
+  # 
+  #  
+  # 
+  # ### Filter by user input
+  # observe({
+  #   req(reactive_objects$stationInfoBenSamps, input$dateRange)
+  #   reactive_objects$stationInfoBenSampsDateRange <- filter(reactive_objects$stationInfoBenSamps, as.Date(`Collection Date`) >= input$dateRange[1] & as.Date(`Collection Date`) <= input$dateRange[2]) %>%
+  #     {if(input$rarifiedFilter)
+  #       filter(.,  `Target Count` == 110)
+  #       #filter(., str_detect(BenSampID, 'R110$')) # must end with R110
+  #       ###filter(., grepl( 'R110', BenSampID))
+  #       else . } %>%
+  #     {if(!is.null(input$repFilter))
+  #       filter(., RepNum %in% input$repFilter)
+  #       else . }  %>%
+  #     {if(input$boatableFilter)
+  #       filter(., Gradient != 'Boatable')
+  #       else . } })
+  # 
+  # stationBenthicsDateRange <- reactive({ 
+  #   req(reactive_objects$stationInfoBenSampsDateRange)
+  #   filter(reactive_objects$stationBenthics, BenSampID %in% reactive_objects$stationInfoBenSampsDateRange$BenSampID) %>%
+  #     left_join(dplyr::select(reactive_objects$stationInfoBenSampsDateRange, BenSampID, `Collection Date`)) %>%
+  #     dplyr::select(`Collection Date`, everything()) %>%
+  #     arrange(`Collection Date`)})
+  # 
+  # SCIresults <- reactive({
+  #   req( stationBenthicsDateRange())
+  #   SCIresults <- SCI(stationBenthicsDateRange(), input$SCIchoice, reactive_objects$stationInfoBenSampsDateRange,  reactive_objects$masterTaxaGenus, reactive_objects$vmast) %>%
+  #     mutate_if(is.numeric, round, digits=2) %>%# rounds all numeric columns to 2 decimal places
+  #     arrange(`Collection Date`)
+  #   SCIresults$Season <-  factor(SCIresults$Season,levels=c("Spring","Outside Sample Window","Fall"))#,ordered=T)
+  #   return(SCIresults)})
+  # 
+  # observe({
+  #   req(reactive_objects$stationInfoBenSampsDateRange, SCIresults())
+  #   reactive_objects$SCIresults <- SCIresults()  # for report, creates endless loop if not in separate reactive
+  #   reactive_objects$avgSCI <- averageSCI(reactive_objects$stationInfoBenSampsDateRange, SCIresults()) 
+  #   reactive_objects$sciTable <- dplyr::select(SCIresults(), StationID, Sta_Desc, `Collection Date`, RepNum, `Target Count`, `Number of Grids`, Season, BenSampID:`SCI Threshold`) %>% # inclusive of different column types 
+  #     arrange(`Collection Date`)}) # inclusive of different column types 
+  # 
+  # 
+  # 
+  
+  
 
 
 
@@ -662,14 +879,14 @@ shinyServer(function(input, output, session) {
 
 
   # Query by manual selection
-  output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)')
-    list(helpText('Begin typing station names and the app will filter available data by input text. Multiple stations are allowed.'),
-         selectInput('manualSelection','Station ID', choices = sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)) })
+  # output$manualSelectionUI <- renderUI({req(input$queryType == 'Manually Specify Stations (requires a few seconds for the station text box to appear)')
+  #   list(helpText('Begin typing station names and the app will filter available data by input text. Multiple stations are allowed.'),
+  #        selectInput('manualSelection','Station ID', choices = sort(unique(WQM_Stations_Spatial$StationID)), multiple = T)) })
 
   observeEvent(input$begin_multistation_manual, {
     show_modal_spinner(spin = 'flower')
 
-    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations (requires a few seconds for the station text box to appear)',
+    reactive_objects$WQM_Stations_Filter <- WQM_Stations_Filter_function('Manually Specify Stations',
                                                                          pool, WQM_Stations_Spatial, VAHU6Filter = NULL, subbasinFilter = NULL, assessmentRegionFilter = NULL,
                                                                          ecoregionFilter = input$ecoregionFilter, ecoregionLevel4Filter = input$ecoregionFilterLevel4,
                                                                          countyFilter = input$countyFilter,
@@ -730,7 +947,7 @@ shinyServer(function(input, output, session) {
       domain = ecoregion$US_L3NAME)
 
     CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE,
-                 options= leafletOptions(zoomControl = TRUE,minZoom = 3, maxZoom = 20,
+                 options= leafletOptions(zoomControl = TRUE,minZoom = 5, maxZoom = 20,
                                          preferCanvas = TRUE)) %>%
       setView(-79.1, 37.7, zoom=7)  %>%
       addPolygons(data= ecoregion,  color = 'gray', weight = 1,
@@ -1033,9 +1250,8 @@ shinyServer(function(input, output, session) {
                            reactive_objects$multiStationInfo,
                            reactive_objects$multiStationGIS_View,
                            dropCodes = c('QF', input$multistationLabCodesDropped),
-                           assessmentUse = F) #%>% 
-        #arrange(FDT_STA_ID, FDT_DATE_TIME, FDT_DEPTH)
-      })
+                           assessmentUse = F,
+                           overwriteUncensoredZeros = ifelse(input$multistationOverwrite0 == 'Overwrite Uncensored 0s', T, F ))     })
     
     mulitStationConventionalsData <- reactive({req(mulitStationOrganizedData())
       mulitStationOrganizedData()$Conventionals})

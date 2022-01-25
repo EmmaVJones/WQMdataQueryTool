@@ -66,15 +66,18 @@ pool <- dbPool(
 This version of the application is the first to include basin-specific estimates (opposed to just superbasin) as the 2020IR officially published these data and thus they are available for use in other applications.
 
 ```{r prob Estimates}
-probCDF <- read_csv('C:/HardDriveBackup/R/GitHub/ProbMon-Integrated-Reports/2020ProbChapter/processedData/allCDF.csv')
+probCDF <- read_csv('C:/HardDriveBackup/R/GitHub/FreshwaterProbMonIntegratedReports/2022ProbChapter/processedData/allCDF.csv')
+#probCDF1 <- read_csv('C:/HardDriveBackup/R/GitHub/ProbMon-Integrated-Reports/2020ProbChapter/processedData/allCDF.csv')
 
 # add unit information
 unitData <- read_csv('data/probIndicatorUnits.csv')
 
-probCDF <- left_join(probCDF, unitData, by = 'Indicator')
+probCDF <- left_join(probCDF, unitData, by = 'Indicator') %>% 
+  filter(!is.na(Type))
 # save to RDS locally for better data manipulation experience
+saveRDS(probCDF, 'data/IR2022probMonCDFestimates.RDS')
 # drop first blank row
-saveRDS(probCDF[2:nrow(probCDF),], 'data/IR2020probMonCDFestimates.RDS')
+#saveRDS(probCDF[2:nrow(probCDF),], 'data/IR2020probMonCDFestimates.RDS')
 ```
 
 ```{r}
