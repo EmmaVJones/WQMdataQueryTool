@@ -211,7 +211,30 @@ shinyUI(fluidPage(tags$head(
                                                    plotlyOutput('SCIplot'),
                                                    h4("SCI Metrics"),
                                                    DT::dataTableOutput('SCIresultsTable'),
-                                                   br(), br(), br()))
+                                                   br(), br(), br())),
+                                        tabPanel('Habitat Data',
+                                                 sidebarPanel(
+                                                   helpText('To expedite application rendering time, habitat date range filters are based on the date range 
+                                                            specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
+                                                            tab there will be no data.'),
+                                                   h4(span(strong("This tab shows total habitat score information and LRBS for the selected station and date range. For more
+                                                      detailed habitat information and analysis, please see the", 
+                                                                  HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
+                                                                  strong(".")))) ),
+                                                 mainPanel(
+                                                   tabsetPanel(
+                                                     tabPanel('Total Habitat Score',
+                                                              h4("Total Habitat Score Interactive Plot"),
+                                                              plotlyOutput('totalHabitatPlot'),
+                                                              h4("Total Habitat Score"),
+                                                              DT::dataTableOutput('habitatResultsTable'),
+                                                              br(), br(), br()),
+                                                     tabPanel('LRBS',
+                                                              h4("Log Relative Bed Stability (LRBS)"),
+                                                              DT::dataTableOutput('LRBSTable_habitatTab'),
+                                                              br(), br(), br()))
+                                                   )
+                                                   )
                                         )),
                             tabPanel('Multiple Station Query (Archived Spatial Data Refreshed Weekly)',
                                      tabsetPanel(

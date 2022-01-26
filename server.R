@@ -593,7 +593,44 @@ shinyServer(function(input, output, session) {
               options = list(dom = 'Bit', scrollX= TRUE, scrollY = '250px', 
                              pageLength= nrow(reactive_objects$SCI_filter), buttons=list('copy','colvis')))  })
   
-  output$benthicTest <- renderPrint({reactive_objects$SCI_filter})
+  
+  ### Habitat Tab
+  output$totalHabitatPlot <- renderPlotly({req(nrow(reactive_objects$stationTotalHabitat)>0)
+    reactive_objects$stationTotalHabitat %>%
+      plot_ly( x = ~`Collection Date`, y = ~`Total Habitat Score`, type = 'bar', 
+               color = ~Season, width = 0.5, stroke = list(color = 'rgb(0, 0, 0)', width = 3),
+               #marker = list(line = list(width = 1.5)),
+               hoverinfo="text", text=~paste(sep="<br>",
+                                             paste("StationID: ", StationID),
+                                             paste("Collection Date: ", as.Date(`Collection Date`)),
+                                             #paste('Replicate: ', RepNum),
+                                             paste("Field Team: ",`Field Team`),
+                                             paste("HabSampID: ", HabSampID),
+                                             paste("Total Habitat Score: ", `Total Habitat Score`))) %>%
+      layout(#showlegend=FALSE,
+        #shapes = list(hline(sciLimit , 'red', text="SCI Limit")),
+        yaxis=list(title="SCI"),
+        xaxis=list(title="Sample Date",tickfont = list(size = 10),
+                   type = 'date',tickformat = "%Y")) })
+  
+  output$habitatResultsTable <- DT::renderDataTable({req(nrow(reactive_objects$stationTotalHabitat)>0)
+    datatable(reactive_objects$stationTotalHabitat %>% 
+                mutate(`Collection Date` = as.Date(`Collection Date`)),
+              rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
+                             pageLength = nrow(reactive_objects$stationTotalHabitat), buttons=list('copy','colvis')))  })
+  
+  ## LRBS
+  output$LRBSTable_habitatTab <- renderDataTable({ req(reactive_objects$stationAnalyteDataUserFilter)
+    z <- filter(LRBS, StationID %in% input$station & between(as.Date(Date), as.Date(input$dateRangeFilter[1]), as.Date(input$dateRangeFilter[2]) ) ) %>%
+      mutate(Date = as.Date(Date))
+    
+    datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
+                             buttons=list('copy',list(extend='excel',filename=paste0('LRBSdata',input$station, Sys.Date())),
+                                          'colvis')), selection = 'none') }) 
+  
+  
   
 })
       
