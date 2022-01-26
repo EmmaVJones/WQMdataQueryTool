@@ -18,8 +18,8 @@ shinyUI(fluidPage(tags$head(
                             # #          htmlOutput("BenthicQueryToolHowTo") ),
                             
                             
-       #                     tabPanel('How To',
-       #                              includeMarkdown("CEDS WQM Query Tool How To.md")),
+                            tabPanel('How To',
+                                     includeMarkdown("CEDS WQM Query Tool How To.md")),
                             #includeHTML("BenthicQueryToolHowTo.html")),#htmlOutput("BenthicQueryToolHowTo") ), # this was a hot mess. when trying to update the BenthicQueryHowTo rmd and rendering to html, the app would not take any user inputs. so weird and wasted hours on this problem. ultimately had to go with rendering the .md in the app to have any semblance of a solution
 
                              
@@ -200,7 +200,9 @@ shinyUI(fluidPage(tags$head(
                                                  sidebarPanel(
                                                    helpText('To expedite application rendering time, benthic date range filters are based on the date range 
                                                             specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
-                                                            tab there will be no data.'),
+                                                            tab there will be no data. Additionally, the benthic data available to this application are refreshed at the
+                                                            beginning of each week. For the most recent benthic data, please see the Benthic Data Query app- Single
+                                                            Station Query.'),
                                                    h4(span(strong("This tab shows basic benthic SCI score information (SCI choice based on station location). For more
                                                       detailed benthic information and analysis, please see the", 
                                                                   HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
@@ -216,7 +218,9 @@ shinyUI(fluidPage(tags$head(
                                                  sidebarPanel(
                                                    helpText('To expedite application rendering time, habitat date range filters are based on the date range 
                                                             specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
-                                                            tab there will be no data.'),
+                                                            tab there will be no data. Additionally, the habitat data available to this application are refreshed at the
+                                                            beginning of each week. For the most recent habitat data, please see the Benthic Data Query app- Single
+                                                            Station Query.'),
                                                    h4(span(strong("This tab shows total habitat score information and LRBS for the selected station and date range. For more
                                                       detailed habitat information and analysis, please see the", 
                                                                   HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
@@ -232,9 +236,7 @@ shinyUI(fluidPage(tags$head(
                                                      tabPanel('LRBS',
                                                               h4("Log Relative Bed Stability (LRBS)"),
                                                               DT::dataTableOutput('LRBSTable_habitatTab'),
-                                                              br(), br(), br()))
-                                                   )
-                                                   )
+                                                              br(), br(), br())) ))
                                         )),
                             tabPanel('Multiple Station Query (Archived Spatial Data Refreshed Weekly)',
                                      tabsetPanel(
@@ -401,7 +403,49 @@ shinyUI(fluidPage(tags$head(
                                                   
                                                     
                                                     
-                                                    ))) 
+                                                    ))),
+                                       tabPanel('Benthic Data',
+                                                sidebarPanel(
+                                                  helpText('To expedite application rendering time, benthic date range filters are based on the date range 
+                                                            specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
+                                                            tab there will be no data. Additionally, the benthic data available to this application are refreshed at the
+                                                            beginning of each week. For the most recent benthic data, please see the Benthic Data Query app- Single
+                                                            Station Query.'),
+                                                  h4(span(strong("This tab shows basic benthic SCI score information (SCI choice based on station location). For more
+                                                      detailed benthic information and analysis, please see the", 
+                                                                 HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
+                                                                 strong(". All results are limited to rarified rep 1 values.")))) ),
+                                                mainPanel(
+                                                  # verbatimTextOutput('testBenthics'),
+                                                  # h4("SCI Interactive Plot"),
+                                                  # helpText("Note: Only rarified rep 1 samples are plotted."),
+                                                  # plotlyOutput('multistationSCIplot'),
+                                                  h4("SCI Metrics"),
+                                                  DT::dataTableOutput('multistationSCIresultsTable'),
+                                                  br(), br(), br())),
+                                       tabPanel('Habitat Data',
+                                                sidebarPanel(
+                                                  helpText('To expedite application rendering time, habitat date range filters are based on the date range 
+                                                            specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
+                                                            tab there will be no data. Additionally, the habitat data available to this application are refreshed at the
+                                                            beginning of each week. For the most recent habitat data, please see the Benthic Data Query app- Single
+                                                            Station Query.'),
+                                                  h4(span(strong("This tab shows total habitat score information and LRBS for the selected station and date range. For more
+                                                      detailed habitat information and analysis, please see the", 
+                                                                 HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
+                                                                 strong(".")))) ),
+                                                mainPanel(
+                                                  tabsetPanel(
+                                                    tabPanel('Total Habitat Score',
+                                                             # h4("Total Habitat Score Interactive Plot"),
+                                                             # plotlyOutput('multistationTotalHabitatPlot'),
+                                                             h4("Total Habitat Score"),
+                                                             DT::dataTableOutput('multistationHabitatResultsTable'),
+                                                             br(), br(), br()),
+                                                    tabPanel('LRBS',
+                                                             h4("Log Relative Bed Stability (LRBS)"),
+                                                             DT::dataTableOutput('multistationLRBSTable_habitatTab'),
+                                                             br(), br(), br())) ))
                                                                
                                                                
                                                     
