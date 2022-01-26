@@ -54,8 +54,8 @@ pool <- dbPool(
 
 
 ## Pull one station- this brings everything back based on these parameters and futher refining is allowed in the app
-station <- '2-JKS023.61'#'4AROA216.75'#'4AROA175.63'#'1BDUR000.11'#'2-JKS023.61'#'2-SKC001.17'#'2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
-dateRange <- c(as.Date('1970-01-01'), as.Date('2021-10-26'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
+station <- '2-JKS013.29'#'2-JKS023.61'#'4AROA216.75'#'4AROA175.63'#'1BDUR000.11'#'2-JKS023.61'#'2-SKC001.17'#'2-JKS023.61'#'4AROA175.63'##'4ASRE043.54'#'2-JKS028.69'#'4AROA202.20'#'4ATKR000.08'#'4ADEE000.06'##'4ATKR003.03'#'2-JKS023.61'#'4ADEE000.06'##'2-JKS018.68'#'1BNFS011.81'#'2-PWT003.98'#'2-JKS023.61'#'2-JKS067.00'#'2-JKS023.61'#'1AOCC002.47'##'2-JKS006.67'#'2-JKS023.61'#'4AROA217.38'# not in WQM_full on REST service '2-JKS023.61'#
+dateRange <- c(as.Date('2015-01-01'), as.Date('2021-10-26'))# as.Date(Sys.Date())) #as.Date('1985-01-01'))#
 
 # make sure station has data
 # z <- pool %>% tbl( "Wqm_Field_data_View") %>%
@@ -117,7 +117,7 @@ stationAnalyteData <- pool %>% tbl(in_schema("wqm", "Wqm_Analytes_View")) %>%
 
 # User filters
 #dateRangeFilter <- c(as.Date('2015-01-01'), as.Date('2017-09-01'))# c(as.Date('2010-01-01'),as.Date('2022-01-01'))#c(as.Date('2015-01-01'), as.Date('2020-12-31'))#c(as.Date('1970-01-01'), as.Date(Sys.Date()))#c(as.Date('2015-02-24'), as.Date(Sys.Date()))#
-dateRangeFilter <- c(as.Date('1970-01-01'),as.Date('2022-01-01'))
+dateRangeFilter <- c(as.Date('2015-01-01'),as.Date('2022-01-01'))
 labCodesDropped <- c('QF')#sort(unique(stationAnalyteData$Ana_Com_Code))
 repFilter <- c('R')
 

@@ -21,7 +21,8 @@ library(dbplyr)
 source('vlookup.R')
 source('cdfRiskTable.R')
 source('dissolvedMetalsModule.R') #also contains dissolved metals functions that are more flexible than from assessment apps
-source('conventionalsFunction12142021.R')
+source('conventionalsFunction01262022.R')
+#source('conventionalsFunction12142021.R')
 #source('conventionalsFunction1232021.R')
 #source('conventionalsFunction.R')
 
@@ -41,6 +42,14 @@ for (i in 1:length(modulesToReadIn)){
 WQM_Station_Full <- pin_get("ejones/WQM-Station-Full", board = "rsconnect")
 Wqm_Stations_View <- pin_get("ejones/WQM-Stations-View", board = "rsconnect")
 LRBS <- pin_get("ejones/LRBS", board = 'rsconnect')
+
+VSCIresults <- pin_get("ejones/VSCIresults", board = "rsconnect")
+VCPMI63results <- pin_get("ejones/VCPMI63results", board = "rsconnect")
+VCPMI65results <- pin_get("ejones/VCPMI65results", board = "rsconnect")
+benSamps <- pin_get("ejones/benSamps", board = "rsconnect")
+totalHabitat <- pin_get("ejones/totalHabitatScore", board = "rsconnect")
+
+
 
 mCCUmetals <- c("HARDNESS, CA MG CALCULATED (MG/L AS CACO3) AS DISSOLVED", "ARSENIC, DISSOLVED  (UG/L AS AS)",
                 "CHROMIUM, DISSOLVED (UG/L AS CR)", "COPPER, DISSOLVED (UG/L AS CU)",
@@ -1427,3 +1436,20 @@ thermoclineDepth <- function(stationData){
     mutate(LakeStratification= ifelse(FDT_DEPTH < ThermoclineDepth,"Epilimnion","Hypolimnion"))%>% ungroup() 
 }
 # stationData %>% thermoclineDepth()
+
+
+
+# horizontal line for plotly
+hline <- function(y = 0, color = "blue", text = 'test') {
+  list(
+    type = "line", 
+    x0 = 0, 
+    x1 = 1, 
+    xref = "paper",
+    y0 = y, 
+    y1 = y, 
+    line = list(color = color),
+    hoverinfo="text",
+    text = text
+  )
+}

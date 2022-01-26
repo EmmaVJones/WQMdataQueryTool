@@ -18,8 +18,8 @@ shinyUI(fluidPage(tags$head(
                             # #          htmlOutput("BenthicQueryToolHowTo") ),
                             
                             
-                            tabPanel('How To',
-                                     includeMarkdown("CEDS WQM Query Tool How To.md")),
+       #                     tabPanel('How To',
+       #                              includeMarkdown("CEDS WQM Query Tool How To.md")),
                             #includeHTML("BenthicQueryToolHowTo.html")),#htmlOutput("BenthicQueryToolHowTo") ), # this was a hot mess. when trying to update the BenthicQueryHowTo rmd and rendering to html, the app would not take any user inputs. so weird and wasted hours on this problem. ultimately had to go with rendering the .md in the app to have any semblance of a solution
 
                              
@@ -198,34 +198,21 @@ shinyUI(fluidPage(tags$head(
                                                  )),
                                         tabPanel('Benthic Data',
                                                  sidebarPanel(
-                                                   uiOutput('dateRange_'),
-                                                   radioButtons('SCIchoice', "SCI Choice", choices = c('VSCI', 'VCPMI63 + Chowan', 'VCPMI65 - Chowan')),
-                                                   checkboxInput('rarifiedFilter', "Only Include Target Count = 110", value=TRUE),
-                                                   checkboxInput('boatableFilter', "Only Include Wadeable Methods", value=TRUE),
-                                                   checkboxGroupInput('repFilter', "Filter Reps (if none are selected then all are included)", 
-                                                                      choices = c('1','2'), selected = NULL)   ),
+                                                   helpText('To expedite application rendering time, benthic date range filters are based on the date range 
+                                                            specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
+                                                            tab there will be no data.'),
+                                                   h4(span(strong("This tab shows basic benthic SCI score information (SCI choice based on station location). For more
+                                                      detailed benthic information and analysis, please see the", 
+                                                                  HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
+                                                                  strong(". All results are limited to rarified rep 1 values.")))) ),
                                                  mainPanel(
-                                                   tabsetPanel(
-                                                     tabPanel('SCI Results',
-                                                              verbatimTextOutput('benthicTest'),
-                                                              h4("SCI Interactive Plot"),
-                                                              helpText("Note: Only rarified samples are plotted."),
-                                                              plotlyOutput('SCIplot'),
-                                                              h4("SCI Metrics"),
-                                                              DT::dataTableOutput('SCIresultsTable'),
-                                                              br(), br(), br()),
-                                                     tabPanel('Raw Data Download Formats',
-                                                              tabsetPanel(
-                                                                tabPanel('Raw Genus Level Data Crosstab View',
-                                                                         DT::dataTableOutput('rawBenthicCrosstabGenus'),
-                                                                         br(), br(), br()), # a little breathing room
-                                                                tabPanel('Raw Genus Level Data Long View',
-                                                                         DT::dataTableOutput('rawBenthicGenus'),
-                                                                         br(), br(), br())))))
-                                                          
-                                                 
-                                                 )
-                                      )),
+                                                   h4("SCI Interactive Plot"),
+                                                   helpText("Note: Only rarified rep 1 samples are plotted."),
+                                                   plotlyOutput('SCIplot'),
+                                                   h4("SCI Metrics"),
+                                                   DT::dataTableOutput('SCIresultsTable'),
+                                                   br(), br(), br()))
+                                        )),
                             tabPanel('Multiple Station Query (Archived Spatial Data Refreshed Weekly)',
                                      tabsetPanel(
                                        tabPanel("Station Query",
