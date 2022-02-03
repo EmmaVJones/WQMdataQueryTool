@@ -440,7 +440,6 @@ conventionalsSummary <- function(conventionals, stationFieldDataUserFilter, stat
     
     # Step 3.4: Organize lab remark fields
     # now fix remark fields
-    
     if(nrow(stationAnalyteDataUserFilter0_0) > 0){
       stationAnalyteDataUserFilter2 <- bind_rows(remarkTemplate, 
                                                  suppressWarnings(

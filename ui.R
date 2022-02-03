@@ -72,13 +72,19 @@ shinyUI(fluidPage(tags$head(
                                                                        instances occur, the additional rows are highlighted in yellow. If you wish to consolidate this information into a single
                                                                        measure by averaging these values, please choose the `Average similar parameters by sample date time`
                                                                        option below."),
-                                                              helpText('The Simplified Dataset tab offers data organized in a standardized format consistent across assessment program tools (the 
-                                                                       "conventionals" query logic.'),
-                                                              radioButtons('averageParameters', strong("Display Options"),
-                                                                           choices = c('Report all available parameters and highlight rows with duplicate analyte measures. The first field named
+                                                              helpText('The Simplified Dataset subtab under the Visualization Tools tab offers data organized in a standardized format consistent across assessment program tools (the 
+                                                                       "conventionals" query logic).'),
+                                                              wellPanel(fluidRow(
+                                                                column(6,
+                                                                       radioButtons('averageParameters', strong("Data Summary Options"),
+                                                                                    choices = c('Report all available parameters and highlight rows with duplicate analyte measures. The first field named
                                                                                        `Associated Analyte Records` identifies when multiple analytes with the same lab name are returned
                                                                                        for a single sample event date time.', 'Average parameters by sample date time.'),
-                                                                           width = '100%'),
+                                                                                    width = '100%')),
+                                                                column(6,
+                                                                       p(strong("Parameter View Options")),
+                                                                       helpText('The default parameter view displays all parameters available.'),
+                                                                       actionButton('parameterView','Custom Parameter View') ))),
                                                               DT::dataTableOutput('stationFieldAnalyte'),
                                                               br(),
                                                               h4('Sample Metrics'),
@@ -196,24 +202,32 @@ shinyUI(fluidPage(tags$head(
                                                               
                                                      )
                                                  )),
-                                        tabPanel('Benthic Data',
+                                        tabPanel('Biological Data',
                                                  sidebarPanel(
-                                                   helpText('To expedite application rendering time, benthic date range filters are based on the date range 
+                                                   helpText('To expedite application rendering time, biological date range filters are based on the date range 
                                                             specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
                                                             tab there will be no data. Additionally, the benthic data available to this application are refreshed at the
                                                             beginning of each week. For the most recent benthic data, please see the Benthic Data Query app- Single
-                                                            Station Query.'),
-                                                   h4(span(strong("This tab shows basic benthic SCI score information (SCI choice based on station location). For more
-                                                      detailed benthic information and analysis, please see the", 
-                                                                  HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
-                                                                  strong(". All results are limited to rarified rep 1 values.")))) ),
+                                                            Station Query.')),
                                                  mainPanel(
-                                                   h4("SCI Interactive Plot"),
-                                                   helpText("Note: Only rarified rep 1 samples are plotted."),
-                                                   plotlyOutput('SCIplot'),
-                                                   h4("SCI Metrics"),
-                                                   DT::dataTableOutput('SCIresultsTable'),
-                                                   br(), br(), br())),
+                                                   tabsetPanel(
+                                                     tabPanel("Benthic Data",
+                                                              h4(span(strong("This tab shows basic benthic SCI score information (SCI choice based on station location). For more
+                                                      detailed benthic information and analysis, please see the", 
+                                                                             HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
+                                                                             strong(". All results are limited to rarified rep 1 values.")))),
+                                                              h4("SCI Interactive Plot"),
+                                                              helpText("Note: Only rarified rep 1 samples are plotted."),
+                                                              plotlyOutput('SCIplot'),
+                                                              h4("SCI Metrics"),
+                                                              DT::dataTableOutput('SCIresultsTable'),
+                                                              br(), br(), br()),
+                                                     tabPanel('Fish Data',
+                                                              h4(span(strong("This tab shows basic fish collection information. For more detailed fish collection and distribution data, please see the", 
+                                                                             HTML("<b><a href='https://rconnect.deq.virginia.gov/FishEDAS/' target= '_blank'> Fish EDAS app.</a></b>")))),
+                                                              h4("Fish Collection Data"),
+                                                              DT::dataTableOutput('fishResultsTable'),
+                                                              br(), br(), br()) ))),
                                         tabPanel('Habitat Data',
                                                  sidebarPanel(
                                                    helpText('To expedite application rendering time, habitat date range filters are based on the date range 
@@ -404,25 +418,34 @@ shinyUI(fluidPage(tags$head(
                                                     
                                                     
                                                     ))),
-                                       tabPanel('Benthic Data',
+                                       tabPanel('Biological Data',
                                                 sidebarPanel(
-                                                  helpText('To expedite application rendering time, benthic date range filters are based on the date range 
+                                                  helpText('To expedite application rendering time, biological date range filters are based on the date range 
                                                             specified on the Water Quality Data tab, so if you have not visited that tab prior to opening this 
                                                             tab there will be no data. Additionally, the benthic data available to this application are refreshed at the
                                                             beginning of each week. For the most recent benthic data, please see the Benthic Data Query app- Single
-                                                            Station Query.'),
-                                                  h4(span(strong("This tab shows basic benthic SCI score information (SCI choice based on station location). For more
-                                                      detailed benthic information and analysis, please see the", 
-                                                                 HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
-                                                                 strong(". All results are limited to rarified rep 1 values.")))) ),
+                                                            Station Query.')),
                                                 mainPanel(
-                                                  # verbatimTextOutput('testBenthics'),
-                                                  # h4("SCI Interactive Plot"),
-                                                  # helpText("Note: Only rarified rep 1 samples are plotted."),
-                                                  # plotlyOutput('multistationSCIplot'),
-                                                  h4("SCI Metrics"),
-                                                  DT::dataTableOutput('multistationSCIresultsTable'),
-                                                  br(), br(), br())),
+                                                  tabsetPanel(
+                                                    tabPanel('Benthic Data',
+                                                             h4(span(strong("This tab shows basic benthic SCI score information (SCI choice based on station location). For more
+                                                      detailed benthic information and analysis, please see the", 
+                                                                            HTML("<b><a href='https://rconnect.deq.virginia.gov/CEDSBenthicDataQueryTool/' target= '_blank'> Benthic Data Query app</a></b>"),
+                                                                            strong(". All results are limited to rarified rep 1 values.")))),
+                                                             
+                                                             # verbatimTextOutput('testBenthics'),
+                                                             # h4("SCI Interactive Plot"),
+                                                             # helpText("Note: Only rarified rep 1 samples are plotted."),
+                                                             # plotlyOutput('multistationSCIplot'),
+                                                             h4("SCI Metrics"),
+                                                             DT::dataTableOutput('multistationSCIresultsTable'),
+                                                             br(), br(), br() ),
+                                                    tabPanel('Fish Data',
+                                                             h4(span(strong("This tab shows basic fish collection information. For more detailed fish collection and distribution data, please see the", 
+                                                                            HTML("<b><a href='https://rconnect.deq.virginia.gov/FishEDAS/' target= '_blank'> Fish EDAS app.</a></b>")))),
+                                                             h4("Fish Collection Data"),
+                                                             DT::dataTableOutput('multistationFishResultsTable'),
+                                                             br(), br(), br()) ) ) ),
                                        tabPanel('Habitat Data',
                                                 sidebarPanel(
                                                   helpText('To expedite application rendering time, habitat date range filters are based on the date range 

@@ -248,8 +248,53 @@ shinyServer(function(input, output, session) {
     stationFieldAnalyteDataPretty(reactive_objects$stationAnalyteDataUserFilter, reactive_objects$stationFieldDataUserFilter,
                                   averageResults = ifelse(input$averageParameters == 'Average parameters by sample date time.', TRUE, FALSE) ) })
 
-  #output$test <- renderPrint({stationFieldAnalyteDateRange()})
+  output$buttonTest <- renderPrint({input$parameterView})
 
+  observeEvent(input$parameterView,{
+    showModal(modalDialog(
+      title="Custom Parameter Data View",
+      helpText("Use the drop down below to manually delete all undesired fields from the table view. Once the desired fields
+               are identified, click the 'Simply Data View' button to update the table."),
+      helpText(strong('PRO TIP: You can select multiple parameters to delete by clicking a parameter, holding down the shift or control (Ctrl)
+                      keys, and selecting a different parameter to highlight the range. Use the delete or backspace button on your
+                      keyboard to remove selected parameters. Add parameters back in using the drop down below.')),
+      fluidRow(
+        column(8,
+               selectizeInput('customParameterSelection',strong('Fields Included:'),
+                              choices = names(stationFieldAnalyteDateRange()),
+                              selected = names(stationFieldAnalyteDateRange()),
+                              multiple = T, width = '100%')  ),
+        column(2, br(), br(), br(), actionButton('simplifyView', 'Simply Data View')) ),
+      DT::dataTableOutput('stationFieldAnalyteCustom'),
+      size = 'l',
+      easyClose = FALSE))  })
+  
+  output$stationFieldAnalyteCustom <-  renderDataTable({ req(stationFieldAnalyteDateRange(), input$simplifyView)
+    z <- stationFieldAnalyteDateRange() %>% # drop all empty columns ( this method longer but handles dttm issues)
+
+      dplyr::select(input$customParameterSelection) %>%
+
+      map(~.x) %>%
+      discard(~all(is.na(.x))) %>%
+      map_df(~.x)
+    if("Associated Analyte Records" %in% names(z)){ # highlight rows where field data duplicated bc multiple analytes on same datetime
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(z),
+                               buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData_CustomDataView',input$station, Sys.Date())),
+                                            'colvis')), selection = 'none') %>%
+        formatStyle("Associated Analyte Records", target = 'row',
+                    backgroundColor = styleEqual(c(1,2,3,4,5,6,7,8,9,10), c(NA, 'yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow','yellow')))
+
+    } else {
+      datatable(z, rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bift', scrollX = TRUE, scrollY = '350px',
+                               pageLength = nrow(z),
+                               buttons=list('copy',list(extend='excel',filename=paste0('CEDSFieldAnalyteData_CustomDataView',input$station, Sys.Date())),
+                                            'colvis')), selection = 'none')    } })
+
+  
+  
   ## Data Summary
   output$stationFieldAnalyte <-  renderDataTable({ req(stationFieldAnalyteDateRange())
     z <- stationFieldAnalyteDateRange() %>% # drop all empty columns ( this method longer but handles dttm issues)
@@ -513,18 +558,20 @@ shinyServer(function(input, output, session) {
 ### Add in Benthic Data
   
   ## Pull Station Benthic and Habitat Information from Pinned data (tried to use ODS direct connection but slowed app too much)
-  observe({ req(nrow(reactive_objects$stationInfo) > 0, input$dateRangeFilter)
+  observe({ req(nrow(reactive_objects$stationInfoFin) > 0, input$dateRangeFilter)
     
     ## Benthic Sampling Information
-    reactive_objects$stationInfoBenSamps <- filter(benSamps, StationID %in% input$station & 
-                                                     between(as.Date(`Collection Date`), input$dateRangeFilter[1], input$dateRangeFilter[2]  ) ) %>% 
-      filter(`Target Count` == 110) %>% filter(RepNum == 1)  
+    reactive_objects$stationInfoBenSamps <- filter(benSamps, StationID %in% unique(reactive_objects$stationInfoFin$Sta_Id) & 
+                                                     between(as.Date(`Collection Date`), input$dateRangeFilter[1], input$dateRangeFilter[2]  ) &
+                                                     `Target Count` == 110  & RepNum == 1  )
     
-    reactive_objects$stationTotalHabitat <- filter(totalHabitat, StationID %in% input$station & 
-                                                     between(as.Date(`Collection Date`), input$dateRangeFilter[1], input$dateRangeFilter[2]  ) )     })
+    reactive_objects$stationTotalHabitat <- filter(totalHabitat, StationID %in% unique(reactive_objects$stationInfoFin$Sta_Id) & 
+                                                     between(as.Date(`Collection Date`), input$dateRangeFilter[1], input$dateRangeFilter[2]  ) )   
+    reactive_objects$stationFishBenSamps <- filter(fishSamps, StationID %in% unique(reactive_objects$stationInfoFin$Sta_Id) & 
+                                                     between(as.Date(`Collection Date`), input$dateRangeFilter[1], input$dateRangeFilter[2]  ))    })
     
   # Benthic and Habitat pull after initial ben samps data available
-  observe({ req(nrow(reactive_objects$stationInfoBenSamps) > 0)
+  observe({ req(reactive_objects$stationInfoBenSamps)
     reactive_objects$stationBasinEco <- left_join(reactive_objects$stationInfoBenSamps, 
                                                   dplyr::select(WQM_Stations_Spatial, StationID, 
                                                                 EPA_ECO_US_L3CODE = US_L3CODE,  Basin = Basin_Name), by = 'StationID')
@@ -553,7 +600,7 @@ shinyServer(function(input, output, session) {
   ## SCI Results Tab
   
   ### SCI plotly
-  output$SCIplot <- renderPlotly({    req(reactive_objects$SCI_filter)
+  output$SCIplot <- renderPlotly({    req(nrow(reactive_objects$SCI_filter) >0)
     if(unique(reactive_objects$SCI_filter$SCI) == 'VSCI'){sciLimit <- 60} else {sciLimit <- 40}
 
     SCIresults <- reactive_objects$SCI_filter 
@@ -629,9 +676,22 @@ shinyServer(function(input, output, session) {
               options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                              buttons=list('copy',list(extend='excel',filename=paste0('LRBSdata',input$station, Sys.Date())),
                                           'colvis')), selection = 'none') }) 
-  
-  
-  
+
+  ## Fish
+  ## Pull Station fish data from Pinned data only if fish samp info exists
+  observe({ req(reactive_objects$stationFishBenSamps)
+    reactive_objects$stationFishes <- filter(fishes, FishSampID %in% reactive_objects$stationFishBenSamps$FishSampID)  %>%
+      left_join(reactive_objects$stationFishBenSamps, by = c('FishSampID', 'RepNum')) %>%
+      dplyr::select(StationID, `Collection Date`, FishSampID, RepNum, FinalID, Anomaly, `Anomaly Code`, Hybrid, Individuals,
+                    `Fishes Comments`, CollMeth, `Field Team`, `Fishes ID by`, `Entered Date`, everything()) %>%
+      arrange(StationID, `Collection Date`)})
+
+  output$fishResultsTable <-  DT::renderDataTable({req(nrow(reactive_objects$stationFishes)>0)
+    datatable(reactive_objects$stationFishes %>%
+                mutate(`Collection Date` = as.Date(`Collection Date`)),
+              rownames = F, escape= F, extensions = 'Buttons',
+              options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
+                             pageLength = nrow(reactive_objects$stationFishes), buttons=list('copy','colvis')))  })
 
 
 
@@ -1290,18 +1350,22 @@ shinyServer(function(input, output, session) {
     output$testBenthics <- renderPrint({reactive_objects$multistationBasinEco})
     
     # Pull Station Benthic and Habitat Information from Pinned data (tried to use ODS direct connection but slowed app too much)
-    observe({ req(nrow(reactive_objects$multistationSelection) > 0, input$multistationDateRangeFilter)
+    observe({ req(reactive_objects$multistationSelection, input$multistationDateRangeFilter)
 
       ## Benthic Sampling Information
       reactive_objects$multistationInfoBenSamps <- filter(benSamps, StationID %in% unique(reactive_objects$multistationSelection$Sta_Id) &
-                                                       between(as.Date(`Collection Date`), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]  ) ) %>%
-        filter(`Target Count` == 110) %>% filter(RepNum == 1)
+                                                       between(as.Date(`Collection Date`), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]  ) &
+                                                         `Target Count` == 110 & RepNum == 1)
 
       reactive_objects$multistationTotalHabitat <- filter(totalHabitat, StationID %in% unique(reactive_objects$multistationSelection$Sta_Id) &
-                                                       between(as.Date(`Collection Date`), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]  ) )     })
+                                                       between(as.Date(`Collection Date`), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]  ) )     
+      reactive_objects$multistationFishBenSamps <- filter(fishSamps, StationID %in% unique(reactive_objects$multistationSelection$Sta_Id) & 
+                                                       between(as.Date(`Collection Date`), input$multistationDateRangeFilter[1], input$multistationDateRangeFilter[2]   ))    })
+    
+      
 
     # Benthic and Habitat pull after initial ben samps data available
-    observe({ req(nrow(reactive_objects$multistationInfoBenSamps) > 0)
+    observe({ req(reactive_objects$multistationInfoBenSamps)
       reactive_objects$multistationBasinEco <- left_join(reactive_objects$multistationInfoBenSamps,
                                                     dplyr::select(WQM_Stations_Spatial, StationID,
                                                                   EPA_ECO_US_L3CODE = US_L3CODE,  Basin = Basin_Name), by = 'StationID')
@@ -1407,6 +1471,23 @@ shinyServer(function(input, output, session) {
                 options = list(dom = 'Bift', scrollX = TRUE, scrollY = '500px', pageLength = nrow(z),
                                buttons=list('copy',list(extend='excel',filename=paste0('LRBSdata',input$station, Sys.Date())),
                                             'colvis')), selection = 'none') })
+    
+    ## Fish
+    ## Pull Station fish data from Pinned data only if fish samp info exists
+    observe({ req(reactive_objects$multistationFishBenSamps)
+      reactive_objects$multistationFishes <- filter(fishes, FishSampID %in% reactive_objects$multistationFishBenSamps$FishSampID)  %>%
+        left_join(reactive_objects$multistationFishBenSamps, by = c('FishSampID', 'RepNum')) %>%
+        dplyr::select(StationID, `Collection Date`, FishSampID, RepNum, FinalID, Anomaly, `Anomaly Code`, Hybrid, Individuals,
+                      `Fishes Comments`, CollMeth, `Field Team`, `Fishes ID by`, `Entered Date`, everything()) %>%
+        arrange(StationID, `Collection Date`)})
+
+    output$multistationFishResultsTable <-  DT::renderDataTable({req(nrow(reactive_objects$multistationFishes)>0)
+      datatable(reactive_objects$multistationFishes %>%
+                  mutate(`Collection Date` = as.Date(`Collection Date`)),
+                rownames = F, escape= F, extensions = 'Buttons',
+                options = list(dom = 'Bift', scrollX= TRUE, scrollY = '300px',
+                               pageLength = nrow(reactive_objects$multistationFishes), buttons=list('copy','colvis')))  })
+
 
 
 
